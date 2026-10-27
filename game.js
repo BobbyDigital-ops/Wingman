@@ -4,12 +4,14 @@
   'use strict';
   let W=320; const H=180, STEP=1/60, TAU=Math.PI*2;
   const canvas=document.getElementById('game');
-  const aircraftSprites=window.WingmanSprites?.build() || {};
+  const aircraftArt=window.WingmanSprites;
+  const modelCanvas=document.getElementById('aircraft-layer');
+  const modelCtx=modelCanvas.getContext('2d',{alpha:true});
   const g=canvas.getContext('2d',{alpha:false});
   g.imageSmoothingEnabled=false;
 
   const PLANES={
-    fighter:{name:'SPITFIRE',speed:96,turn:3.5,hull:110,radius:5.5,burst:10,interval:.07,cooldown:1.65,damage:10,bulletSpeed:190,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'SWOOP'},
+    fighter:{name:'SPITFIRE',speed:83,turn:3.15,hull:110,radius:5.5,burst:10,interval:.055,cooldown:1.35,damage:15,bulletSpeed:194,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'SWOOP'},
     heavy:{name:'HEAVY FIGHTER',speed:72,turn:1.55,hull:160,radius:8,burst:3,interval:.19,cooldown:2.8,damage:29,bulletSpeed:177,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
     bomber:{name:'BOMBER',speed:60,turn:1.05,hull:205,radius:9,burst:2,interval:.30,cooldown:3.2,damage:8,bulletSpeed:85,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'}
   };
@@ -60,7 +62,7 @@
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boost:0,
       spawnSafe:1.0,smokeTimer:0,hitFlash:0,alive:true,aiThink:0,
       energy:85,rollTime:0,rollRecovery:0,stallTime:0,wallGrace:0,armourTime:0,bombCooldown:0,climbAssist:0,
-      swoopTime:0,swoopDir:1,swoopPeak:40,swoopAimX:0,swoopAimY:0};
+      swoopTime:0,swoop:null,turnVelocity:0,damageCause:'',damageNotice:0};
   }
   function newRound(){
     state.fliers=[
@@ -111,16 +113,33 @@
     if(!p||!p.alive||p.specialCooldown>0||state.phase!=='playing'||state.paused)return;
     p.specialCooldown=p.d.specialCd;
     if(p.type==='fighter'){
-      // A committed climb-and-dive high yo-yo, not a teleported 180-degree turn.
-      // Capture the projected tail position now; timing determines whether it works.
-      const enemy=state.fliers[1-p.id];
-      p.swoopTime=1.3;
-      p.swoopDir=Math.cos(p.angle)<0?-1:1;
-      p.swoopPeak=Math.max(37,p.y-36);
-      p.swoopAimX=enemy?enemy.x+enemy.vx*.32-Math.cos(enemy.angle)*24:p.x+p.swoopDir*35;
-      p.swoopAimY=enemy?enemy.y+enemy.vy*.32-Math.sin(enemy.angle)*20:p.y;
-      p.energy=Math.max(12,p.energy-12);
-      emit(p.x,p.y,7,'#d8e9d4',12);
+      // A physically continuous high yo-yo: follow a single smooth arc
+      // through the upper air, then descend toward the rival's predicted tail.
+      // Its destination is captured at launch, so accurate timing matters.
+      const rival=state.fliers[1-p.id];
+      const heading={x:Math.cos(p.angle),y:Math.sin(p.angle)};
+      const p0={x:p.x,y:p.y};
+      const predicted=rival?{
+        x:rival.x+rival.vx*.29-Math.cos(rival.angle)*20,
+        y:rival.y+rival.vy*.29-Math.sin(rival.angle)*20
+      }:{x:p.x+heading.x*65,y:p.y};
+      const p3={
+        x:clamp(predicted.x,p.x-82,p.x+82),
+        y:clamp(predicted.y,p.y-52,p.y+52)
+      };
+      p3.x=clamp(p3.x,17,W-17);p3.y=clamp(p3.y,43,H-24);
+      const p1={
+        x:clamp(p.x+heading.x*21,17,W-17),
+        y:clamp(p.y+heading.y*14-9,40,H-25)
+      };
+      const p2={
+        x:clamp(p3.x-(rival?Math.cos(rival.angle):heading.x)*22,17,W-17),
+        y:clamp(Math.min(p1.y,p3.y)-28,39,H-28)
+      };
+      p.swoop={p0,p1,p2,p3,elapsed:0,duration:1.22};
+      p.swoopTime=1.22;
+      p.energy=Math.max(18,p.energy-17);
+      emit(p.x,p.y,5,'#d8e9d4',9);
     }else if(p.type==='heavy'){
       p.armourTime=10;
       emit(p.x,p.y,5,'#a9dced',10);
@@ -191,22 +210,36 @@
     sound('special');
   }
   function steerPlane(p,steer,dt){
+    if(p.swoop){
+      const a=p.swoop;
+      a.elapsed=Math.min(a.duration,a.elapsed+dt);
+      const t=a.elapsed/a.duration,u=1-t;
+      const bez=(key)=>
+        u*u*u*a.p0[key]+3*u*u*t*a.p1[key]+3*u*t*t*a.p2[key]+t*t*t*a.p3[key];
+      const deriv=(key)=>
+        (3*u*u*(a.p1[key]-a.p0[key])+6*u*t*(a.p2[key]-a.p1[key])+
+          3*t*t*(a.p3[key]-a.p2[key]))/a.duration;
+      const x=bez('x'),y=bez('y'),vx=deriv('x'),vy=deriv('y');
+      p.x=x;p.y=y;p.vx=vx;p.vy=vy;p.speed=Math.hypot(vx,vy);
+      if(p.speed>3)p.angle=Math.atan2(vy,vx);
+      p.energy=Math.max(10,p.energy-dt*6);
+      p.swoopTime=Math.max(0,a.duration-a.elapsed);
+      if(a.elapsed>=a.duration){p.swoop=null;p.turnVelocity=0;}
+      return;
+    }
     const wing=steer<0?p.parts.left:p.parts.right;
     const authority=.42+.58*wing/100;
     const sluggish=p.stallTime>0?.57:1;
-    if(p.swoopTime>0){
-      const progress=1-p.swoopTime/1.3;
-      const goal=progress<.36?Math.atan2(-48,p.swoopDir*22):
-        progress<.65?Math.atan2(p.swoopPeak-p.y,p.swoopAimX-p.x):
-        Math.atan2(p.swoopAimY-p.y,p.swoopAimX-p.x);
-      p.angle+=clamp(angleDiff(goal,p.angle),-dt*5.0,dt*5.0);
-    }else if(p.climbAssist>0){
+    if(p.climbAssist>0){
       const direction=Math.cos(p.angle)<0?-1:1;
       const climbHeading=Math.atan2(-43,direction*20);
-      p.angle+=clamp(angleDiff(climbHeading,p.angle),-dt*2.9,dt*2.9);
+      const desired=clamp(angleDiff(climbHeading,p.angle)*2.8,-p.d.turn,p.d.turn);
+      p.turnVelocity+=(desired-p.turnVelocity)*Math.min(1,dt*8.8);
     }else{
-      p.angle+=steer*p.d.turn*authority*sluggish*dt;
+      const desired=steer*p.d.turn*authority*sluggish;
+      p.turnVelocity+=(desired-p.turnVelocity)*Math.min(1,dt*10);
     }
+    p.angle+=p.turnVelocity*dt;
     if(p.angle>Math.PI)p.angle-=TAU;
     if(p.angle< -Math.PI)p.angle+=TAU;
     const engine=.52+.48*p.parts.engine/100;
@@ -220,23 +253,19 @@
     p.stallTime=p.energy<9?Math.max(p.stallTime,.2):Math.max(0,p.stallTime-dt);
     // Low energy lowers turn authority and speed, but never disables steering.
     const speedTarget=p.stallTime>0?wanted*.68:wanted;
-    p.speed+=(speedTarget-p.speed)*Math.min(1,dt*5.2);
-    const follow=Math.min(1,dt*(p.type==='bomber'?9.0:p.type==='heavy'?11.0:13.5));
+    p.speed+=(speedTarget-p.speed)*Math.min(1,dt*4.6);
+    const follow=Math.min(1,dt*(p.type==='bomber'?8.5:p.type==='heavy'?9.5:10.5));
     p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
     p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
     p.x+=p.vx*dt;p.y+=p.vy*dt;
-    p.wallGrace=Math.max(0,p.wallGrace-dt);
-    // Smooth turn-in rather than sudden horizontal/vertical angle reflections.
-    const margin=12;
-    if(p.x<margin||p.x>W-margin||p.y<34||p.y>H-12){
-      p.x=clamp(p.x,margin,W-margin);p.y=clamp(p.y,34,H-12);
-      if(p.wallGrace<=0){
-        const inward=Math.atan2(H*.53-p.y,W*.5-p.x);
-        p.angle+=clamp(angleDiff(inward,p.angle),-1.05,1.05);
-        p.energy=Math.max(15,p.energy-7);
-        p.wallGrace=.22;
-      }
-      p.vx*=.88;p.vy*=.88;
+    // A soft, continuous boundary recovery avoids frame-to-frame angle snaps.
+    const margin=15;
+    if(p.x<margin||p.x>W-margin||p.y<37||p.y>H-15){
+      p.x=clamp(p.x,margin,W-margin);p.y=clamp(p.y,37,H-15);
+      const inward=Math.atan2(H*.52-p.y,W*.5-p.x);
+      p.angle+=clamp(angleDiff(inward,p.angle),-2.7*dt,2.7*dt);
+      if(p.x===margin&&p.vx<0||p.x===W-margin&&p.vx>0)p.vx=0;
+      if(p.y===37&&p.vy<0||p.y===H-15&&p.vy>0)p.vy=0;
     }
   }
   // Tactical AI: state changes prevent indefinite tail-chasing and combat orbits.
@@ -295,9 +324,9 @@
     if(!p.alive)return;
     p.spawnSafe=Math.max(0,p.spawnSafe-dt);
     p.hitFlash=Math.max(0,p.hitFlash-dt);
+    p.damageNotice=Math.max(0,p.damageNotice-dt);
     p.specialCooldown=Math.max(0,p.specialCooldown-dt);
     p.armourTime=Math.max(0,p.armourTime-dt);
-    p.swoopTime=Math.max(0,p.swoopTime-dt);
     p.climbAssist=Math.max(0,p.climbAssist-dt);
     p.bombCooldown=Math.max(0,p.bombCooldown-dt);
     p.boost=Math.max(0,p.boost-dt);
