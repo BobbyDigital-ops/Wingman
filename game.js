@@ -4,13 +4,14 @@
   'use strict';
   let W=320; const H=180, STEP=1/60, TAU=Math.PI*2;
   const canvas=document.getElementById('game');
+  const aircraftSprites=window.WingmanSprites?.build() || {};
   const g=canvas.getContext('2d',{alpha:false});
   g.imageSmoothingEnabled=false;
 
   const PLANES={
-    fighter:{name:'SPITFIRE',speed:62,turn:3.35,hull:110,radius:8,burst:6,interval:.085,cooldown:2.05,damage:12,bulletSpeed:165,specialCd:7.5,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'BOOST'},
-    heavy:{name:'HEAVY FIGHTER',speed:49,turn:2.35,hull:160,radius:10,burst:4,interval:.14,cooldown:2.55,damage:23,bulletSpeed:155,specialCd:8.5,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'MINE'},
-    bomber:{name:'BOMBER',speed:40,turn:1.73,hull:205,radius:12,burst:4,interval:.17,cooldown:2.7,damage:11,bulletSpeed:135,specialCd:5.6,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'BOMB'}
+    fighter:{name:'SPITFIRE',speed:62,turn:3.35,hull:110,radius:6,burst:6,interval:.085,cooldown:2.05,damage:12,bulletSpeed:165,specialCd:7.5,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'BOOST'},
+    heavy:{name:'HEAVY FIGHTER',speed:49,turn:2.35,hull:160,radius:8,burst:4,interval:.14,cooldown:2.55,damage:23,bulletSpeed:155,specialCd:8.5,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'MINE'},
+    bomber:{name:'BOMBER',speed:40,turn:1.73,hull:205,radius:9,burst:4,interval:.17,cooldown:2.7,damage:11,bulletSpeed:135,specialCd:5.6,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'BOMB'}
   };
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
@@ -61,8 +62,8 @@
   }
   function newRound(){
     state.fliers=[
-      plane(state.selected,0,W*.23,82,-.14),
-      plane(state.enemyType,1,W*.77,89,Math.PI+.15)
+      plane(state.selected,0,W*.19,81,-.14),
+      plane(state.enemyType,1,W*.81,92,Math.PI+.15)
     ];
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.time=90;state.impactLock=0;state.phase='playing';state.paused=false;
@@ -177,8 +178,8 @@
     if(p.x<11){p.x=11;p.vx=Math.abs(p.vx)*.65;p.angle=Math.PI-p.angle;}
     if(p.x>W-11){p.x=W-11;p.vx=-Math.abs(p.vx)*.65;p.angle=Math.PI-p.angle;}
     if(p.y<32){p.y=32;p.vy=Math.abs(p.vy)*.65;p.angle=-p.angle;}
-    if(p.y>162){
-      p.y=162;p.vy=-Math.abs(p.vy)*.7;p.angle=-p.angle;
+    if(p.y>172){
+      p.y=172;p.vy=-Math.abs(p.vy)*.7;p.angle=-p.angle;
       if(p.spawnSafe<=0)hit(p,25,p.x,p.y,'body');
     }
   }
@@ -251,14 +252,14 @@
       if(target&&target.alive&&distance(b,target)<target.d.radius+1){
         hit(target,b.damage,b.x,b.y);state.bullets.splice(i,1);continue;
       }
-      if(b.life<=0||b.x<0||b.x>W||b.y<31||b.y>170)state.bullets.splice(i,1);
+      if(b.life<=0||b.x<0||b.x>W||b.y<31||b.y>176)state.bullets.splice(i,1);
     }
     for(let i=state.bombs.length-1;i>=0;i--){
       const b=state.bombs[i];
       b.vy+=94*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
       const target=state.fliers[1-b.owner];
-      if(b.y>=161||(target&&target.alive&&distance(b,target)<target.d.radius+4)){
-        explosion(b.x,Math.min(b.y,161),24,b.owner,55);
+      if(b.y>=172||(target&&target.alive&&distance(b,target)<target.d.radius+4)){
+        explosion(b.x,Math.min(b.y,172),24,b.owner,55);
         state.bombs.splice(i,1);continue;
       }
       if(b.life<=0||b.x<0||b.x>W)state.bombs.splice(i,1);
@@ -356,17 +357,15 @@
     }
     const far=['#8daec3','#7197b4','#e5e8dc','#b9d4db'];
     const mid=['#729bad','#5c829b','#e6eadf','#b0cad1'];
-    for(let x=-35,i=0;x<W+65;x+=59,i++){
-      peak(x+19,66+(i*17)%23,49,127,far);
+    for(let x=-70,i=0;x<W+105;x+=107,i++){
+      peak(x+30,91+(i*13)%13,79,145,far);
     }
-    for(let x=-58,i=0;x<W+65;x+=91,i++){
-      peak(x+41,80+(i*13)%22,63,145,mid);
+    for(let x=-85,i=0;x<W+100;x+=163,i++){
+      peak(x+58,109+(i*11)%13,95,160,mid);
     }
     // Lower ravine, slopes and a distant stone bridge across the lake.
-    poly(ctx,[[0,147],[27,132],[55,144],[86,126],[121,148],[155,136],
-      [188,149],[222,128],[257,147],[W,132],[W,180],[0,180]],'#658f8e');
-    poly(ctx,[[0,159],[35,146],[73,155],[103,141],[143,159],[187,145],
-      [219,158],[270,139],[W,154],[W,180],[0,180]],'#4c7474');
+    poly(ctx,[[0,157],[W*.12,145],[W*.25,156],[W*.43,147],[W*.59,158],[W*.81,144],[W,155],[W,180],[0,180]],'#658f8e');
+    poly(ctx,[[0,164],[W*.12,155],[W*.24,164],[W*.38,153],[W*.53,165],[W*.7,156],[W*.87,164],[W,158],[W,180],[0,180]],'#4c7474');
     // Lake glint: horizontally banded to avoid shader/per-pixel work.
     rect(0,158,W,22,'#568698');
     rect(0,163,W,17,'#47788a');
@@ -426,74 +425,23 @@
   // Small, readable aircraft silhouettes. Their proportions are deliberately
   // more plausible than cartoon rockets, but every colour remains pixel art.
   function aircraft(p){
-    const d=p.d;
     const x=Math.round(p.x),y=Math.round(p.y);
+    const sprite=aircraftSprites[p.type];
     g.save();g.translate(x,y);g.rotate(p.angle);
-    const body=p.hitFlash>0?'#fff2d5':d.color;
-    const ink='#273843';
-    if(p.type==='fighter'){
-      // Slim single-engine fighter: pronounced tail, elliptical wing, narrow nose.
-      poly(g,[[-12,0],[-11,-6],[-9,-6],[-8,-2],[-4,-3],[3,-3],
-        [9,-2],[13,0],[10,2],[-8,2]],ink);
-      poly(g,[[-11,-1],[-9,-4],[-8,-2],[-4,-2],[4,-2],
-        [11,-1],[12,0],[9,1],[-9,1]],body);
-      poly(g,[[-6,0],[-3,-5],[1,-6],[4,-4],[5,1],[1,4],[-4,4]],ink);
-      poly(g,[[-4,0],[-2,-4],[1,-5],[3,-3],[4,1],[0,3],[-3,3]],d.shade);
-      g.fillStyle='#cbd6cb';g.fillRect(-1,-3,2,2);
-      g.fillStyle='#7ea3a7';g.fillRect(3,-2,3,2); // cockpit
-      g.fillStyle=d.accent;g.fillRect(-7,0,2,1);
-      g.fillStyle='#e5dec5';g.fillRect(-2,0,2,1); // roundel
-      g.fillStyle='#263c43';g.fillRect(13,-4,1,9);
-      g.fillStyle='#c2d7d7';g.fillRect(14,-3,1,7); // propeller disc
-      g.fillStyle='#f5d198';g.fillRect(12,0,3,1); // spinner
-    }else if(p.type==='heavy'){
-      // Broad heavy fighter, belly nacelle, angular wing and twin gun barrels.
-      poly(g,[[-15,-1],[-13,-6],[-10,-6],[-10,-3],[-6,-4],
-        [6,-4],[12,-2],[16,-1],[16,2],[7,3],[-13,3]],ink);
-      poly(g,[[-14,-2],[-12,-4],[-9,-3],[-6,-3],[8,-3],
-        [14,-1],[14,1],[5,2],[-12,1]],body);
-      poly(g,[[-7,-2],[-4,-7],[2,-8],[6,-3],[5,5],
-        [-2,6],[-6,3]],ink);
-      poly(g,[[-5,-2],[-2,-6],[2,-6],[4,-3],[4,4],[-1,4],[-5,2]],d.shade);
-      g.fillStyle='#9bb8b4';g.fillRect(5,-3,4,2);
-      g.fillStyle='#d4c29d';g.fillRect(-2,1,3,2);
-      g.fillStyle='#6f403e';g.fillRect(-11,0,2,1);
-      g.fillStyle=ink;g.fillRect(14,-3,5,1);g.fillRect(14,2,5,1); // cannons
-      g.fillStyle='#d1c8a3';g.fillRect(17,-4,1,8); // prop
-      g.fillStyle='#f6db95';g.fillRect(16,-1,3,2);
-    }else{
-      // Chunky twin-engined bomber, with long fuselage, twin props and large tail.
-      poly(g,[[-18,-1],[-17,-6],[-14,-7],[-13,-3],
-        [-7,-4],[9,-4],[16,-2],[19,0],[18,3],[-14,4]],ink);
-      poly(g,[[-17,-2],[-15,-5],[-13,-2],[-7,-3],
-        [9,-3],[16,-1],[18,1],[15,2],[-14,2]],body);
-      poly(g,[[-7,-3],[-4,-7],[6,-7],[10,-3],[11,5],
-        [4,7],[-7,5]],ink);
-      poly(g,[[-5,-2],[-2,-6],[5,-6],[9,-2],[9,4],
-        [3,5],[-5,3]],d.shade);
-      // Two engine nacelles and their pixel props (not over-sized turbines).
-      g.fillStyle='#35434a';g.fillRect(-2,-7,6,3);g.fillRect(-2,5,6,3);
-      g.fillStyle='#c9b38c';g.fillRect(4,-9,1,6);g.fillRect(4,4,1,6);
-      g.fillStyle='#e5d69f';g.fillRect(3,-7,2,2);g.fillRect(3,6,2,2);
-      g.fillStyle='#89aeb9';g.fillRect(9,-3,5,2); // glazed nose
-      g.fillStyle='#d8cda4';g.fillRect(-14,-1,3,1);
-      g.fillStyle='#4c655b';g.fillRect(-7,0,9,1);
+    if(sprite){
+      const dw=sprite.width,dh=sprite.height;
+      g.drawImage(sprite,-Math.round(dw/2),-Math.round(dh/2));
+      if(p.hitFlash>0){g.globalAlpha=.5;g.fillStyle='#fff1d1';g.fillRect(-dw/2,-1,dw,2);g.globalAlpha=1;}
+      if(p.parts.nose<45){g.fillStyle='#333b3e';g.fillRect(Math.round(dw*.25),-2,2,2);}
+      if(p.parts.left<40){g.fillStyle='#2e373c';g.fillRect(-2,-Math.round(dh/2),2,2);}
+      if(p.parts.right<40){g.fillStyle='#2e373c';g.fillRect(-2,Math.round(dh/2)-2,2,2);}
     }
-    if(p.parts.left<40||p.parts.right<40){
-      g.fillStyle='#262f35';
-      g.fillRect(-2,p.parts.left<p.parts.right?-5:3,4,2);
-    }
-    if(p.boost>0){
-      g.fillStyle='#ffe7a8';g.fillRect(-d.radius-4,-2,4,3);
-      g.fillStyle='#ee9554';g.fillRect(-d.radius-7,-1,3,1);
-    }
+    if(p.boost>0){g.fillStyle='#f9c783';g.fillRect(-13,-1,4,2);}
     g.restore();
-    // High-contrast tags are much easier to track when aircraft overlap.
-    g.fillStyle='#243747';g.fillRect(x-9,y-d.radius-11,18,8);
-    g.fillStyle=p.id===0?'#ffebae':'#f6a1a0';
-    g.font='bold 6px monospace';g.textAlign='center';
-    g.fillText(p.id===0?'YOU':'CPU',x,y-d.radius-10);
-    g.textAlign='left';
+    g.fillStyle='#253743c9';g.fillRect(x-8,y-13,16,6);
+    g.fillStyle=p.id===0?'#ffe4a0':'#f5a1a4';
+    g.font='bold 5px monospace';g.textAlign='center';
+    g.fillText(p.id===0?'P1':'AI',x,y-13);g.textAlign='left';
   }
   function bar(x,y,w,value,max,color){
     g.fillStyle='#243946';g.fillRect(x,y,w,4);
@@ -647,7 +595,7 @@
     if(!rect.width||!rect.height)return;
     // The original logical height remains 180; extra-wide screens show
     // more horizontal sky so 4-player combat will eventually fit naturally.
-    const nextW=clamp(Math.round(H*rect.width/rect.height),320,560);
+    const nextW=clamp(Math.round(H*rect.width/rect.height),480,650);
     if(nextW===W&&canvas.width===W)return;
     const old=W;
     W=nextW;
