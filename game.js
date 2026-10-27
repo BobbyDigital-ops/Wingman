@@ -9,9 +9,9 @@
   g.imageSmoothingEnabled=false;
 
   const PLANES={
-    fighter:{name:'SPITFIRE',speed:93,turn:3.35,hull:110,radius:5.5,burst:9,interval:.075,cooldown:1.85,damage:8,bulletSpeed:182,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'BREAK'},
+    fighter:{name:'SPITFIRE',speed:96,turn:3.5,hull:110,radius:5.5,burst:10,interval:.07,cooldown:1.65,damage:10,bulletSpeed:190,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'SWOOP'},
     heavy:{name:'HEAVY FIGHTER',speed:72,turn:1.55,hull:160,radius:8,burst:3,interval:.19,cooldown:2.8,damage:29,bulletSpeed:177,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
-    bomber:{name:'BOMBER',speed:60,turn:1.05,hull:205,radius:9,burst:2,interval:.28,cooldown:3.0,damage:11,bulletSpeed:87,specialCd:12,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'BOMBS'}
+    bomber:{name:'BOMBER',speed:60,turn:1.05,hull:205,radius:9,burst:2,interval:.30,cooldown:3.2,damage:8,bulletSpeed:85,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'}
   };
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
@@ -59,7 +59,8 @@
       parts:{engine:100,nose:100,body:100,left:100,right:100},
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boost:0,
       spawnSafe:1.0,smokeTimer:0,hitFlash:0,alive:true,aiThink:0,
-      energy:85,rollTime:0,rollRecovery:0,stallTime:0,wallGrace:0,armourTime:0};
+      energy:85,rollTime:0,rollRecovery:0,stallTime:0,wallGrace:0,armourTime:0,bombCooldown:0,climbAssist:0,
+      swoopTime:0,swoopDir:1,swoopPeak:40,swoopAimX:0,swoopAimY:0};
   }
   function newRound(){
     state.fliers=[
@@ -108,25 +109,35 @@
     if(!p||!p.alive||p.specialCooldown>0||state.phase!=='playing'||state.paused)return;
     p.specialCooldown=p.d.specialCd;
     if(p.type==='fighter'){
-      // A defensive break turn: instantly redirect, but sacrifice airspeed and energy.
-      p.angle+=Math.PI*.84;
-      if(p.angle>Math.PI)p.angle-=TAU;
-      p.energy=Math.max(10,p.energy-24);
-      p.speed*=.63;
-      p.vx*=.53;p.vy*=.53;
-      emit(p.x,p.y,8,'#ffe4a2',18);
+      // A committed climb-and-dive high yo-yo, not a teleported 180-degree turn.
+      // Capture the projected tail position now; timing determines whether it works.
+      const enemy=state.fliers[1-p.id];
+      p.swoopTime=1.3;
+      p.swoopDir=Math.cos(p.angle)<0?-1:1;
+      p.swoopPeak=Math.max(37,p.y-36);
+      p.swoopAimX=enemy?enemy.x+enemy.vx*.32-Math.cos(enemy.angle)*24:p.x+p.swoopDir*35;
+      p.swoopAimY=enemy?enemy.y+enemy.vy*.32-Math.sin(enemy.angle)*20:p.y;
+      p.energy=Math.max(12,p.energy-12);
+      emit(p.x,p.y,7,'#d8e9d4',12);
     }else if(p.type==='heavy'){
       p.armourTime=10;
       emit(p.x,p.y,5,'#a9dced',10);
     }else{
-      // Bombs inherit aircraft horizontal momentum and fall under gravity.
-      // Delayed stagger preserves the value of being above the target.
-      for(let i=0;i<3;i++){
-        state.bombs.push({x:p.x-Math.cos(p.angle)*(i*4),
-          y:p.y+7,vx:p.vx*.65-i*4,vy:p.vy*.15+9-i*2,
-          owner:p.id,life:4,delay:i*.17});
-      }
+      // The bomber's unique skill is a sustained powered climb, not bomb release.
+      p.climbAssist=1.25;
+      p.energy=Math.min(100,p.energy+25);
+      emit(p.x,p.y,6,'#e4d9b7',12);
     }
+    sound('special');
+  }
+  function triggerBomb(p){
+    // Bombing is an independent bomber weapon, available between climb assists.
+    if(!p||p.type!=='bomber'||!p.alive||state.phase!=='playing'||
+      state.paused||p.bombCooldown>0||p.rollTime>0)return;
+    p.bombCooldown=2.5;
+    state.bombs.push({x:p.x+p.vx*.035,y:p.y+7,
+      vx:p.vx*.58,vy:Math.max(8,p.vy*.16+10),
+      owner:p.id,life:4,delay:0});
     sound('special');
   }
   function shoot(p){
@@ -181,7 +192,19 @@
     const wing=steer<0?p.parts.left:p.parts.right;
     const authority=.42+.58*wing/100;
     const sluggish=p.stallTime>0?.57:1;
-    p.angle+=steer*p.d.turn*authority*sluggish*dt;
+    if(p.swoopTime>0){
+      const progress=1-p.swoopTime/1.3;
+      const goal=progress<.36?Math.atan2(-48,p.swoopDir*22):
+        progress<.65?Math.atan2(p.swoopPeak-p.y,p.swoopAimX-p.x):
+        Math.atan2(p.swoopAimY-p.y,p.swoopAimX-p.x);
+      p.angle+=clamp(angleDiff(goal,p.angle),-dt*5.0,dt*5.0);
+    }else if(p.climbAssist>0){
+      const direction=Math.cos(p.angle)<0?-1:1;
+      const climbHeading=Math.atan2(-43,direction*20);
+      p.angle+=clamp(angleDiff(climbHeading,p.angle),-dt*2.9,dt*2.9);
+    }else{
+      p.angle+=steer*p.d.turn*authority*sluggish*dt;
+    }
     if(p.angle>Math.PI)p.angle-=TAU;
     if(p.angle< -Math.PI)p.angle+=TAU;
     const engine=.52+.48*p.parts.engine/100;
@@ -190,7 +213,8 @@
     const dive=Math.max(0,Math.sin(p.angle));
     p.energy=clamp(p.energy+dt*(24*dive-27*climb+6*(1-climb)),0,100);
     const energyFactor=.75+.25*(p.energy/100);
-    const wanted=p.d.speed*engine*energyFactor*(1+Math.min(.32,dive*.25));
+    const wanted=p.d.speed*engine*energyFactor*(1+Math.min(.32,dive*.25))*
+      (p.swoopTime>0?1.14:1)*(p.climbAssist>0?1.25:1);
     p.stallTime=p.energy<9?Math.max(p.stallTime,.2):Math.max(0,p.stallTime-dt);
     // Low energy lowers turn authority and speed, but never disables steering.
     const speedTarget=p.stallTime>0?wanted*.68:wanted;
@@ -263,6 +287,9 @@
     p.hitFlash=Math.max(0,p.hitFlash-dt);
     p.specialCooldown=Math.max(0,p.specialCooldown-dt);
     p.armourTime=Math.max(0,p.armourTime-dt);
+    p.swoopTime=Math.max(0,p.swoopTime-dt);
+    p.climbAssist=Math.max(0,p.climbAssist-dt);
+    p.bombCooldown=Math.max(0,p.bombCooldown-dt);
     p.boost=Math.max(0,p.boost-dt);
     p.rollTime=Math.max(0,p.rollTime-dt);
     p.rollRecovery=Math.max(0,p.rollRecovery-dt);
@@ -335,11 +362,21 @@
       updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0));
       updatePlane(enemy,dt,aiInput(enemy,user));
       projectiles(dt);
-      state.impactLock=Math.max(0,state.impactLock-dt);
-      if(user.alive&&enemy.alive&&distance(user,enemy)<user.d.radius+enemy.d.radius-3&&state.impactLock<=0){
-        const hx=(user.x+enemy.x)/2,hy=(user.y+enemy.y)/2;
-        hit(user,21,hx,hy);hit(enemy,21,hx,hy);
-        state.impactLock=.75;
+      // Airframes cannot hurt one another. Separate overlaps without HP or
+      // component damage; bombers must win through bombing, not ramming.
+      if(user.alive&&enemy.alive){
+        const dx=enemy.x-user.x,dy=enemy.y-user.y;
+        const gap=user.d.radius+enemy.d.radius-2;
+        const dist=Math.hypot(dx,dy);
+        if(dist<gap){
+          const nx=dist>.001?dx/dist:Math.cos(user.angle);
+          const ny=dist>.001?dy/dist:Math.sin(user.angle);
+          const push=(gap-dist)*.5;
+          user.x=clamp(user.x-nx*push,12,W-12);
+          user.y=clamp(user.y-ny*push,34,H-12);
+          enemy.x=clamp(enemy.x+nx*push,12,W-12);
+          enemy.y=clamp(enemy.y+ny*push,34,H-12);
+        }
       }
       if(state.time<=0){
         const a=user.health/user.d.hull,b=enemy.health/enemy.d.hull;
@@ -480,8 +517,9 @@
     if(p.rollTime>0){g.scale(1,Math.max(.24,Math.abs(Math.cos(p.rollTime*22))));}
     if(sprite){
       // Detailed source sprites are sampled down to preserve the existing game scale.
-      const dw=25,dh=13;
-      g.drawImage(sprite,-Math.round(dw/2),-Math.round(dh/2),dw,dh);
+      const dw=sprite.width,dh=sprite.height;
+      // One sprite pixel equals one world pixel: no downscaling or blurry samples.
+      g.drawImage(sprite,-Math.floor(dw/2),-Math.floor(dh/2));
       if(p.hitFlash>0){g.globalAlpha=.5;g.fillStyle='#fff1d1';g.fillRect(-dw/2,-1,dw,2);g.globalAlpha=1;}
       if(p.parts.nose<45){g.fillStyle='#333b3e';g.fillRect(Math.round(dw*.25),-2,2,2);}
       if(p.parts.left<40){g.fillStyle='#2e373c';g.fillRect(-2,-Math.round(dh/2),2,2);}
