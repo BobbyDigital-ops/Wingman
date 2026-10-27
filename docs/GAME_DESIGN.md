@@ -116,3 +116,33 @@ damage silhouette is a future feature.
 - Future work: verify sprite loading on-device, refine propeller animation,
   remove hard-boundary reversal exploits, improve altitude/energy handling,
   terrain collisions, and artwork.
+
+
+## Phase 2 — Flight, manoeuvres and class skills (October 2026)
+
+Implemented arcade flight-energy reserve (0–100). Sustained climbs drain energy,
+dives restore it; near-zero energy reduces speed and turning authority. Aircraft
+still have continuous forward movement. Arena boundaries use an inward corrective
+turn instead of a hard instant reflection. These are intentionally arcade
+approximations, not a full aerodynamic model.
+
+**All aircraft have a standard barrel roll:** a briefly invulnerable-to-bullets
+defensive manoeuvre. During the roll, regular gun bursts cannot be initiated.
+It does not protect against bombs, mines or collisions. A recovery period follows.
+Touch: ROLL button. Keyboard: L. This is NOT the plane's special skill.
+
+**Distinct weapons:**
+- Spitfire: 10 small rounds, damage 6 each, 0.075s apart, 2.0s cooldown.
+- Heavy fighter: 3 cannon rounds, damage 22 each, 0.19s apart, 2.8s cooldown.
+- Bomber: 4 defensive rounds, damage 9 each, 0.17s apart, 2.4s cooldown.
+
+**Class skills:**
+- Spitfire: Break Turn, fast near reversal with energy / speed penalty, 8s cooldown.
+- Heavy fighter: reinforced armour for 10s; damage reduced by 60%, 20s cooldown.
+- Bomber: bombing run launches three staggered gravity bombs, 12s cooldown.
+
+AI uses the same guns, rolls and class skills under basic contextual rules.
+The next development focus is real-world Android playtesting: tune energy,
+stalls, edge manoeuvring, HUD legibility, and AI tactics (including avoiding
+the repetitive chase-circle pattern). Damage-awarded powerups are **not**
+implemented; their balance must be assessed separately.
