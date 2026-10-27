@@ -308,49 +308,119 @@
     for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);
     ctx.closePath();ctx.fill();
   }
+  // Cached, deterministic low-resolution 16-bit inspired alpine landscape.
+  // There are no image downloads and no per-frame scenery allocations.
   function makeBackground(){
     const c=document.createElement('canvas');c.width=W;c.height=H;
     const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
-    ctx.fillStyle='#96c6de';ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#a9d2e2';ctx.fillRect(0,34,W,27);
-    ctx.fillStyle='#b6d6df';ctx.fillRect(0,61,W,45);
-    // Clouds use chunky horizontal pixel blocks.
-    function cloud(x,y){
-      ctx.fillStyle='#e8ecdd';ctx.fillRect(x+5,y,26,4);ctx.fillRect(x,y+4,40,5);
-      ctx.fillRect(x+9,y-4,12,4);ctx.fillRect(x+14,y+9,27,3);
-      ctx.fillStyle='#c9d9d9';ctx.fillRect(x+6,y+10,30,2);
+    // A few solid sky bands, rather than an expensive per-frame gradient.
+    const skies=['#6fa9cf','#80b6d4','#92c3d9','#a9d0da','#bfd9d8'];
+    skies.forEach((v,i)=>{ctx.fillStyle=v;ctx.fillRect(0,30+i*18,W,19);});
+    ctx.fillStyle='#c3d9d5';ctx.fillRect(0,120,W,60);
+    let seed=1337;
+    const rnd=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+    function rect(x,y,w,h,color){
+      ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));
     }
-    cloud(24,47);cloud(153,38);cloud(263,55);
-    poly(ctx,[[0,116],[29,76],[47,96],[74,61],[104,116]],'#9bbed1');
-    poly(ctx,[[74,118],[116,73],[146,104],[173,65],[221,116]],'#94b1c4');
-    poly(ctx,[[175,123],[229,66],[256,96],[282,77],[320,120]],'#a5bac9');
-    poly(ctx,[[20,89],[29,76],[37,91],[32,87],[28,91]],'#f0ecdd');
-    poly(ctx,[[65,74],[74,61],[85,79],[76,74],[73,78]],'#e8e8dc');
-    poly(ctx,[[220,76],[229,66],[240,80],[230,75],[227,79]],'#eee9db');
-    // Middle distance ridges and snow.
-    poly(ctx,[[0,128],[38,106],[64,121],[93,100],[125,131],[160,106],[200,127],[244,102],[282,125],[320,107],[320,180],[0,180]],'#6f9b9e');
-    poly(ctx,[[0,141],[30,125],[64,138],[96,124],[140,146],[177,127],[209,139],[249,118],[288,137],[320,128],[320,180],[0,180]],'#4d7d7c');
-    ctx.fillStyle='#487f90';ctx.fillRect(0,155,W,25);
-    ctx.fillStyle='#7cabb1';for(let y=158;y<180;y+=5){
-      for(let x=(y*7)%31;x<W;x+=31)ctx.fillRect(x,y,15,1);
+    function chunkCloud(x,y,scale){
+      ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.scale(scale,scale);
+      rect(3,3,24,7,'#d5e4dd');rect(7,0,12,6,'#eceddc');
+      rect(11,-3,12,5,'#f3f0dd');rect(22,2,12,5,'#eeeedd');
+      rect(0,6,36,4,'#eff0de');rect(5,10,28,3,'#c2d5d9');
+      rect(12,13,16,2,'#a9cbd5');
+      ctx.restore();
     }
-    // Silhouettes: a ruined fortress and tiny pine trees.
-    ctx.fillStyle='#375f5d';ctx.fillRect(238,125,33,13);
-    ctx.fillRect(241,119,9,8);ctx.fillRect(257,116,9,11);
-    ctx.fillRect(241,115,3,3);ctx.fillRect(247,115,3,3);
-    ctx.fillRect(257,112,3,4);ctx.fillRect(263,112,3,4);
-    ctx.fillStyle='#284b52';ctx.fillRect(252,130,5,8);
-    ctx.fillStyle='#365e59';
-    for(const x of [12,18,26,43,52,72,91,113,143,170,190,220,284,300,312]){
-      const y=143+(x*13)%11,h=9+(x*7)%9;
-      poly(ctx,[[x,y-h],[x-4,y-2],[x-2,y-2],[x-6,y+2],[x+6,y+2],[x+2,y-2],[x+4,y-2]],'#305e58');
-      ctx.fillRect(x-1,y,2,5);
+    chunkCloud(W*.09,44,1);chunkCloud(W*.38,59,.75);
+    chunkCloud(W*.68,42,1.1);chunkCloud(W*.91,56,.7);
+    // Mountain faces with sharp, distinct light and dark slopes and snow.
+    function peak(cx,yTop,spread,base,colors){
+      const l=cx-spread,r=cx+spread;
+      poly(ctx,[[l,base],[cx,yTop],[r,base]],colors[0]);
+      poly(ctx,[[cx,yTop],[cx+spread*.18,yTop+spread*.23],[r,base],[cx+spread*.16,base]],colors[1]);
+      poly(ctx,[[cx,yTop],[cx-spread*.25,yTop+spread*.36],[cx-spread*.46,yTop+spread*.58],
+        [cx-spread*.18,yTop+spread*.49],[cx,yTop+spread*.35],
+        [cx+spread*.18,yTop+spread*.56],[cx+spread*.3,yTop+spread*.45]],colors[2]);
+      poly(ctx,[[cx,yTop+spread*.34],[cx-spread*.13,yTop+spread*.61],
+        [cx-spread*.25,yTop+spread*.85],[cx-spread*.13,yTop+spread*.71],
+        [cx+spread*.05,yTop+spread*.9],[cx+spread*.2,yTop+spread*.69]],colors[3]);
+      // Pixel-textured stone scatter clipped to the mountain.
+      ctx.save();
+      ctx.beginPath();ctx.moveTo(l,base);ctx.lineTo(cx,yTop);ctx.lineTo(r,base);ctx.closePath();ctx.clip();
+      for(let i=0;i<Math.floor(spread*4);i++){
+        const x=Math.floor(l+rnd()*spread*2),y=Math.floor(yTop+rnd()*(base-yTop));
+        rect(x,y,rnd()>.75?2:1,1,colors[rnd()>.5?1:0]);
+      }
+      ctx.restore();
     }
-    ctx.fillStyle='#345b5a';ctx.fillRect(0,164,W,16);
-    ctx.fillStyle='#426c64';for(let x=0;x<W;x+=11)ctx.fillRect(x,162+(x%3),7,3);
+    const far=['#8daec3','#7197b4','#e5e8dc','#b9d4db'];
+    const mid=['#729bad','#5c829b','#e6eadf','#b0cad1'];
+    for(let x=-35,i=0;x<W+65;x+=59,i++){
+      peak(x+19,66+(i*17)%23,49,127,far);
+    }
+    for(let x=-58,i=0;x<W+65;x+=91,i++){
+      peak(x+41,80+(i*13)%22,63,145,mid);
+    }
+    // Lower ravine, slopes and a distant stone bridge across the lake.
+    poly(ctx,[[0,147],[27,132],[55,144],[86,126],[121,148],[155,136],
+      [188,149],[222,128],[257,147],[W,132],[W,180],[0,180]],'#658f8e');
+    poly(ctx,[[0,159],[35,146],[73,155],[103,141],[143,159],[187,145],
+      [219,158],[270,139],[W,154],[W,180],[0,180]],'#4c7474');
+    // Lake glint: horizontally banded to avoid shader/per-pixel work.
+    rect(0,158,W,22,'#568698');
+    rect(0,163,W,17,'#47788a');
+    for(let y=160;y<179;y+=3)
+      for(let x=(y*13)%23;x<W;x+=20+Math.floor(rnd()*16))
+        rect(x,y,4+Math.floor(rnd()*11),1,y%2?'#729eaa':'#93b5b4');
+    // Tiny distant bridge with arches and buttresses.
+    const bridgeStart=W*.49,bridgeY=150,bridgeLength=W*.27;
+    rect(bridgeStart,bridgeY,bridgeLength,3,'#657e81');
+    rect(bridgeStart,bridgeY-2,bridgeLength,1,'#a9ada6');
+    for(let j=0;j<5;j++){
+      const x=bridgeStart+j*bridgeLength/5;
+      rect(x,bridgeY+3,3,11,'#738c86');
+      rect(x+1,bridgeY+3,1,8,'#4d777d');
+    }
+    // Fortress and evergreen ridge on the left, discreet watchtower on right.
+    function tower(x,y,w,h,roof){
+      rect(x,y-h,w,h,'#647b7c');rect(x+2,y-h+3,w-5,h-4,'#81928a');
+      for(let k=0;k<w;k+=5)rect(x+k,y-h-4,3,4,'#5a7278');
+      if(roof){
+        poly(ctx,[[x-2,y-h-5],[x+w/2,y-h-13],[x+w+2,y-h-5]],'#955f58');
+        rect(x-2,y-h-5,w+4,2,'#775451');
+      }
+      for(let k=0;k<2;k++)rect(x+4+k*9,y-h+7,2,5,'#324d5c');
+      rect(x+w/2-2,y-9,4,9,'#3e5965');
+    }
+    // Cliffs are behind the aircraft and never block direct input.
+    poly(ctx,[[0,135],[12,137],[24,148],[53,147],[67,164],[62,180],[0,180]],'#657274');
+    poly(ctx,[[0,145],[9,144],[19,159],[31,165],[31,180],[0,180]],'#445f69');
+    poly(ctx,[[W-42,165],[W-27,147],[W-11,151],[W,141],[W,180],[W-48,180]],'#6b7b78');
+    rect(0,143,38,2,'#d7d9d0');rect(W-27,149,27,2,'#d7d9d0');
+    tower(6,141,14,25,true);tower(23,141,10,18,false);
+    rect(0,141,39,5,'#516f70');
+    for(let k=0;k<37;k+=5)rect(k,137,3,4,'#516f70');
+    tower(W-25,145,13,24,true);
+    // Sparse spruce trees with two-shade pixel foliage.
+    function tree(x,y,size){
+      rect(x-1,y-3,2,6,'#3b5552');
+      poly(ctx,[[x,y-size],[x-size*.29,y-size*.27],[x-size*.15,y-size*.27],
+        [x-size*.4,y],[x+size*.4,y],[x+size*.15,y-size*.27],
+        [x+size*.29,y-size*.27]],'#315d5c');
+      rect(x-2,y-size*.55,2,4,'#498073');
+    }
+    for(let x=3;x<W;x+=8+rnd()*12){
+      const yy=144+rnd()*18;
+      if((x<40&&yy<146)||(x>W-29&&yy<147))continue;
+      tree(x,yy,7+rnd()*8);
+    }
+    // Quiet foreground flecks, kept low to preserve gameplay contrast.
+    for(let i=0;i<W*.85;i++){
+      const x=rnd()*W,y=162+rnd()*18;
+      rect(x,y,rnd()>.65?2:1,1,rnd()>.5?'#7eaaa5':'#436a74');
+    }
     return c;
   }
-  const background=makeBackground();
+  let background=makeBackground();
   function aircraft(p){
     const d=p.d;
     const x=Math.round(p.x),y=Math.round(p.y);
