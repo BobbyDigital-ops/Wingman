@@ -65,3 +65,11 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
   .control-cluster.attack{gap:clamp(5px,1.1vw,11px)}
   .control-cluster.attack .control-btn{width:clamp(40px,8dvh,65px);height:clamp(40px,8dvh,65px)}
 }
+
+/* Bomber has an independent bomb release; other classes keep three actions. */
+.control-btn.bomb{font-size:11px;background:#75553cb8;border-color:#efc68cae}
+.control-btn[hidden]{display:none!important}
+@media(pointer:coarse) and (orientation:landscape){
+  .control-cluster.attack{gap:clamp(3px,.75vw,8px)}
+  .control-cluster.attack .control-btn{width:clamp(39px,7.8dvh,62px);height:clamp(39px,7.8dvh,62px)}
+}
