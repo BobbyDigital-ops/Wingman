@@ -12,6 +12,7 @@ function launch(){
   });
   const el={};
   const canvas={width:320,height:180,getContext:()=>ctx};
+  const modelCanvas={width:320,height:180,getContext:()=>ctx};
   let viewport={width:320,height:180};
   el.frame={getBoundingClientRect:()=>viewport};
   for(const id of ['menu','result','result-title','result-detail','start',
@@ -26,7 +27,7 @@ function launch(){
   }));
   const document={
     hidden:false,
-    getElementById:id=>id==='game'?canvas:el[id],
+    getElementById:id=>id==='game'?canvas:id==='aircraft-layer'?modelCanvas:el[id],
     createElement:()=>({getContext:()=>ctx}),
     querySelectorAll:()=>choices,
     addEventListener:(type,cb)=>listeners.set('document:'+type,cb)
@@ -42,7 +43,7 @@ function launch(){
   vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
   vm.runInNewContext(instrumented,sandbox,{timeout:3000,filename:'game.js'});
   return {
-    listeners,canvas,internals:sandbox.window.__wingmanTest,
+    listeners,canvas,modelCanvas,internals:sandbox.window.__wingmanTest,
     setViewport:(width,height)=>{
       viewport={width,height};
       listeners.get('window:resize')?.();
@@ -163,4 +164,55 @@ test('Bomber climb does not release bombs, separate BOMB button does',()=>{
  game.listeners.get('bomb:pointerdown')({pointerId:3,preventDefault(){}});
  assert.equal(game.internals.state.bombs.length,1);
  assert.ok(bomber.bombCooldown>0);
+});
+
+
+test('Spitfire has effective guns while remaining controllable',()=>{
+ const game=launch();
+ game.listeners.get('start:click')();
+ const s=game.internals.state.fliers[0];
+ assert.equal(s.d.speed,83);
+ assert.equal(s.d.damage,15);
+ assert.equal(s.d.burst,10);
+ assert.ok(s.d.turn>3);
+});
+test('overlapping aircraft cannot inflict point-blank gun damage',()=>{
+ const game=launch();
+ game.listeners.get('start:click')();
+ const state=game.internals.state;
+ const [a,b]=state.fliers;
+ a.spawnSafe=0;b.spawnSafe=0;
+ a.x=b.x;a.y=b.y;a.vx=b.vx=0;a.vy=b.vy=0;
+ const health=a.health;
+ state.bullets.push({x:a.x,y:a.y,vx:0,vy:0,owner:1,
+   damage:100,life:1,age:0});
+ game.advance(3,1000);
+ assert.equal(a.health,health);
+});
+test('swoop is a continuous curved move rather than an instant heading flip',()=>{
+ const game=launch();
+ game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0];
+ const originalAngle=p.angle,originY=p.y;
+ game.internals.triggerSpecial(p);
+ assert.equal(p.angle,originalAngle);
+ let previous={x:p.x,y:p.y},highest=p.y;
+ for(let i=0;i<72;i++){
+   game.advance(1,2000+i*16.6667);
+   highest=Math.min(highest,p.y);
+   const step=Math.hypot(p.x-previous.x,p.y-previous.y);
+   assert.ok(step<9.5,'swoop should have no sudden position jumps');
+   previous={x:p.x,y:p.y};
+ }
+ assert.ok(highest<originY-5,'the aircraft should arc above its initial altitude');
+ assert.equal(p.swoop,null);
+});
+test('plane models have a dedicated display-sized rendering surface',()=>{
+ const game=launch();
+ assert.ok(game.modelCanvas.width>0);
+ game.setViewport(1350,490);
+ assert.equal(game.modelCanvas.width,1350);
+ assert.equal(game.modelCanvas.height,490);
+ game.listeners.get('start:click')();
+ game.advance(12,1000);
 });
