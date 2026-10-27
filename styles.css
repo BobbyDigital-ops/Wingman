@@ -73,3 +73,11 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
   .control-cluster.attack{gap:clamp(3px,.75vw,8px)}
   .control-cluster.attack .control-btn{width:clamp(39px,7.8dvh,62px);height:clamp(39px,7.8dvh,62px)}
 }
+
+/* High-resolution aircraft sit above the pixel-art scenery, below controls.
+ * Never inherit the nearest-neighbour canvas filter on this vector layer. */
+.game-frame>.aircraft-layer{
+ position:absolute;inset:0;display:block;width:100%;height:100%;z-index:2;
+ pointer-events:none;touch-action:none;
+ image-rendering:auto;object-fit:fill;
+}
