@@ -163,7 +163,7 @@
     const armourPenalty=1+(100-p.parts.body)/100*.25;
     p.health-=amount*armourPenalty*(p.armourTime>0?.4:1);
     p.hitFlash=.17;
-    emit(x,y,7,'#ffe0a0',27);sound('hit');
+    emit(x,y,p.type==='heavy'?11:7,'#ffe0a0',p.type==='heavy'?38:27);sound('hit');
     if(p.health<=0){
       p.health=0;p.alive=false;
       emit(p.x,p.y,28,'#ffc47e',75);
@@ -213,36 +213,48 @@
       p.vx*=.88;p.vy*=.88;
     }
   }
+  // Tactical AI: state changes prevent indefinite tail-chasing and combat orbits.
   function aiInput(p,target){
-    let goal;
-    // Fly toward the opponent's tail rather than simply aiming at the nose.
-    const tx=target.x-Math.cos(target.angle)*26+target.vx*.17;
-    const ty=target.y-Math.sin(target.angle)*26+target.vy*.17;
-    goal=Math.atan2(ty-p.y,tx-p.x);
-    if(p.x<43||p.x>W-43||p.y<45||p.y>145){
-      const centre=Math.atan2(92-p.y,W/2-p.x);
-      goal=centre;
-    }
-    for(const m of state.mines){
-      if(m.owner===p.id||m.arm>0)continue;
-      if(Math.hypot(m.x-p.x,m.y-p.y)<28){
-        goal=Math.atan2(p.y-m.y,p.x-m.x);break;
-      }
-    }
-    // Slight aiming imperfection keeps early AI beatable.
-    const error=angleDiff(goal,p.angle);
-    const turn=Math.abs(error)<.07?0:Math.sign(error);
+    p.aiThink=Math.max(0,p.aiThink-STEP);
     const range=distance(p,target);
-    const aim=angleDiff(Math.atan2(target.y-p.y,target.x-p.x),p.angle);
-    if(range<135&&Math.abs(aim)<.16&&p.gunCooldown<=0&&p.burstLeft===0)
+    const targetAngle=Math.atan2(target.y-p.y,target.x-p.x);
+    const facing=Math.abs(angleDiff(targetAngle,p.angle));
+    const enemyBehind=Math.abs(angleDiff(Math.atan2(p.y-target.y,p.x-target.x),target.angle))<.65;
+    if(p.aiThink<=0){
+      if(p.x<45||p.x>W-45||p.y<43||p.y>H-31) p.aiMode='recover';
+      else if(target.burstLeft>0&&range<95) p.aiMode='evade';
+      else if(enemyBehind&&range<80) p.aiMode='break';
+      else if(p.gunCooldown>0&&range<110) p.aiMode='extend';
+      else if(range>150) p.aiMode='intercept';
+      else p.aiMode='attack';
+      p.aiThink=.35+Math.random()*.22;
+    }
+    let tx=target.x+target.vx*.36,ty=target.y+target.vy*.36;
+    if(p.aiMode==='recover'){tx=W*.5;ty=H*.48;}
+    if(p.aiMode==='extend'){
+      tx=p.x+Math.cos(p.angle)*125;ty=p.y+Math.sin(p.angle)*85;
+      if(p.y>122)ty=55;
+    }
+    if(p.aiMode==='break'){tx=p.x+(p.x-target.x)*.9;ty=p.y<90?140:51;}
+    if(p.aiMode==='evade'){
+      const a=targetAngle+Math.PI*.65;tx=p.x+Math.cos(a)*85;ty=p.y+Math.sin(a)*55;
+      if(p.rollRecovery<=0&&range<75)triggerRoll(p);
+    }
+    if(p.aiMode==='intercept'){
+      tx=target.x+target.vx*.55;ty=target.y+target.vy*.55;
+      if(p.energy<38)ty=Math.max(70,ty);
+    }
+    tx=clamp(tx,32,W-32);ty=clamp(ty,48,H-31);
+    const goal=Math.atan2(ty-p.y,tx-p.x);
+    const error=angleDiff(goal,p.angle);
+    const turn=Math.abs(error)<.085?0:Math.sign(error);
+    if(p.aiMode==='attack'&&range<165&&facing<.18&&p.gunCooldown<=0&&p.burstLeft===0)
       triggerBurst(p);
     if(p.specialCooldown<=0){
-      if(p.type==='bomber'&&p.y<target.y-13&&Math.abs(p.x-target.x)<22)triggerSpecial(p);
-      if(p.type==='heavy'&&range<85&&p.health<p.d.hull*.7)
-        triggerSpecial(p);
-      if(p.type==='fighter'&&range<65&&Math.abs(error)>1.9)triggerSpecial(p);
+      if(p.type==='bomber'&&p.y<target.y-15&&Math.abs(p.x-target.x)<28)triggerSpecial(p);
+      if(p.type==='heavy'&&range<100&&(p.health<p.d.hull*.7||target.burstLeft>0))triggerSpecial(p);
+      if(p.type==='fighter'&&p.aiMode==='break'&&range<70)triggerSpecial(p);
     }
-    if(range<75&&target.burstLeft>0&&p.rollTime<=0&&p.rollRecovery<=0&&Math.abs(aim)>2)triggerRoll(p);
     return turn;
   }
   function updatePlane(p,dt,steer){
@@ -462,7 +474,8 @@
   // more plausible than cartoon rockets, but every colour remains pixel art.
   function aircraft(p){
     const x=Math.round(p.x),y=Math.round(p.y);
-    const sprite=aircraftSprites[p.type];
+    const set=aircraftSprites[p.type];
+    const sprite=set?.[(p.health<p.d.hull*.38)?'damaged':Math.sin(p.angle)<-.3?'climb':Math.sin(p.angle)>.3?'dive':'level'];
     g.save();g.translate(x,y);g.rotate(p.angle);
     if(p.rollTime>0){g.scale(1,Math.max(.24,Math.abs(Math.cos(p.rollTime*22))));}
     if(sprite){
@@ -539,8 +552,9 @@
       g.fillStyle='#e8ba80';g.fillRect(Math.round(b.x)+1,Math.round(b.y),1,1);
     }
     for(const b of state.bullets){
-      g.fillStyle='#354657';g.fillRect(Math.round(b.x)-1,Math.round(b.y)-1,4,3);
-      g.fillStyle='#ffe18e';g.fillRect(Math.round(b.x),Math.round(b.y),3,1);
+      const heavy=state.fliers[b.owner]?.type==='heavy';
+      g.fillStyle=heavy?'#653e33':'#574c43';g.fillRect(Math.round(b.x)-1,Math.round(b.y)-1,heavy?5:3,heavy?3:2);
+      g.fillStyle=heavy?'#ffd19b':'#fff1ac';g.fillRect(Math.round(b.x),Math.round(b.y),heavy?4:2,1);
     }
     for(const p of state.fliers)if(p.alive)aircraft(p);
     for(const p of state.sparks){
