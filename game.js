@@ -2,7 +2,7 @@
    Gameplay is separated from rendering so input can later be sourced from networking. */
 (() => {
   'use strict';
-  const W=320,H=180, STEP=1/60, TAU=Math.PI*2;
+  let W=320; const H=180, STEP=1/60, TAU=Math.PI*2;
   const canvas=document.getElementById('game');
   const g=canvas.getContext('2d',{alpha:false});
   g.imageSmoothingEnabled=false;
@@ -61,8 +61,8 @@
   }
   function newRound(){
     state.fliers=[
-      plane(state.selected,0,68,90,-.14),
-      plane(state.enemyType,1,254,88,Math.PI+.15)
+      plane(state.selected,0,W*.23,82,-.14),
+      plane(state.enemyType,1,W*.77,89,Math.PI+.15)
     ];
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.time=90;state.impactLock=0;state.phase='playing';state.paused=false;
@@ -173,7 +173,7 @@
     p.x+=p.vx*dt;p.y+=p.vy*dt;
     // Prototype arena: reflect at the edges. Later we can tune soft boundaries.
     if(p.x<11){p.x=11;p.vx=Math.abs(p.vx)*.65;p.angle=Math.PI-p.angle;}
-    if(p.x>309){p.x=309;p.vx=-Math.abs(p.vx)*.65;p.angle=Math.PI-p.angle;}
+    if(p.x>W-11){p.x=W-11;p.vx=-Math.abs(p.vx)*.65;p.angle=Math.PI-p.angle;}
     if(p.y<32){p.y=32;p.vy=Math.abs(p.vy)*.65;p.angle=-p.angle;}
     if(p.y>162){
       p.y=162;p.vy=-Math.abs(p.vy)*.7;p.angle=-p.angle;
@@ -186,8 +186,8 @@
     const tx=target.x-Math.cos(target.angle)*26+target.vx*.17;
     const ty=target.y-Math.sin(target.angle)*26+target.vy*.17;
     goal=Math.atan2(ty-p.y,tx-p.x);
-    if(p.x<43||p.x>277||p.y<45||p.y>145){
-      const centre=Math.atan2(92-p.y,160-p.x);
+    if(p.x<43||p.x>W-43||p.y<45||p.y>145){
+      const centre=Math.atan2(92-p.y,W/2-p.x);
       goal=centre;
     }
     for(const m of state.mines){
@@ -249,7 +249,7 @@
       if(target&&target.alive&&distance(b,target)<target.d.radius+1){
         hit(target,b.damage,b.x,b.y);state.bullets.splice(i,1);continue;
       }
-      if(b.life<=0||b.x<0||b.x>W||b.y<29||b.y>170)state.bullets.splice(i,1);
+      if(b.life<=0||b.x<0||b.x>W||b.y<31||b.y>170)state.bullets.splice(i,1);
     }
     for(let i=state.bombs.length-1;i>=0;i--){
       const b=state.bombs[i];
@@ -396,7 +396,7 @@
   }
   function drawHud(){
     const p=state.fliers[0],e=state.fliers[1];
-    g.fillStyle='#182d3bdc';g.fillRect(0,0,W,30);
+    g.fillStyle='#182d3bdc';g.fillRect(0,0,W,31);
     g.font='bold 7px monospace';g.textBaseline='top';
     g.fillStyle='#f5e6c2';g.fillText(p?p.d.name:'WINGMAN',7,3);
     const en=e?e.d.name:'SELECT PLANE';
@@ -407,23 +407,23 @@
     g.fillText(Math.max(0,Math.ceil(state.time))+'s',W/2,15);g.textAlign='left';
     if(p&&e){
       bar(7,12,100,p.health,p.d.hull,'#78ba87');
-      bar(213,12,100,e.health,e.d.hull,'#d9776d');
+      bar(W-107,12,100,e.health,e.d.hull,'#d9776d');
       const gReady=p.burstLeft>0?'FIRING':p.gunCooldown>0?'RELOAD':'READY';
       g.fillStyle=p.gunCooldown>0?'#eabc7f':'#c5ead4';
       g.fillText('GUN '+gReady,7,19);
       const sc=p.specialCooldown>0?Math.ceil(p.specialCooldown)+'s':'READY';
       g.fillStyle='#f0d8a2';g.fillText(p.d.special+' '+sc,77,19);
-      g.fillStyle='#dce8e1';g.fillText('DAMAGE',214,19);
+      g.fillStyle='#dce8e1';g.fillText('DAMAGE',W-106,19);
       const zones=[['E','engine'],['N','nose'],['A','body'],['L','left'],['R','right']];
       for(let i=0;i<zones.length;i++){
         const health=p.parts[zones[i][1]];
-        const x=260+i*11;
+        const x=W-60+i*11;
         g.fillStyle=health>65?'#76b68a':health>30?'#e6b96c':'#e77267';
         g.fillRect(x,19,8,8);
         g.fillStyle='#192c35';g.font='bold 6px monospace';g.fillText(zones[i][0],x+1,20);
       }
     }
-    g.fillStyle='#37546a';g.fillRect(0,29,W,1);
+    g.fillStyle='#37546a';g.fillRect(0,30,W,1);
   }
   function draw(){
     g.drawImage(background,0,0);
@@ -449,15 +449,15 @@
     g.globalAlpha=1;
     drawHud();
     if(state.bannerTime>0){
-      g.fillStyle='#1d3043b9';g.fillRect(113,44,94,19);
-      g.strokeStyle='#c5a780';g.strokeRect(113.5,44.5,93,18);
+      g.fillStyle='#1d3043b9';g.fillRect(W/2-47,44,94,19);
+      g.strokeStyle='#c5a780';g.strokeRect(W/2-46.5,44.5,93,18);
       g.font='bold 9px monospace';g.textAlign='center';g.fillStyle='#ffdfaa';
-      g.fillText(state.banner,160,50);g.textAlign='left';
+      g.fillText(state.banner,W/2,50);g.textAlign='left';
     }
     if(state.paused&&state.phase==='playing'){
-      g.fillStyle='#172738bb';g.fillRect(96,75,128,29);
+      g.fillStyle='#172738bb';g.fillRect(W/2-64,75,128,29);
       g.fillStyle=palette.cream;g.font='bold 11px monospace';g.textAlign='center';
-      g.fillText('PAUSED',160,86);g.textAlign='left';
+      g.fillText('PAUSED',W/2,86);g.textAlign='left';
     }
   }
   function loop(now){
@@ -528,5 +528,29 @@
   ui.start.addEventListener('click',startMatch);
   ui.rematch.addEventListener('click',startMatch);
   ui.change.addEventListener('click',showMenu);
+  // Preserve pixel density rather than squashing a 16:9 picture on wide phones.
+  function resizeArena(){
+    const frame=document.getElementById('frame');
+    if(!frame)return;
+    const rect=frame.getBoundingClientRect();
+    if(!rect.width||!rect.height)return;
+    // The original logical height remains 180; extra-wide screens show
+    // more horizontal sky so 4-player combat will eventually fit naturally.
+    const nextW=clamp(Math.round(H*rect.width/rect.height),320,560);
+    if(nextW===W&&canvas.width===W)return;
+    const old=W;
+    W=nextW;
+    canvas.width=W;canvas.height=H;
+    g.imageSmoothingEnabled=false;
+    const factor=W/old;
+    for(const p of state.fliers)p.x*=factor;
+    for(const kind of [state.bullets,state.bombs,state.mines,state.sparks])
+      for(const p of kind)p.x*=factor;
+    background=makeBackground();
+  }
+  if(window.addEventListener)window.addEventListener('resize',resizeArena);
+  if(window.visualViewport?.addEventListener)
+    window.visualViewport.addEventListener('resize',resizeArena);
+  resizeArena();
   requestAnimationFrame(loop);
 })();
