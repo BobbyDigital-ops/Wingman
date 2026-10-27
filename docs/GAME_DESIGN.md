@@ -96,3 +96,23 @@ damage silhouette is a future feature.
 - Treat **burst/cooldown/flight handling** as protected design pillars.
 - Do not claim multiplayer is supported until network synchronisation is implemented.
 - Do not replace aircraft with photorealistic or high-poly assets.
+
+
+## v0.2 visual/scale direction — 27 October 2026
+- Aircraft sprites now live in \`src/art/aircraft.js\`, made from individually
+  defined pixel rows and rendered using a cached sprite canvas per class.
+- The actual render dimensions are small: fighter ~16×7, heavy ~19×9,
+  bomber ~20×10 pixels. All remain recognisable side profiles.
+- The game uses a **minimum 480 logical pixels wide**, expanding with the
+  mobile landscape screen aspect ratio up to 650, with a constant 180 height.
+  More horizontal arena area is shown; do not enlarge aircraft proportionally.
+- Spawns are at about 19% and 81% of world width; collision radii are now
+  6 / 8 / 9 for fighter / heavy fighter / bomber.
+- Scenery was reorganised for less dense mountain repetition, more open sky,
+  less intrusive valley slopes, and distant environmental objects.
+- Art is still a lightweight in-code pixel-art prototype and should be
+  compared critically against the original agreed visual mockup on a real
+  Android device before finalising colours or silhouettes.
+- Future work: verify sprite loading on-device, refine propeller animation,
+  remove hard-boundary reversal exploits, improve altitude/energy handling,
+  terrain collisions, and artwork.
