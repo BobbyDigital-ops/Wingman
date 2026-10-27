@@ -78,11 +78,13 @@
     state.enemyType=others[Math.floor(Math.random()*others.length)];
     state.scores=[0,0];state.round=1;
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
+    document.getElementById('bomb').hidden=state.selected!=='bomber';
     newRound();
   }
   function showMenu(){
     state.phase='menu';state.paused=false;controls.left=false;controls.right=false;
     ui.result.classList.add('hidden');ui.menu.classList.remove('hidden');
+    document.getElementById('bomb').hidden=true;
   }
   function endRound(winner){
     if(state.phase!=='playing')return;
@@ -268,14 +270,22 @@
       tx=target.x+target.vx*.55;ty=target.y+target.vy*.55;
       if(p.energy<38)ty=Math.max(70,ty);
     }
+    // Bombers seek the high ground and track crossing opportunities.
+    if(p.type==='bomber'&&p.aiMode!=='recover'){
+      tx=target.x+target.vx*.3;
+      ty=p.y>target.y-25?Math.max(43,target.y-48):Math.max(45,target.y-22);
+      if(p.y>target.y-16&&p.specialCooldown<=0&&p.climbAssist<=0)
+        triggerSpecial(p);
+      if(p.y<target.y-14&&Math.abs((p.x+p.vx*.15)-(target.x+target.vx*.15))<24)
+        triggerBomb(p);
+    }
     tx=clamp(tx,32,W-32);ty=clamp(ty,48,H-31);
     const goal=Math.atan2(ty-p.y,tx-p.x);
     const error=angleDiff(goal,p.angle);
     const turn=Math.abs(error)<.085?0:Math.sign(error);
-    if(p.aiMode==='attack'&&range<165&&facing<.18&&p.gunCooldown<=0&&p.burstLeft===0)
-      triggerBurst(p);
+    if(p.aiMode==='attack'&&range<165&&facing<.18&&p.gunCooldown<=0&&p.burstLeft===0&&
+      (p.type!=='bomber'||range<65&&Math.random()<.12))triggerBurst(p);
     if(p.specialCooldown<=0){
-      if(p.type==='bomber'&&p.y<target.y-15&&Math.abs(p.x-target.x)<28)triggerSpecial(p);
       if(p.type==='heavy'&&range<100&&(p.health<p.d.hull*.7||target.burstLeft>0))triggerSpecial(p);
       if(p.type==='fighter'&&p.aiMode==='break'&&range<70)triggerSpecial(p);
     }
@@ -565,6 +575,9 @@
       bar(123,27,48,p.energy,100,p.energy<20?'#db8369':'#9bbfd0');
       g.fillStyle=p.rollTime>0?'#f8e4a2':'#c0d9df';
       g.fillText(p.rollTime>0?'ROLLING':p.rollRecovery>0?'ROLL '+p.rollRecovery.toFixed(1):'ROLL READY',181,19);
+      if(p.type==='bomber'){
+        g.fillStyle='#ffd9a2';g.fillText(p.bombCooldown>0?'BOMB '+p.bombCooldown.toFixed(1):'BOMB READY',W*.50,27);
+      }
       g.fillStyle='#dce8e1';g.fillText('DAMAGE',W-106,19);
       const zones=[['E','engine'],['N','nose'],['A','body'],['L','left'],['R','right']];
       for(let i=0;i<zones.length;i++){
@@ -650,7 +663,8 @@
   bindButton('fire',null,()=>triggerBurst(state.fliers[0]));
   bindButton('special',null,()=>triggerSpecial(state.fliers[0]));
   bindButton('roll',null,()=>triggerRoll(state.fliers[0]));
-  const preventKeys=new Set(['ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyA','KeyD','KeyK','KeyL']);
+  bindButton('bomb',null,()=>triggerBomb(state.fliers[0]));
+  const preventKeys=new Set(['ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyA','KeyD','KeyK','KeyL','KeyB']);
   document.addEventListener('keydown',e=>{
     if(preventKeys.has(e.code))e.preventDefault();
     if(e.code==='KeyA'||e.code==='ArrowLeft')controls.left=true;
@@ -659,6 +673,7 @@
     if(e.code==='Space'){audioUnlock();triggerBurst(state.fliers[0]);}
     if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyK'){audioUnlock();triggerSpecial(state.fliers[0]);}
     if(e.code==='KeyL'){audioUnlock();triggerRoll(state.fliers[0]);}
+    if(e.code==='KeyB'){audioUnlock();triggerBomb(state.fliers[0]);}
     if(e.code==='KeyP'&&state.phase==='playing')state.paused=!state.paused;
   });
   document.addEventListener('keyup',e=>{
