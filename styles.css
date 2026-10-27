@@ -40,3 +40,21 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
 }
 @media(pointer:coarse){.control-btn{width:clamp(42px,8.5dvh,72px);height:clamp(42px,8.5dvh,72px)}}
 @media(orientation:portrait) and (max-width:700px){#rotate-hint{display:grid;position:absolute;inset:0;z-index:8;place-items:center;padding:20px;text-align:center;background:#132b3cf7;color:#f4dcab;font-size:14px;line-height:1.6}.game-frame{width:100%;max-height:none}}
+
+/* On phones the combat arena fills the usable landscape viewport. The
+   canvas changes its logical WIDTH in JS instead of stretching 16:9 pixels. */
+@media (pointer:coarse) and (orientation:landscape){
+  html,body{width:100%;height:100%;overflow:hidden}
+  .app{width:100vw;height:100dvh;min-height:0;padding:0;gap:0;justify-content:flex-start}
+  .site-header,.site-footer{display:none}
+  .game-frame{width:100vw;height:100dvh;max-height:none;aspect-ratio:auto;min-height:0;flex:none;border:0;box-shadow:none}
+  .control-layer{padding:0 max(15px,env(safe-area-inset-right)) max(11px,env(safe-area-inset-bottom)) max(15px,env(safe-area-inset-left))}
+  .control-btn{background:#172b3b84;border-color:#d3e1e7a6;box-shadow:0 2px 0 #172e3780}
+  .control-btn.fire{background:#a65b4dab}
+  .control-cluster{gap:12px}
+  .control-btn:active,.control-btn.pressed{background:#f0bd76d9}
+}
+/* Reduced motion helps users sensitive to extra interface transitions. */
+@media (prefers-reduced-motion:reduce){
+  .start-button:active{transform:none}
+}
