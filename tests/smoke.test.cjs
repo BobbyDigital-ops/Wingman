@@ -105,3 +105,15 @@ test('barrel roll inputs and energy-based flight remain stable',()=>{
  game.listeners.get('document:keydown')({code:'KeyL',repeat:false,preventDefault(){}});
  game.advance(300,4000);
 });
+
+test('transient mobile blur during FIRE does not pause the game',()=>{
+ const game=launch();
+ game.listeners.get('start:click')();
+ const e={pointerId:4,preventDefault(){}};
+ game.listeners.get('fire:pointerdown')(e);
+ game.listeners.get('window:blur')();
+ game.advance(80,1000);
+ // No explicit pause; restarting the game must not be required after a blur.
+ game.listeners.get('fire:pointerdown')(e);
+ game.advance(300,2500);
+});
