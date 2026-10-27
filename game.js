@@ -9,9 +9,9 @@
   g.imageSmoothingEnabled=false;
 
   const PLANES={
-    fighter:{name:'SPITFIRE',speed:62,turn:3.35,hull:110,radius:6,burst:6,interval:.085,cooldown:2.05,damage:12,bulletSpeed:165,specialCd:7.5,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'BOOST'},
-    heavy:{name:'HEAVY FIGHTER',speed:49,turn:2.35,hull:160,radius:8,burst:4,interval:.14,cooldown:2.55,damage:23,bulletSpeed:155,specialCd:8.5,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'MINE'},
-    bomber:{name:'BOMBER',speed:40,turn:1.73,hull:205,radius:9,burst:4,interval:.17,cooldown:2.7,damage:11,bulletSpeed:135,specialCd:5.6,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'BOMB'}
+    fighter:{name:'SPITFIRE',speed:62,turn:3.35,hull:110,radius:6,burst:10,interval:.075,cooldown:2.0,damage:6,bulletSpeed:165,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'BREAK'},
+    heavy:{name:'HEAVY FIGHTER',speed:49,turn:2.35,hull:160,radius:8,burst:3,interval:.19,cooldown:2.8,damage:22,bulletSpeed:155,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
+    bomber:{name:'BOMBER',speed:40,turn:1.73,hull:205,radius:9,burst:4,interval:.17,cooldown:2.4,damage:9,bulletSpeed:135,specialCd:12,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'BOMBS'}
   };
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
@@ -59,7 +59,7 @@
       parts:{engine:100,nose:100,body:100,left:100,right:100},
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boost:0,
       spawnSafe:1.0,smokeTimer:0,hitFlash:0,alive:true,aiThink:0,
-      energy:85,rollTime:0,rollRecovery:0,stallTime:0,wallGrace:0};
+      energy:85,rollTime:0,rollRecovery:0,stallTime:0,wallGrace:0,armourTime:0};
   }
   function newRound(){
     state.fliers=[
@@ -108,17 +108,26 @@
     if(!p||!p.alive||p.specialCooldown>0||state.phase!=='playing'||state.paused)return;
     p.specialCooldown=p.d.specialCd;
     if(p.type==='fighter'){
-      p.boost=1.2;sound('special');
-      emit(p.x-Math.cos(p.angle)*8,p.y-Math.sin(p.angle)*8,7,'#ffe4a2',18);
+      // A defensive break turn: instantly redirect, but sacrifice airspeed and energy.
+      p.angle+=Math.PI*.84;
+      if(p.angle>Math.PI)p.angle-=TAU;
+      p.energy=Math.max(10,p.energy-24);
+      p.speed*=.63;
+      p.vx*=.53;p.vy*=.53;
+      emit(p.x,p.y,8,'#ffe4a2',18);
     }else if(p.type==='heavy'){
-      state.mines.push({x:p.x-Math.cos(p.angle)*11,y:p.y-Math.sin(p.angle)*11,
-        owner:p.id,arm:.7,life:11,phase:random(0,TAU)});
-      sound('special');
+      p.armourTime=10;
+      emit(p.x,p.y,5,'#a9dced',10);
     }else{
-      state.bombs.push({x:p.x-Math.sin(p.angle)*4,y:p.y+7,
-        vx:p.vx*.55,vy:p.vy*.15+9,owner:p.id,life:3});
-      sound('special');
+      // Bombs inherit aircraft horizontal momentum and fall under gravity.
+      // Delayed stagger preserves the value of being above the target.
+      for(let i=0;i<3;i++){
+        state.bombs.push({x:p.x-Math.cos(p.angle)*(i*4),
+          y:p.y+7,vx:p.vx*.65-i*4,vy:p.vy*.15+9-i*2,
+          owner:p.id,life:4,delay:i*.17});
+      }
     }
+    sound('special');
   }
   function shoot(p){
     // Damaged nose/cowling makes precise bursts noticeably less accurate.
@@ -150,9 +159,9 @@
       else if(ly>p.d.radius*.35)zone='right';
       else zone='body';
     }
-    p.parts[zone]=Math.max(0,p.parts[zone]-amount*1.45);
+    p.parts[zone]=Math.max(0,p.parts[zone]-amount*1.45*(p.armourTime>0?.4:1));
     const armourPenalty=1+(100-p.parts.body)/100*.25;
-    p.health-=amount*armourPenalty;
+    p.health-=amount*armourPenalty*(p.armourTime>0?.4:1);
     p.hitFlash=.17;
     emit(x,y,7,'#ffe0a0',27);sound('hit');
     if(p.health<=0){
@@ -229,9 +238,9 @@
       triggerBurst(p);
     if(p.specialCooldown<=0){
       if(p.type==='bomber'&&p.y<target.y-13&&Math.abs(p.x-target.x)<22)triggerSpecial(p);
-      if(p.type==='heavy'&&range<54&&Math.abs(angleDiff(target.angle,p.angle))<.7)
+      if(p.type==='heavy'&&range<85&&p.health<p.d.hull*.7)
         triggerSpecial(p);
-      if(p.type==='fighter'&&range>115&&Math.abs(error)<.3)triggerSpecial(p);
+      if(p.type==='fighter'&&range<65&&Math.abs(error)>1.9)triggerSpecial(p);
     }
     if(range<75&&target.burstLeft>0&&p.rollTime<=0&&p.rollRecovery<=0&&Math.abs(aim)>2)triggerRoll(p);
     return turn;
@@ -241,6 +250,7 @@
     p.spawnSafe=Math.max(0,p.spawnSafe-dt);
     p.hitFlash=Math.max(0,p.hitFlash-dt);
     p.specialCooldown=Math.max(0,p.specialCooldown-dt);
+    p.armourTime=Math.max(0,p.armourTime-dt);
     p.boost=Math.max(0,p.boost-dt);
     p.rollTime=Math.max(0,p.rollTime-dt);
     p.rollRecovery=Math.max(0,p.rollRecovery-dt);
@@ -280,6 +290,8 @@
     }
     for(let i=state.bombs.length-1;i>=0;i--){
       const b=state.bombs[i];
+      b.delay=Math.max(0,(b.delay||0)-dt);
+      if(b.delay>0)continue;
       b.vy+=94*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
       const target=state.fliers[1-b.owner];
       if(b.y>=172||(target&&target.alive&&distance(b,target)<target.d.radius+4)){
@@ -461,7 +473,7 @@
       if(p.parts.left<40){g.fillStyle='#2e373c';g.fillRect(-2,-Math.round(dh/2),2,2);}
       if(p.parts.right<40){g.fillStyle='#2e373c';g.fillRect(-2,Math.round(dh/2)-2,2,2);}
     }
-    if(p.boost>0){g.fillStyle='#f9c783';g.fillRect(-13,-1,4,2);}
+    if(p.armourTime>0){g.strokeStyle='#b5e7ef';g.strokeRect(-12,-8,24,16);}
     g.restore();
     g.fillStyle='#253743c9';g.fillRect(x-8,y-13,16,6);
     g.fillStyle=p.id===0?'#ffe4a0':'#f5a1a4';
@@ -522,6 +534,7 @@
       g.fillRect(x-3,y-3,7,7);g.fillStyle='#f4d1a3';g.fillRect(x-1,y-1,3,3);
     }
     for(const b of state.bombs){
+      if(b.delay>0)continue;
       g.fillStyle='#2b3743';g.fillRect(Math.round(b.x)-2,Math.round(b.y)-1,5,4);
       g.fillStyle='#e8ba80';g.fillRect(Math.round(b.x)+1,Math.round(b.y),1,1);
     }
