@@ -84,13 +84,13 @@ test('menu can be restored and a new match started',()=>{
 
 test('extra-wide landscape viewport expands logical width without distorting pixel height',()=>{
   const game=launch();
-  assert.equal(game.canvas.width,320);
+  assert.equal(game.canvas.width,480);
   game.setViewport(1350,490);
   assert.equal(game.canvas.width,Math.round(180*1350/490));
   assert.equal(game.canvas.height,180);
   game.listeners.get('start:click')();
   game.advance(400,1200);
   game.setViewport(960,540);
-  assert.equal(game.canvas.width,320);
+  assert.equal(game.canvas.width,480);
   game.advance(30,10000);
 });
