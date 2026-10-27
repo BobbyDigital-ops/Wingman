@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#172939">
   <meta name="description" content="Wingman — a tiny, tactical, single-screen aerial dogfighting game.">
   <title>Wingman · Pixel Dogfights</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20261027c">
 </head>
 <body>
   <div class="app">
@@ -15,6 +15,7 @@
     </header>
     <main class="game-frame" id="frame">
       <canvas id="game" width="320" height="180" role="img" aria-label="Side-on aerial duel with fighter aircraft"></canvas>
+      <canvas id="aircraft-layer" class="aircraft-layer" width="320" height="180" aria-hidden="true"></canvas>
       <div class="overlay" id="menu">
         <div class="menu-card">
           <p class="eyebrow">ONE SCREEN · ONE RIVAL · ONE PERFECT BURST</p>
@@ -59,7 +60,7 @@
       <span><b>P</b> pause</span>
     </footer>
   </div>
-  <script src="./src/art/aircraft.js" defer></script>
-  <script src="./game.js" defer></script>
+  <script src="./src/art/aircraft.js?v=20261027c" defer></script>
+  <script src="./game.js?v=20261027c" defer></script>
 </body>
 </html>
