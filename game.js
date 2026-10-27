@@ -612,9 +612,11 @@
     if(e.code==='KeyA'||e.code==='ArrowLeft')controls.left=false;
     if(e.code==='KeyD'||e.code==='ArrowRight')controls.right=false;
   });
+  // Mobile browsers can briefly blur the page when touch controls, browser
+  // chrome or audio focus change. Never pause gameplay merely on window blur:
+  // it made FIRE appear to pause the game and left no touch way to resume.
   window.addEventListener('blur',()=>{
     controls.left=false;controls.right=false;
-    if(state.phase==='playing')state.paused=true;
   });
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden){controls.left=false;controls.right=false;}
