@@ -15,7 +15,7 @@ function launch(){
   let viewport={width:320,height:180};
   el.frame={getBoundingClientRect:()=>viewport};
   for(const id of ['menu','result','result-title','result-detail','start',
-    'rematch','change-plane','left','right','fire','special','roll']){
+    'rematch','change-plane','left','right','fire','special','roll','bomb']){
     el[id]={textContent:'',dataset:{},setPointerCapture:noop,setAttribute:noop,
       classList:{add:noop,remove:noop,toggle:noop},
       addEventListener:(type,cb)=>listeners.set(id+':'+type,cb)};
@@ -36,9 +36,11 @@ function launch(){
     document,window:{addEventListener:(type,cb)=>listeners.set('window:'+type,cb)},requestAnimationFrame:cb=>{nextFrame=cb},
     console
   };
-  vm.runInNewContext(code,sandbox,{timeout:3000,filename:'game.js'});
+  const instrumented=code.replace('  // All scenery is painted once;',
+    '  window.__wingmanTest={state,triggerBomb,triggerSpecial};\n  // All scenery is painted once;');
+  vm.runInNewContext(instrumented,sandbox,{timeout:3000,filename:'game.js'});
   return {
-    listeners,canvas,
+    listeners,canvas,internals:sandbox.window.__wingmanTest,
     setViewport:(width,height)=>{
       viewport={width,height};
       listeners.get('window:resize')?.();
@@ -116,4 +118,40 @@ test('transient mobile blur during FIRE does not pause the game',()=>{
  // No explicit pause; restarting the game must not be required after a blur.
  game.listeners.get('fire:pointerdown')(e);
  game.advance(300,2500);
+});
+
+test('ramming planes causes no direct health or component damage',()=>{
+ const game=launch();
+ game.listeners.get('start:click')();
+ const [fighter,enemy]=game.internals.state.fliers;
+ fighter.spawnSafe=0;enemy.spawnSafe=0;
+ enemy.x=fighter.x;enemy.y=fighter.y;
+ const health=[fighter.health,enemy.health];
+ game.advance(2,200);
+ assert.equal(fighter.health,health[0]);
+ assert.equal(enemy.health,health[1]);
+});
+test('Spitfire swoop follows a timed arc without instant reversal',()=>{
+ const game=launch();
+ game.listeners.get('start:click')();
+ const fighter=game.internals.state.fliers[0];
+ const heading=fighter.angle,initialY=fighter.y;
+ game.internals.triggerSpecial(fighter);
+ assert.ok(fighter.swoopTime>1);
+ assert.equal(fighter.angle,heading);
+ game.advance(14,1000);
+ assert.ok(fighter.y<initialY,'first part of swoop should climb');
+});
+test('Bomber climb does not release bombs, separate BOMB button does',()=>{
+ const game=launch();
+ game.listeners.get('bomber:click')();
+ game.listeners.get('start:click')();
+ const bomber=game.internals.state.fliers[0];
+ assert.equal(game.internals.state.bombs.length,0);
+ game.internals.triggerSpecial(bomber);
+ assert.ok(bomber.climbAssist>0);
+ assert.equal(game.internals.state.bombs.length,0);
+ game.listeners.get('bomb:pointerdown')({pointerId:3,preventDefault(){}});
+ assert.equal(game.internals.state.bombs.length,1);
+ assert.ok(bomber.bombCooldown>0);
 });
