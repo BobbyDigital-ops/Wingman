@@ -9,9 +9,9 @@
   g.imageSmoothingEnabled=false;
 
   const PLANES={
-    fighter:{name:'SPITFIRE',speed:83,turn:2.65,hull:110,radius:6,burst:10,interval:.075,cooldown:2.0,damage:6,bulletSpeed:165,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'BREAK'},
+    fighter:{name:'SPITFIRE',speed:93,turn:3.35,hull:110,radius:5.5,burst:9,interval:.075,cooldown:1.85,damage:8,bulletSpeed:182,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'BREAK'},
     heavy:{name:'HEAVY FIGHTER',speed:72,turn:1.55,hull:160,radius:8,burst:3,interval:.19,cooldown:2.8,damage:29,bulletSpeed:177,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
-    bomber:{name:'BOMBER',speed:60,turn:1.05,hull:205,radius:9,burst:4,interval:.17,cooldown:2.4,damage:9,bulletSpeed:135,specialCd:12,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'BOMBS'}
+    bomber:{name:'BOMBER',speed:60,turn:1.05,hull:205,radius:9,burst:2,interval:.28,cooldown:3.0,damage:11,bulletSpeed:87,specialCd:12,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'BOMBS'}
   };
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
