@@ -21,9 +21,9 @@
           <h1>WINGMAN</h1>
           <p class="intro">Pick your aircraft. Out-turn your rival. Time every shot.</p>
           <div class="plane-picker" role="group" aria-label="Choose aircraft">
-            <button class="plane-choice selected" type="button" data-plane="fighter" aria-pressed="true"><b>FIGHTER</b><small>Agile · Boost</small></button>
-            <button class="plane-choice" type="button" data-plane="heavy" aria-pressed="false"><b>HEAVY</b><small>Cannons · Mine</small></button>
-            <button class="plane-choice" type="button" data-plane="bomber" aria-pressed="false"><b>BOMBER</b><small>Armour · Bomb</small></button>
+            <button class="plane-choice selected" type="button" data-plane="fighter" aria-pressed="true"><b>SPITFIRE</b><small>Agile · Swoop</small></button>
+            <button class="plane-choice" type="button" data-plane="heavy" aria-pressed="false"><b>HEAVY</b><small>Cannons · Armour</small></button>
+            <button class="plane-choice" type="button" data-plane="bomber" aria-pressed="false"><b>BOMBER</b><small>Climb · Bombs</small></button>
           </div>
           <button class="start-button" id="start" type="button">START DOGFIGHT <span aria-hidden="true">▶</span></button>
           <p class="tip">Every gun burst commits. Miss, and you're exposed during cooldown.</p>
@@ -45,6 +45,7 @@
         </div>
         <div class="control-cluster attack">
           <button id="roll" type="button" class="control-btn roll" aria-label="Defensive barrel roll">ROLL</button>
+          <button id="bomb" type="button" class="control-btn bomb" aria-label="Drop bomb" hidden>BOMB</button>
           <button id="special" type="button" class="control-btn special" aria-label="Activate special weapon">★</button>
           <button id="fire" type="button" class="control-btn fire" aria-label="Fire a committed burst">FIRE</button>
         </div>
@@ -54,7 +55,7 @@
     <footer class="site-footer">
       <span><b>A / D</b> or <b>← / →</b> turn</span>
       <span><b>SPACE</b> burst</span>
-      <span><b>SHIFT / K</b> special · <b>L</b> roll</span>
+      <span><b>SHIFT / K</b> special · <b>L</b> roll · <b>B</b> bomb</span>
       <span><b>P</b> pause</span>
     </footer>
   </div>
