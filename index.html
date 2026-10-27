@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#172939">
+  <meta name="description" content="Wingman — a tiny, tactical, single-screen aerial dogfighting game.">
+  <title>Wingman · Pixel Dogfights</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="site-header">
+      <strong>WINGMAN</strong><span>PIXEL DOGFIGHTS · PROTOTYPE 0.1</span>
+    </header>
+    <main class="game-frame" id="frame">
+      <canvas id="game" width="320" height="180" role="img" aria-label="Side-on aerial duel with fighter aircraft"></canvas>
+      <div class="overlay" id="menu">
+        <div class="menu-card">
+          <p class="eyebrow">ONE SCREEN · ONE RIVAL · ONE PERFECT BURST</p>
+          <h1>WINGMAN</h1>
+          <p class="intro">Pick your aircraft. Out-turn your rival. Time every shot.</p>
+          <div class="plane-picker" role="group" aria-label="Choose aircraft">
+            <button class="plane-choice selected" type="button" data-plane="fighter" aria-pressed="true"><b>FIGHTER</b><small>Agile · Boost</small></button>
+            <button class="plane-choice" type="button" data-plane="heavy" aria-pressed="false"><b>HEAVY</b><small>Cannons · Mine</small></button>
+            <button class="plane-choice" type="button" data-plane="bomber" aria-pressed="false"><b>BOMBER</b><small>Armour · Bomb</small></button>
+          </div>
+          <button class="start-button" id="start" type="button">START DOGFIGHT <span aria-hidden="true">▶</span></button>
+          <p class="tip">Every gun burst commits. Miss, and you're exposed during cooldown.</p>
+        </div>
+      </div>
+      <div class="overlay hidden" id="result" aria-live="polite">
+        <div class="menu-card result-card">
+          <p class="eyebrow">MATCH COMPLETE</p>
+          <h2 id="result-title">VICTORY</h2>
+          <p id="result-detail"></p>
+          <button class="start-button" id="rematch" type="button">FLY AGAIN <span aria-hidden="true">▶</span></button>
+          <button class="text-button" id="change-plane" type="button">Change aircraft</button>
+        </div>
+      </div>
+      <div class="control-layer" id="touch-controls" aria-label="Touch flight controls">
+        <div class="control-cluster steer">
+          <button id="left" type="button" class="control-btn" aria-label="Turn counterclockwise">↶</button>
+          <button id="right" type="button" class="control-btn" aria-label="Turn clockwise">↷</button>
+        </div>
+        <div class="control-cluster attack">
+          <button id="special" type="button" class="control-btn special" aria-label="Activate special weapon">★</button>
+          <button id="fire" type="button" class="control-btn fire" aria-label="Fire a committed burst">FIRE</button>
+        </div>
+      </div>
+      <div id="rotate-hint">Rotate your phone to landscape for the best flying experience ↻</div>
+    </main>
+    <footer class="site-footer">
+      <span><b>A / D</b> or <b>← / →</b> turn</span>
+      <span><b>SPACE</b> burst</span>
+      <span><b>SHIFT / K</b> special</span>
+      <span><b>P</b> pause</span>
+    </footer>
+  </div>
+  <script src="./game.js" defer></script>
+</body>
+</html>
