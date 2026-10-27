@@ -1,79 +1,85 @@
-/* Wingman aircraft silhouettes: original, hand-drawn, pixel-native shapes.
-   Nose points right. Broad wings read as wings, not a solid oval. */
+/* Wingman miniature aircraft: pixel-native artwork, no resampling.
+ * Inspired by painted scale-model silhouettes: bright cockpit glazing,
+ * engine housings, RAF-style markings and hard-edged wing shadows.
+ * Every stroke lands on a whole pixel. Aircraft nose points RIGHT.
+ */
 (function(){
 'use strict';
-const palette={
- fighter:['#233644','#52705c','#94a88c','#d4d9b2','#7aa8b9','#c66e53'],
- heavy:['#242f39','#655b4e','#a79776','#e1c69c','#88b4bd','#b75e45'],
- bomber:['#25333c','#596554','#a0a789','#d9d4ae','#98c0c8','#bd744d']
+const colours={
+ fighter:{line:'#263540',under:'#364b4d',shade:'#496d56',body:'#829d75',light:'#c4d2a6',shine:'#e8e3bf',glass:'#82c4dc',glassDark:'#426f83',red:'#c65c4c',white:'#f1e8d3',metal:'#b9b9a1'},
+ heavy:{line:'#2e3437',under:'#51483e',shade:'#716850',body:'#a39978',light:'#d8c9a0',shine:'#f1dec1',glass:'#85b9bd',glassDark:'#426a76',red:'#b95f4c',white:'#e9dbbe',metal:'#a9afa9'},
+ bomber:{line:'#2d373c',under:'#404b46',shade:'#607061',body:'#a3ad92',light:'#d6d8b5',shine:'#ece9cc',glass:'#99cbd6',glassDark:'#527d91',red:'#b9644c',white:'#eae6cd',metal:'#afb8aa'}
 };
 function buildPlane(type,variant){
- const c=document.createElement('canvas');c.width=32;c.height=16;
+ const size=type==='fighter'?[21,15]:type==='heavy'?[24,16]:[26,17];
+ const c=document.createElement('canvas');c.width=size[0];c.height=size[1];
  const g=c.getContext('2d');g.imageSmoothingEnabled=false;
- const [edge,shadow,body,light,glass,mark]=palette[type];
- const r=(x,y,w,h,col)=>{g.fillStyle=col;g.fillRect(x,y,w,h)};
- const poly=(pts,color)=>{g.fillStyle=color;g.beginPath();g.moveTo(...pts[0]);for(const p of pts.slice(1))g.lineTo(...p);g.closePath();g.fill()};
+ const p=colours[type],r=(x,y,w,h,color)=>{g.fillStyle=color;g.fillRect(x,y,w,h);};
+ const roundel=(x,y)=>{r(x,y,3,3,p.white);r(x+1,y+1,1,1,p.red);};
  if(type==='fighter'){
-   // Elliptical swept wings, narrow tail and long tapered fuselage.
-   poly([[12,3],[17,4],[21,7],[22,9],[17,12],[12,13],[15,9]],edge);
-   poly([[13,4],[17,5],[20,8],[17,11],[13,12],[16,8]],body);
-   r(12,4,2,1,light);r(12,11,2,1,light);
-   poly([[2,5],[6,6],[9,8],[6,10],[2,11],[4,8]],edge);
-   r(3,7,3,2,mark);
-   poly([[5,7],[11,7],[15,6],[25,6],[30,7],[31,8],[26,9],[12,10],[6,9]],edge);
-   r(8,7,17,2,body);r(15,7,11,1,light);
-   r(16,6,5,1,glass);r(17,5,3,1,edge);r(19,6,2,1,glass);
-   r(27,7,3,1,light);r(30,6,1,4,edge);
-   r(16,3,2,1,mark);r(16,12,2,1,mark);
+   // Elliptical-wing Spitfire; deliberately short and stout at 21 x 15.
+   r(10,1,3,13,p.line);r(9,3,5,9,p.line);r(8,5,7,5,p.line);
+   r(10,2,2,11,p.shade);r(9,4,4,7,p.body);r(8,6,6,3,p.light);
+   r(10,2,2,2,p.light);r(10,11,2,2,p.under);
+   roundel(10,4);roundel(10,9);
+   // Distinctive little horizontal tail and rudder.
+   r(2,5,4,5,p.line);r(3,4,2,7,p.line);
+   r(3,6,3,3,p.shade);r(3,5,1,2,p.light);r(3,9,1,1,p.red);
+   // Short round cowling, canopy, silver prop and painted fuselage.
+   r(5,6,12,4,p.line);r(6,7,12,2,p.body);
+   r(7,7,4,1,p.light);r(11,6,4,3,p.glassDark);
+   r(12,6,2,2,p.glass);r(13,6,1,1,p.shine);
+   r(15,6,4,4,p.line);r(16,7,3,2,p.light);
+   r(19,7,1,2,p.metal);r(20,5,1,6,p.line);r(20,7,1,2,p.shine);
+   r(9,8,2,1,p.white);r(10,8,1,1,p.red);
  }else if(type==='heavy'){
-   // Twin engine nacelles stand apart from broad wings; thick cannon nose.
-   poly([[10,2],[17,3],[23,6],[23,10],[17,13],[10,14],[13,8]],edge);
-   poly([[11,3],[17,4],[21,7],[21,9],[17,12],[11,13],[15,8]],body);
-   r(11,4,3,2,shadow);r(11,10,3,2,shadow);
-   r(12,3,2,1,light);r(12,12,2,1,light);
-   r(11,2,5,1,edge);r(11,13,5,1,edge);
-   r(3,5,5,2,edge);r(3,9,5,2,edge);
-   r(3,7,3,2,mark);
-   poly([[5,7],[12,6],[19,6],[26,7],[30,7],[31,9],[24,10],[10,10],[5,9]],edge);
-   r(9,7,19,2,body);r(18,7,10,1,light);
-   r(16,6,5,1,glass);r(17,5,3,1,edge);
-   r(27,8,4,1,shadow);r(29,6,2,1,edge);r(29,10,2,1,edge);
-   r(7,5,3,1,mark);r(7,10,3,1,mark);
+   // Twin-engine cannon fighter: chunky nacelles separated from central hull.
+   r(11,1,5,14,p.line);r(10,3,7,10,p.line);r(9,5,9,6,p.line);
+   r(11,2,4,12,p.shade);r(10,4,6,8,p.body);r(9,6,8,4,p.light);
+   roundel(11,3);roundel(11,10);
+   r(3,5,5,6,p.line);r(4,6,4,4,p.shade);r(4,5,2,1,p.light);
+   // Engine nacelles set outboard from the fuselage.
+   r(15,2,5,3,p.line);r(16,3,4,1,p.metal);
+   r(15,11,5,3,p.line);r(16,12,4,1,p.metal);
+   r(20,1,1,5,p.line);r(20,10,1,5,p.line);
+   r(20,3,1,2,p.shine);r(20,12,1,2,p.shine);
+   // Long cannon chin, short cockpit, heavy nose.
+   r(5,7,18,3,p.line);r(7,8,15,1,p.body);
+   r(12,7,4,2,p.glassDark);r(13,7,2,1,p.glass);
+   r(18,7,4,1,p.light);r(21,7,3,1,p.metal);
+   r(21,9,3,1,p.metal);r(6,8,3,1,p.red);
  }else{
-   // Twin-engine bomber: long tail, clear cockpit and distinct engine pods.
-   poly([[10,2],[19,3],[24,6],[24,10],[19,13],[10,14],[14,8]],edge);
-   poly([[11,3],[19,4],[22,7],[22,9],[19,12],[11,13],[16,8]],body);
-   r(11,4,3,3,shadow);r(11,9,3,3,shadow);
-   r(12,3,4,1,light);r(12,12,4,1,light);
-   r(10,2,6,1,edge);r(10,13,6,1,edge);
-   poly([[2,5],[8,6],[10,8],[8,10],[2,11],[4,8]],edge);
-   r(3,7,4,2,mark);
-   poly([[6,7],[12,6],[24,6],[29,7],[31,8],[29,10],[12,10],[6,9]],edge);
-   r(10,7,18,2,body);r(19,7,9,1,light);
-   r(20,6,5,1,glass);r(22,5,2,1,edge);
-   r(28,7,3,2,glass);
-   r(10,4,5,2,shadow);r(10,10,5,2,shadow);
-   r(8,3,1,5,edge);r(8,9,1,5,edge);
+   // Twin-engine bomber: high wings, two propellers and glazed nose.
+   r(12,1,6,15,p.line);r(10,3,9,11,p.line);
+   r(9,5,12,7,p.line);r(12,2,5,13,p.shade);
+   r(11,4,7,9,p.body);r(10,6,10,5,p.light);
+   roundel(12,4);roundel(12,11);
+   // Twin detached engines + prop discs.
+   r(14,2,6,3,p.line);r(15,3,5,1,p.metal);
+   r(14,12,6,3,p.line);r(15,13,5,1,p.metal);
+   r(20,1,1,6,p.line);r(20,10,1,6,p.line);
+   r(20,3,1,2,p.shine);r(20,12,1,2,p.shine);
+   r(2,6,6,5,p.line);r(3,5,3,7,p.line);
+   r(4,7,5,3,p.body);r(4,6,2,1,p.light);
+   // Glazed cockpit and blunted greenhouse nose.
+   r(6,7,17,4,p.line);r(8,8,15,2,p.body);
+   r(16,7,5,2,p.glassDark);r(17,7,3,1,p.glass);
+   r(22,7,3,4,p.line);r(23,8,2,2,p.glass);
+   r(25,8,1,2,p.metal);
+   r(6,9,3,1,p.red);r(10,8,3,1,p.light);
  }
- // Engine propellers are highly contrasted and independent of the fuselage.
- if(type==='fighter'){
-   r(30,5,1,6,edge);r(30,7,1,2,light);
- }else{
-   r(9,1,1,6,edge);r(9,9,1,6,edge);
-   r(8,4,3,1,light);r(8,11,3,1,light);
- }
- if(variant==='damaged'){r(14,7,4,2,shadow);r(15,6,2,1,edge);}
- if(variant==='climb'){r(26,7,2,1,light);}
- if(variant==='dive'){r(23,8,2,1,shadow);}
+ if(variant==='damaged'){r(type==='fighter'?14:17,8,2,2,p.under);r(11,5,1,2,p.line);}
+ if(variant==='climb'){r(type==='fighter'?17:19,7,2,1,p.shine);}
+ if(variant==='dive'){r(type==='fighter'?17:19,9,2,1,p.under);}
  return c;
 }
 function build(){
- const sprites={};
- for(const type of Object.keys(palette)){
-  sprites[type]={};
-  for(const pose of ['level','climb','dive','damaged'])sprites[type][pose]=buildPlane(type,pose);
+ const atlas={};
+ for(const type of Object.keys(colours)){
+  atlas[type]={};
+  for(const variant of ['level','climb','dive','damaged'])atlas[type][variant]=buildPlane(type,variant);
  }
- return sprites;
+ return atlas;
 }
-window.WingmanSprites={build,palette};
+window.WingmanSprites={build};
 })();
