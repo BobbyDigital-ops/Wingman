@@ -11,6 +11,9 @@ function launch(){
     get:(o,k)=>(k in o?o[k]:noop),set:(o,k,v)=>(o[k]=v,true)
   });
   const el={};
+  const canvas={width:320,height:180,getContext:()=>ctx};
+  let viewport={width:320,height:180};
+  el.frame={getBoundingClientRect:()=>viewport};
   for(const id of ['menu','result','result-title','result-detail','start',
     'rematch','change-plane','left','right','fire','special']){
     el[id]={textContent:'',dataset:{},setPointerCapture:noop,setAttribute:noop,
@@ -23,19 +26,23 @@ function launch(){
   }));
   const document={
     hidden:false,
-    getElementById:id=>id==='game'?{getContext:()=>ctx}:el[id],
+    getElementById:id=>id==='game'?canvas:el[id],
     createElement:()=>({getContext:()=>ctx}),
     querySelectorAll:()=>choices,
     addEventListener:(type,cb)=>listeners.set('document:'+type,cb)
   };
   let nextFrame;
   const sandbox={
-    document,window:{addEventListener:noop},requestAnimationFrame:cb=>{nextFrame=cb},
+    document,window:{addEventListener:(type,cb)=>listeners.set('window:'+type,cb)},requestAnimationFrame:cb=>{nextFrame=cb},
     console
   };
   vm.runInNewContext(code,sandbox,{timeout:3000,filename:'game.js'});
   return {
-    listeners,
+    listeners,canvas,
+    setViewport:(width,height)=>{
+      viewport={width,height};
+      listeners.get('window:resize')?.();
+    },
     advance:(frames,start=0)=>{
       for(let i=0;i<frames;i++){
         assert.equal(typeof nextFrame,'function');
@@ -73,4 +80,17 @@ test('menu can be restored and a new match started',()=>{
   game.listeners.get('fighter:click')();
   game.listeners.get('start:click')();
   game.advance(30);
+});
+
+test('extra-wide landscape viewport expands logical width without distorting pixel height',()=>{
+  const game=launch();
+  assert.equal(game.canvas.width,320);
+  game.setViewport(1350,490);
+  assert.equal(game.canvas.width,Math.round(180*1350/490));
+  assert.equal(game.canvas.height,180);
+  game.listeners.get('start:click')();
+  game.advance(400,1200);
+  game.setViewport(960,540);
+  assert.equal(game.canvas.width,320);
+  game.advance(30,10000);
 });
