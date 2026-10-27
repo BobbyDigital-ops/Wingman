@@ -479,8 +479,9 @@
     g.save();g.translate(x,y);g.rotate(p.angle);
     if(p.rollTime>0){g.scale(1,Math.max(.24,Math.abs(Math.cos(p.rollTime*22))));}
     if(sprite){
-      const dw=sprite.width,dh=sprite.height;
-      g.drawImage(sprite,-Math.round(dw/2),-Math.round(dh/2));
+      // Detailed source sprites are sampled down to preserve the existing game scale.
+      const dw=25,dh=13;
+      g.drawImage(sprite,-Math.round(dw/2),-Math.round(dh/2),dw,dh);
       if(p.hitFlash>0){g.globalAlpha=.5;g.fillStyle='#fff1d1';g.fillRect(-dw/2,-1,dw,2);g.globalAlpha=1;}
       if(p.parts.nose<45){g.fillStyle='#333b3e';g.fillRect(Math.round(dw*.25),-2,2,2);}
       if(p.parts.left<40){g.fillStyle='#2e373c';g.fillRect(-2,-Math.round(dh/2),2,2);}
