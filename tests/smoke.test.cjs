@@ -15,7 +15,7 @@ function launch(){
   let viewport={width:320,height:180};
   el.frame={getBoundingClientRect:()=>viewport};
   for(const id of ['menu','result','result-title','result-detail','start',
-    'rematch','change-plane','left','right','fire','special']){
+    'rematch','change-plane','left','right','fire','special','roll']){
     el[id]={textContent:'',dataset:{},setPointerCapture:noop,setAttribute:noop,
       classList:{add:noop,remove:noop,toggle:noop},
       addEventListener:(type,cb)=>listeners.set(id+':'+type,cb)};
@@ -93,4 +93,15 @@ test('extra-wide landscape viewport expands logical width without distorting pix
   game.setViewport(960,540);
   assert.equal(game.canvas.width,480);
   game.advance(30,10000);
+});
+
+test('barrel roll inputs and energy-based flight remain stable',()=>{
+ const game=launch();
+ game.listeners.get('start:click')();
+ const e={pointerId:3,preventDefault(){}};
+ game.listeners.get('roll:pointerdown')(e);
+ game.advance(150,1300);
+ game.listeners.get('roll:pointerdown')(e);
+ game.listeners.get('document:keydown')({code:'KeyL',repeat:false,preventDefault(){}});
+ game.advance(300,4000);
 });
