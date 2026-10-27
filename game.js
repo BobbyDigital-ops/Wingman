@@ -9,9 +9,9 @@
   g.imageSmoothingEnabled=false;
 
   const PLANES={
-    fighter:{name:'SPITFIRE',speed:62,turn:3.35,hull:110,radius:6,burst:10,interval:.075,cooldown:2.0,damage:6,bulletSpeed:165,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'BREAK'},
-    heavy:{name:'HEAVY FIGHTER',speed:49,turn:2.35,hull:160,radius:8,burst:3,interval:.19,cooldown:2.8,damage:22,bulletSpeed:155,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
-    bomber:{name:'BOMBER',speed:40,turn:1.73,hull:205,radius:9,burst:4,interval:.17,cooldown:2.4,damage:9,bulletSpeed:135,specialCd:12,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'BOMBS'}
+    fighter:{name:'SPITFIRE',speed:83,turn:2.65,hull:110,radius:6,burst:10,interval:.075,cooldown:2.0,damage:6,bulletSpeed:165,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'BREAK'},
+    heavy:{name:'HEAVY FIGHTER',speed:72,turn:1.55,hull:160,radius:8,burst:3,interval:.19,cooldown:2.8,damage:29,bulletSpeed:177,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
+    bomber:{name:'BOMBER',speed:60,turn:1.05,hull:205,radius:9,burst:4,interval:.17,cooldown:2.4,damage:9,bulletSpeed:135,specialCd:12,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'BOMBS'}
   };
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
@@ -189,13 +189,13 @@
     const climb=Math.max(0,-Math.sin(p.angle));
     const dive=Math.max(0,Math.sin(p.angle));
     p.energy=clamp(p.energy+dt*(24*dive-27*climb+6*(1-climb)),0,100);
-    const energyFactor=.52+.48*(p.energy/100);
+    const energyFactor=.75+.25*(p.energy/100);
     const wanted=p.d.speed*engine*energyFactor*(1+Math.min(.32,dive*.25));
     p.stallTime=p.energy<9?Math.max(p.stallTime,.2):Math.max(0,p.stallTime-dt);
     // Low energy lowers turn authority and speed, but never disables steering.
     const speedTarget=p.stallTime>0?wanted*.68:wanted;
-    p.speed+=(speedTarget-p.speed)*Math.min(1,dt*2.3);
-    const follow=Math.min(1,dt*(p.type==='bomber'?2.7:4.0));
+    p.speed+=(speedTarget-p.speed)*Math.min(1,dt*5.2);
+    const follow=Math.min(1,dt*(p.type==='bomber'?9.0:p.type==='heavy'?11.0:13.5));
     p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
     p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
     p.x+=p.vx*dt;p.y+=p.vy*dt;
@@ -210,7 +210,7 @@
         p.energy=Math.max(15,p.energy-7);
         p.wallGrace=.22;
       }
-      p.vx*=.73;p.vy*=.73;
+      p.vx*=.88;p.vy*=.88;
     }
   }
   function aiInput(p,target){
