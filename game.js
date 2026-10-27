@@ -369,7 +369,7 @@
       // by touching another airframe: rounds must leave the collision envelope.
       const clear=target&&shooter&&distance(target,shooter)>
         target.d.radius+shooter.d.radius+3;
-      if(target&&target.alive&&target.rollTime<=0&&b.age>.085&&clear){
+      if(target&&target.alive&&target.rollTime<=0&&b.age>.035&&clear){
         const vx=b.x-px,vy=b.y-py;
         const denom=vx*vx+vy*vy;
         const t=denom>0?clamp(((target.x-px)*vx+(target.y-py)*vy)/denom,0,1):0;
@@ -769,7 +769,7 @@
     // The original logical height remains 180; extra-wide screens show
     // more horizontal sky so 4-player combat will eventually fit naturally.
     const nextW=clamp(Math.round(H*rect.width/rect.height),480,650);
-    const dpr=clamp(window.devicePixelRatio||1,1,2);
+    const dpr=clamp(window.devicePixelRatio||1,1,3);
     const pixelWidth=Math.max(1,Math.round(rect.width*dpr));
     const pixelHeight=Math.max(1,Math.round(rect.height*dpr));
     if(modelCanvas.width!==pixelWidth||modelCanvas.height!==pixelHeight){
