@@ -58,3 +58,10 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
 @media (prefers-reduced-motion:reduce){
   .start-button:active{transform:none}
 }
+
+/* Phase 2: the roll is a defensive manoeuvre, separate from each aircraft skill. */
+.control-btn.roll{font-size:12px;background:#315c7499;border-color:#a9d9e9b0}
+@media(pointer:coarse) and (orientation:landscape){
+  .control-cluster.attack{gap:clamp(5px,1.1vw,11px)}
+  .control-cluster.attack .control-btn{width:clamp(40px,8dvh,65px);height:clamp(40px,8dvh,65px)}
+}
