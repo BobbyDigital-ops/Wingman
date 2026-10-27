@@ -548,29 +548,34 @@
   let background=makeBackground();
   // Small, readable aircraft silhouettes. Their proportions are deliberately
   // more plausible than cartoon rockets, but every colour remains pixel art.
+  // Aircraft are drawn at native display resolution independently of scenery.
   function aircraft(p){
-    const x=Math.round(p.x),y=Math.round(p.y);
-    const set=aircraftSprites[p.type];
-    const sprite=set?.[(p.health<p.d.hull*.38)?'damaged':Math.sin(p.angle)<-.3?'climb':Math.sin(p.angle)>.3?'dive':'level'];
-    g.save();g.translate(x,y);g.rotate(p.angle);
-    if(p.rollTime>0){g.scale(1,Math.max(.24,Math.abs(Math.cos(p.rollTime*22))));}
-    if(sprite){
-      // Detailed source sprites are sampled down to preserve the existing game scale.
-      const dw=sprite.width,dh=sprite.height;
-      // One sprite pixel equals one world pixel: no downscaling or blurry samples.
-      g.drawImage(sprite,-Math.floor(dw/2),-Math.floor(dh/2));
-      if(p.hitFlash>0){g.globalAlpha=.5;g.fillStyle='#fff1d1';g.fillRect(-dw/2,-1,dw,2);g.globalAlpha=1;}
-      if(p.parts.nose<45){g.fillStyle='#333b3e';g.fillRect(Math.round(dw*.25),-2,2,2);}
-      if(p.parts.left<40){g.fillStyle='#2e373c';g.fillRect(-2,-Math.round(dh/2),2,2);}
-      if(p.parts.right<40){g.fillStyle='#2e373c';g.fillRect(-2,Math.round(dh/2)-2,2,2);}
+    const c=modelCtx;
+    c.save();c.translate(p.x,p.y);c.rotate(p.angle);
+    if(p.rollTime>0)c.scale(1,Math.max(.2,Math.abs(Math.cos(p.rollTime*22))));
+    if(p.armourTime>0){
+      c.beginPath();c.ellipse(0,0,15,14,0,0,TAU);
+      c.strokeStyle='#b1ecf5c9';c.lineWidth=.75;c.stroke();
     }
-    if(p.armourTime>0){g.strokeStyle='#b5e7ef';g.strokeRect(-12,-8,24,16);}
-    g.restore();
-    // Keep player identifiers clear of the miniature's wings and canopy.
-    g.fillStyle='#253743cf';g.fillRect(x-7,y-19,14,6);
-    g.fillStyle=p.id===0?'#ffe4a0':'#f5a1a4';
-    g.font='bold 5px monospace';g.textAlign='center';
-    g.fillText(p.id===0?'P1':'AI',x,y-19);g.textAlign='left';
+    aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':'level');
+    if(p.hitFlash>0){
+      c.beginPath();c.ellipse(0,0,12,8,0,0,TAU);
+      c.strokeStyle='#fff0bd';c.lineWidth=.8;c.stroke();
+    }
+    c.restore();
+    c.fillStyle='#1e3341d9';c.fillRect(p.x-7,p.y-19,14,5.5);
+    c.font='bold 5px sans-serif';c.textAlign='center';c.textBaseline='top';
+    c.fillStyle=p.id===0?'#ffe7b4':'#ffc2b8';
+    c.fillText(p.id===0?'P1':'AI',p.x,p.y-18.6);
+  }
+  function drawModels(){
+    if(!modelCanvas.width||!modelCanvas.height)return;
+    const c=modelCtx;
+    c.setTransform(modelCanvas.width/W,0,0,modelCanvas.height/H,0,0);
+    c.clearRect(0,0,W,H);
+    c.save();c.beginPath();c.rect(0,31,W,H-31);c.clip();
+    for(const p of state.fliers)if(p.alive)aircraft(p);
+    c.restore();
   }
   function bar(x,y,w,value,max,color){
     g.fillStyle='#243946';g.fillRect(x,y,w,4);
@@ -638,7 +643,7 @@
       g.fillStyle=heavy?'#653e33':'#574c43';g.fillRect(Math.round(b.x)-1,Math.round(b.y)-1,heavy?5:3,heavy?3:2);
       g.fillStyle=heavy?'#ffd19b':'#fff1ac';g.fillRect(Math.round(b.x),Math.round(b.y),heavy?4:2,1);
     }
-    for(const p of state.fliers)if(p.alive)aircraft(p);
+    drawModels();
     for(const p of state.sparks){
       g.globalAlpha=clamp(p.life/p.max,.2,1);
       g.fillStyle=p.color;g.fillRect(Math.round(p.x),Math.round(p.y),p.size,p.size);
@@ -740,13 +745,23 @@
     // The original logical height remains 180; extra-wide screens show
     // more horizontal sky so 4-player combat will eventually fit naturally.
     const nextW=clamp(Math.round(H*rect.width/rect.height),480,650);
+    const dpr=clamp(window.devicePixelRatio||1,1,2);
+    const pixelWidth=Math.max(1,Math.round(rect.width*dpr));
+    const pixelHeight=Math.max(1,Math.round(rect.height*dpr));
+    if(modelCanvas.width!==pixelWidth||modelCanvas.height!==pixelHeight){
+      modelCanvas.width=pixelWidth;modelCanvas.height=pixelHeight;
+      modelCtx.imageSmoothingEnabled=true;
+    }
     if(nextW===W&&canvas.width===W)return;
     const old=W;
     W=nextW;
-    canvas.width=W;canvas.height=H;
-    g.imageSmoothingEnabled=false;
+    canvas.width=W;canvas.height=H;g.imageSmoothingEnabled=false;
     const factor=W/old;
-    for(const p of state.fliers)p.x*=factor;
+    for(const p of state.fliers){
+      p.x*=factor;
+      if(p.swoop)for(const node of [p.swoop.p0,p.swoop.p1,p.swoop.p2,p.swoop.p3])
+        node.x*=factor;
+    }
     for(const kind of [state.bullets,state.bombs,state.mines,state.sparks])
       for(const p of kind)p.x*=factor;
     background=makeBackground();
