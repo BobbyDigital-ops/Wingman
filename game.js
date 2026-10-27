@@ -167,7 +167,7 @@
     const a=p.angle+random(-spread,spread),dx=Math.cos(a),dy=Math.sin(a);
     state.bullets.push({x:p.x+dx*(p.d.radius+2),y:p.y+dy*(p.d.radius+2),
       vx:dx*p.d.bulletSpeed+p.vx*.35,vy:dy*p.d.bulletSpeed+p.vy*.35,
-      owner:p.id,damage:p.d.damage,life:.9});
+      owner:p.id,damage:p.d.damage,life:.9,age:0});
     emit(p.x+dx*(p.d.radius+3),p.y+dy*(p.d.radius+3),2,'#fff0a3',7);
     sound('shot');
   }
@@ -178,7 +178,7 @@
         life:random(.22,.7),max:.7,color,size:Math.random()<.2?2:1});
     }
   }
-  function hit(p,amount,x,y,zoneOverride){
+  function hit(p,amount,x,y,zoneOverride,cause='GUN'){
     if(!p.alive||p.spawnSafe>0)return;
     const ca=Math.cos(p.angle),sa=Math.sin(p.angle);
     const lx=(x-p.x)*ca+(y-p.y)*sa;
@@ -195,6 +195,7 @@
     const armourPenalty=1+(100-p.parts.body)/100*.25;
     p.health-=amount*armourPenalty*(p.armourTime>0?.4:1);
     p.hitFlash=.17;
+    p.damageCause=cause;p.damageNotice=1.15;
     emit(x,y,p.type==='heavy'?11:7,'#ffe0a0',p.type==='heavy'?38:27);sound('hit');
     if(p.health<=0){
       p.health=0;p.alive=false;
@@ -348,31 +349,48 @@
       emit(x,y,1,'#6d7480',6);
     }
   }
-  function explosion(x,y,r,owner,damage){
+  function explosion(x,y,r,owner,damage,cause='BOMB'){
     emit(x,y,22,'#ffc47b',52);emit(x,y,9,'#6b707b',30);sound('boom');
     for(const p of state.fliers){
       if(!p.alive||p.id===owner)continue;
       const d=Math.hypot(x-p.x,y-p.y);
-      if(d<r+p.d.radius)hit(p,damage*(1-clamp(d/(r+p.d.radius),0,.75)),x,y);
+      // Explosions must not masquerade as ramming damage when airframes touch.
+      const source=state.fliers[owner];
+      if(source&&distance(source,p)<source.d.radius+p.d.radius+5)continue;
+      if(d<r+p.d.radius)hit(p,damage*(1-clamp(d/(r+p.d.radius),0,.75)),x,y,undefined,cause);
     }
   }
   function projectiles(dt){
     for(let i=state.bullets.length-1;i>=0;i--){
-      const b=state.bullets[i];
-      b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
-      const target=state.fliers[1-b.owner];
-      if(target&&target.alive&&target.rollTime<=0&&distance(b,target)<target.d.radius+1){
-        hit(target,b.damage,b.x,b.y);state.bullets.splice(i,1);continue;
+      const b=state.bullets[i],px=b.x,py=b.y;
+      b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;b.age=(b.age||0)+dt;
+      const target=state.fliers[1-b.owner],shooter=state.fliers[b.owner];
+      // Neither a gun muzzle nor a bomber can inflict disguised impact damage
+      // by touching another airframe: rounds must leave the collision envelope.
+      const clear=target&&shooter&&distance(target,shooter)>
+        target.d.radius+shooter.d.radius+3;
+      if(target&&target.alive&&target.rollTime<=0&&b.age>.085&&clear){
+        const vx=b.x-px,vy=b.y-py;
+        const denom=vx*vx+vy*vy;
+        const t=denom>0?clamp(((target.x-px)*vx+(target.y-py)*vy)/denom,0,1):0;
+        const nx=px+t*vx,ny=py+t*vy;
+        if(Math.hypot(target.x-nx,target.y-ny)<target.d.radius+
+          (shooter.type==='fighter'?2.7:1.4)){
+          hit(target,b.damage,b.x,b.y,undefined,'GUN');
+          state.bullets.splice(i,1);continue;
+        }
       }
-      if(b.life<=0||b.x<0||b.x>W||b.y<31||b.y>176)state.bullets.splice(i,1);
+      if(b.life<=0||b.x<0||b.x>W||b.y<31||b.y>176)
+        state.bullets.splice(i,1);
     }
     for(let i=state.bombs.length-1;i>=0;i--){
       const b=state.bombs[i];
       b.delay=Math.max(0,(b.delay||0)-dt);
       if(b.delay>0)continue;
+      b.age=(b.age||0)+dt;
       b.vy+=94*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
       const target=state.fliers[1-b.owner];
-      if(b.y>=172||(target&&target.alive&&distance(b,target)<target.d.radius+4)){
+      if(b.y>=172||(b.age>.24&&target&&target.alive&&distance(b,target)<target.d.radius+4)){
         explosion(b.x,Math.min(b.y,172),24,b.owner,55);
         state.bombs.splice(i,1);continue;
       }
@@ -382,7 +400,7 @@
       const m=state.mines[i];m.arm-=dt;m.life-=dt;m.phase+=dt*2;
       const target=state.fliers[1-m.owner];
       if(m.arm<=0&&target&&target.alive&&distance(m,target)<target.d.radius+6){
-        explosion(m.x,m.y,21,m.owner,54);state.mines.splice(i,1);continue;
+        explosion(m.x,m.y,21,m.owner,54,'MINE');state.mines.splice(i,1);continue;
       }
       if(m.life<=0)state.mines.splice(i,1);
     }
@@ -650,6 +668,12 @@
     }
     g.globalAlpha=1;
     drawHud();
+    const pilot=state.fliers[0];
+    if(pilot&&pilot.damageNotice>0){
+      g.font='bold 7px monospace';g.textAlign='center';
+      g.fillStyle='#ffd39c';g.fillText('HIT BY '+pilot.damageCause,W*.5,36);
+      g.textAlign='left';
+    }
     if(state.bannerTime>0){
       g.fillStyle='#1d3043b9';g.fillRect(W/2-47,44,94,19);
       g.strokeStyle='#c5a780';g.strokeRect(W/2-46.5,44.5,93,18);
