@@ -537,10 +537,11 @@
     }
     if(p.armourTime>0){g.strokeStyle='#b5e7ef';g.strokeRect(-12,-8,24,16);}
     g.restore();
-    g.fillStyle='#253743c9';g.fillRect(x-8,y-13,16,6);
+    // Keep player identifiers clear of the miniature's wings and canopy.
+    g.fillStyle='#253743cf';g.fillRect(x-7,y-19,14,6);
     g.fillStyle=p.id===0?'#ffe4a0':'#f5a1a4';
     g.font='bold 5px monospace';g.textAlign='center';
-    g.fillText(p.id===0?'P1':'AI',x,y-13);g.textAlign='left';
+    g.fillText(p.id===0?'P1':'AI',x,y-19);g.textAlign='left';
   }
   function bar(x,y,w,value,max,color){
     g.fillStyle='#243946';g.fillRect(x,y,w,4);
