@@ -119,7 +119,9 @@
     }
   }
   function shoot(p){
-    const a=p.angle,dx=Math.cos(a),dy=Math.sin(a);
+    // Damaged nose/cowling makes precise bursts noticeably less accurate.
+    const spread=(1-p.parts.nose/100)*.12;
+    const a=p.angle+random(-spread,spread),dx=Math.cos(a),dy=Math.sin(a);
     state.bullets.push({x:p.x+dx*(p.d.radius+2),y:p.y+dy*(p.d.radius+2),
       vx:dx*p.d.bulletSpeed+p.vx*.35,vy:dy*p.d.bulletSpeed+p.vy*.35,
       owner:p.id,damage:p.d.damage,life:.9});
@@ -514,8 +516,14 @@
       const gReady=p.burstLeft>0?'FIRING':p.gunCooldown>0?'RELOAD':'READY';
       g.fillStyle=p.gunCooldown>0?'#eabc7f':'#c5ead4';
       g.fillText('GUN '+gReady,7,19);
+      // A physical refill meter makes the risky post-burst window clear.
+      const charge=p.burstLeft>0 ? (p.d.burst-p.burstLeft)/p.d.burst :
+        p.gunCooldown>0 ? 1-p.gunCooldown/p.d.cooldown : 1;
+      bar(7,27,64,charge,1,p.burstLeft>0?'#e4aa68':p.gunCooldown>0?'#d88e63':'#80c69e');
       const sc=p.specialCooldown>0?Math.ceil(p.specialCooldown)+'s':'READY';
       g.fillStyle='#f0d8a2';g.fillText(p.d.special+' '+sc,77,19);
+      bar(77,27,39,p.specialCooldown>0?1-p.specialCooldown/p.d.specialCd:1,
+        1,'#c4b6df');
       g.fillStyle='#dce8e1';g.fillText('DAMAGE',W-106,19);
       const zones=[['E','engine'],['N','nose'],['A','body'],['L','left'],['R','right']];
       for(let i=0;i<zones.length;i++){
