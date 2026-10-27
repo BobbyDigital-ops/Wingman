@@ -197,7 +197,7 @@ test('swoop is a continuous curved move rather than an instant heading flip',()=
  game.internals.triggerSpecial(p);
  assert.equal(p.angle,originalAngle);
  let previous={x:p.x,y:p.y},highest=p.y;
- for(let i=0;i<72;i++){
+ for(let i=0;i<84;i++){
    game.advance(1,2000+i*16.6667);
    highest=Math.min(highest,p.y);
    const step=Math.hypot(p.x-previous.x,p.y-previous.y);
