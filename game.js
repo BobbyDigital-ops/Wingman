@@ -58,7 +58,8 @@
       vy:Math.sin(angle)*d.speed*.8,health:d.hull,
       parts:{engine:100,nose:100,body:100,left:100,right:100},
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boost:0,
-      spawnSafe:1.0,smokeTimer:0,hitFlash:0,alive:true,aiThink:0};
+      spawnSafe:1.0,smokeTimer:0,hitFlash:0,alive:true,aiThink:0,
+      energy:85,rollTime:0,rollRecovery:0,stallTime:0,wallGrace:0};
   }
   function newRound(){
     state.fliers=[
@@ -100,7 +101,7 @@
     }
   }
   function triggerBurst(p){
-    if(!p||!p.alive||p.gunCooldown>0||p.burstLeft>0||state.phase!=='playing'||state.paused)return;
+    if(!p||!p.alive||p.gunCooldown>0||p.burstLeft>0||p.rollTime>0||state.phase!=='playing'||state.paused)return;
     p.burstLeft=p.d.burst;p.shotTimer=0;
   }
   function triggerSpecial(p){
@@ -161,26 +162,46 @@
       endRound(p.id===0?1:0);
     }
   }
+  function triggerRoll(p){
+    if(!p||!p.alive||state.phase!=='playing'||state.paused||p.rollTime>0||p.rollRecovery>0)return;
+    p.rollTime=p.type==='fighter'?.5:p.type==='heavy'?.48:.45;
+    p.rollRecovery=1.35+(p.type==='bomber'?.35:0);
+    sound('special');
+  }
   function steerPlane(p,steer,dt){
-    const turning=steer<0?(.4+.6*p.parts.left/100):(.4+.6*p.parts.right/100);
-    p.angle+=steer*p.d.turn*turning*dt;
+    const wing=steer<0?p.parts.left:p.parts.right;
+    const authority=.42+.58*wing/100;
+    const sluggish=p.stallTime>0?.57:1;
+    p.angle+=steer*p.d.turn*authority*sluggish*dt;
     if(p.angle>Math.PI)p.angle-=TAU;
     if(p.angle< -Math.PI)p.angle+=TAU;
     const engine=.52+.48*p.parts.engine/100;
-    const altitude=1+Math.sin(p.angle)*.22;
-    const wanted=p.d.speed*engine*altitude*(p.boost>0?1.55:1);
-    p.speed+=(wanted-p.speed)*Math.min(1,dt*2.6);
-    const follow=Math.min(1,dt*(p.type==='bomber'?2.4:3.8));
+    // Flight energy is a real store: climbing consumes it; diving restores it.
+    const climb=Math.max(0,-Math.sin(p.angle));
+    const dive=Math.max(0,Math.sin(p.angle));
+    p.energy=clamp(p.energy+dt*(24*dive-27*climb+6*(1-climb)),0,100);
+    const energyFactor=.52+.48*(p.energy/100);
+    const wanted=p.d.speed*engine*energyFactor*(1+Math.min(.32,dive*.25));
+    p.stallTime=p.energy<9?Math.max(p.stallTime,.2):Math.max(0,p.stallTime-dt);
+    // Low energy lowers turn authority and speed, but never disables steering.
+    const speedTarget=p.stallTime>0?wanted*.68:wanted;
+    p.speed+=(speedTarget-p.speed)*Math.min(1,dt*2.3);
+    const follow=Math.min(1,dt*(p.type==='bomber'?2.7:4.0));
     p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
     p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
     p.x+=p.vx*dt;p.y+=p.vy*dt;
-    // Prototype arena: reflect at the edges. Later we can tune soft boundaries.
-    if(p.x<11){p.x=11;p.vx=Math.abs(p.vx)*.65;p.angle=Math.PI-p.angle;}
-    if(p.x>W-11){p.x=W-11;p.vx=-Math.abs(p.vx)*.65;p.angle=Math.PI-p.angle;}
-    if(p.y<32){p.y=32;p.vy=Math.abs(p.vy)*.65;p.angle=-p.angle;}
-    if(p.y>172){
-      p.y=172;p.vy=-Math.abs(p.vy)*.7;p.angle=-p.angle;
-      if(p.spawnSafe<=0)hit(p,25,p.x,p.y,'body');
+    p.wallGrace=Math.max(0,p.wallGrace-dt);
+    // Smooth turn-in rather than sudden horizontal/vertical angle reflections.
+    const margin=12;
+    if(p.x<margin||p.x>W-margin||p.y<34||p.y>H-12){
+      p.x=clamp(p.x,margin,W-margin);p.y=clamp(p.y,34,H-12);
+      if(p.wallGrace<=0){
+        const inward=Math.atan2(H*.53-p.y,W*.5-p.x);
+        p.angle+=clamp(angleDiff(inward,p.angle),-1.05,1.05);
+        p.energy=Math.max(15,p.energy-7);
+        p.wallGrace=.22;
+      }
+      p.vx*=.73;p.vy*=.73;
     }
   }
   function aiInput(p,target){
@@ -212,6 +233,7 @@
         triggerSpecial(p);
       if(p.type==='fighter'&&range>115&&Math.abs(error)<.3)triggerSpecial(p);
     }
+    if(range<75&&target.burstLeft>0&&p.rollTime<=0&&p.rollRecovery<=0&&Math.abs(aim)>2)triggerRoll(p);
     return turn;
   }
   function updatePlane(p,dt,steer){
@@ -220,6 +242,8 @@
     p.hitFlash=Math.max(0,p.hitFlash-dt);
     p.specialCooldown=Math.max(0,p.specialCooldown-dt);
     p.boost=Math.max(0,p.boost-dt);
+    p.rollTime=Math.max(0,p.rollTime-dt);
+    p.rollRecovery=Math.max(0,p.rollRecovery-dt);
     steerPlane(p,steer,dt);
     if(p.burstLeft>0){
       p.shotTimer-=dt;
@@ -249,7 +273,7 @@
       const b=state.bullets[i];
       b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
       const target=state.fliers[1-b.owner];
-      if(target&&target.alive&&distance(b,target)<target.d.radius+1){
+      if(target&&target.alive&&target.rollTime<=0&&distance(b,target)<target.d.radius+1){
         hit(target,b.damage,b.x,b.y);state.bullets.splice(i,1);continue;
       }
       if(b.life<=0||b.x<0||b.x>W||b.y<31||b.y>176)state.bullets.splice(i,1);
@@ -428,6 +452,7 @@
     const x=Math.round(p.x),y=Math.round(p.y);
     const sprite=aircraftSprites[p.type];
     g.save();g.translate(x,y);g.rotate(p.angle);
+    if(p.rollTime>0){g.scale(1,Math.max(.24,Math.abs(Math.cos(p.rollTime*22))));}
     if(sprite){
       const dw=sprite.width,dh=sprite.height;
       g.drawImage(sprite,-Math.round(dw/2),-Math.round(dh/2));
@@ -472,6 +497,10 @@
       g.fillStyle='#f0d8a2';g.fillText(p.d.special+' '+sc,77,19);
       bar(77,27,39,p.specialCooldown>0?1-p.specialCooldown/p.d.specialCd:1,
         1,'#c4b6df');
+      g.fillStyle='#e6d3a0';g.fillText('ENERGY',123,19);
+      bar(123,27,48,p.energy,100,p.energy<20?'#db8369':'#9bbfd0');
+      g.fillStyle=p.rollTime>0?'#f8e4a2':'#c0d9df';
+      g.fillText(p.rollTime>0?'ROLLING':p.rollRecovery>0?'ROLL '+p.rollRecovery.toFixed(1):'ROLL READY',181,19);
       g.fillStyle='#dce8e1';g.fillText('DAMAGE',W-106,19);
       const zones=[['E','engine'],['N','nose'],['A','body'],['L','left'],['R','right']];
       for(let i=0;i<zones.length;i++){
@@ -554,7 +583,8 @@
   bindButton('right','right');
   bindButton('fire',null,()=>triggerBurst(state.fliers[0]));
   bindButton('special',null,()=>triggerSpecial(state.fliers[0]));
-  const preventKeys=new Set(['ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyA','KeyD','KeyK']);
+  bindButton('roll',null,()=>triggerRoll(state.fliers[0]));
+  const preventKeys=new Set(['ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyA','KeyD','KeyK','KeyL']);
   document.addEventListener('keydown',e=>{
     if(preventKeys.has(e.code))e.preventDefault();
     if(e.code==='KeyA'||e.code==='ArrowLeft')controls.left=true;
@@ -562,6 +592,7 @@
     if(e.repeat)return;
     if(e.code==='Space'){audioUnlock();triggerBurst(state.fliers[0]);}
     if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyK'){audioUnlock();triggerSpecial(state.fliers[0]);}
+    if(e.code==='KeyL'){audioUnlock();triggerRoll(state.fliers[0]);}
     if(e.code==='KeyP'&&state.phase==='playing')state.paused=!state.paused;
   });
   document.addEventListener('keyup',e=>{
