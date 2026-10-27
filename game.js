@@ -421,43 +421,76 @@
     return c;
   }
   let background=makeBackground();
+  // Small, readable aircraft silhouettes. Their proportions are deliberately
+  // more plausible than cartoon rockets, but every colour remains pixel art.
   function aircraft(p){
     const d=p.d;
     const x=Math.round(p.x),y=Math.round(p.y);
     g.save();g.translate(x,y);g.rotate(p.angle);
-    g.fillStyle='#273e49';
+    const body=p.hitFlash>0?'#fff2d5':d.color;
+    const ink='#273843';
     if(p.type==='fighter'){
-      poly(g,[[-10,-3],[-4,-3],[-3,-5],[2,-5],[4,-3],[10,-2],[13,0],[9,2],[-5,2],[-10,3]],'#2d4350');
-      poly(g,[[-9,-2],[-3,-2],[0,-4],[3,-3],[10,-1],[12,0],[7,1],[-7,1]],p.hitFlash>0?'#fff2d7':d.color);
-      g.fillStyle=d.shade;g.fillRect(-4,2,7,4);g.fillRect(-5,-6,6,2);
-      g.fillStyle=d.accent;g.fillRect(-7,-2,2,3);
-      g.fillStyle='#395467';g.fillRect(2,-3,3,2);
-      g.fillStyle='#e3cd91';g.fillRect(12,-1,2,2);
+      // Slim single-engine fighter: pronounced tail, elliptical wing, narrow nose.
+      poly(g,[[-12,0],[-11,-6],[-9,-6],[-8,-2],[-4,-3],[3,-3],
+        [9,-2],[13,0],[10,2],[-8,2]],ink);
+      poly(g,[[-11,-1],[-9,-4],[-8,-2],[-4,-2],[4,-2],
+        [11,-1],[12,0],[9,1],[-9,1]],body);
+      poly(g,[[-6,0],[-3,-5],[1,-6],[4,-4],[5,1],[1,4],[-4,4]],ink);
+      poly(g,[[-4,0],[-2,-4],[1,-5],[3,-3],[4,1],[0,3],[-3,3]],d.shade);
+      g.fillStyle='#cbd6cb';g.fillRect(-1,-3,2,2);
+      g.fillStyle='#7ea3a7';g.fillRect(3,-2,3,2); // cockpit
+      g.fillStyle=d.accent;g.fillRect(-7,0,2,1);
+      g.fillStyle='#e5dec5';g.fillRect(-2,0,2,1); // roundel
+      g.fillStyle='#263c43';g.fillRect(13,-4,1,9);
+      g.fillStyle='#c2d7d7';g.fillRect(14,-3,1,7); // propeller disc
+      g.fillStyle='#f5d198';g.fillRect(12,0,3,1); // spinner
     }else if(p.type==='heavy'){
-      poly(g,[[-13,-4],[-8,-4],[-5,-6],[2,-6],[4,-4],[11,-3],[15,-1],[15,2],[-10,3],[-13,5]],'#3e4650');
-      poly(g,[[-12,-3],[-7,-3],[-4,-5],[4,-4],[12,-2],[14,0],[9,2],[-11,2]],p.hitFlash>0?'#fff2d7':d.color);
-      g.fillStyle=d.shade;g.fillRect(-4,2,11,5);g.fillRect(-8,-7,10,2);
-      g.fillStyle='#f9c773';g.fillRect(5,-2,4,1);
-      g.fillStyle='#343b42';g.fillRect(13,-3,4,1);g.fillRect(13,2,4,1);
+      // Broad heavy fighter, belly nacelle, angular wing and twin gun barrels.
+      poly(g,[[-15,-1],[-13,-6],[-10,-6],[-10,-3],[-6,-4],
+        [6,-4],[12,-2],[16,-1],[16,2],[7,3],[-13,3]],ink);
+      poly(g,[[-14,-2],[-12,-4],[-9,-3],[-6,-3],[8,-3],
+        [14,-1],[14,1],[5,2],[-12,1]],body);
+      poly(g,[[-7,-2],[-4,-7],[2,-8],[6,-3],[5,5],
+        [-2,6],[-6,3]],ink);
+      poly(g,[[-5,-2],[-2,-6],[2,-6],[4,-3],[4,4],[-1,4],[-5,2]],d.shade);
+      g.fillStyle='#9bb8b4';g.fillRect(5,-3,4,2);
+      g.fillStyle='#d4c29d';g.fillRect(-2,1,3,2);
+      g.fillStyle='#6f403e';g.fillRect(-11,0,2,1);
+      g.fillStyle=ink;g.fillRect(14,-3,5,1);g.fillRect(14,2,5,1); // cannons
+      g.fillStyle='#d1c8a3';g.fillRect(17,-4,1,8); // prop
+      g.fillStyle='#f6db95';g.fillRect(16,-1,3,2);
     }else{
-      poly(g,[[-16,-5],[-11,-5],[-10,-7],[4,-7],[10,-4],[15,-3],[18,0],[14,3],[-14,4],[-16,7]],'#4d5552');
-      poly(g,[[-15,-4],[-9,-4],[-6,-6],[6,-5],[14,-2],[17,0],[12,3],[-14,3]],p.hitFlash>0?'#fff2d7':d.color);
-      g.fillStyle=d.shade;g.fillRect(-7,3,15,6);g.fillRect(-10,-9,14,3);
-      g.fillStyle='#7d9aa0';g.fillRect(4,-4,6,2);
-      g.fillStyle='#eee0b3';g.fillRect(16,-1,3,2);
+      // Chunky twin-engined bomber, with long fuselage, twin props and large tail.
+      poly(g,[[-18,-1],[-17,-6],[-14,-7],[-13,-3],
+        [-7,-4],[9,-4],[16,-2],[19,0],[18,3],[-14,4]],ink);
+      poly(g,[[-17,-2],[-15,-5],[-13,-2],[-7,-3],
+        [9,-3],[16,-1],[18,1],[15,2],[-14,2]],body);
+      poly(g,[[-7,-3],[-4,-7],[6,-7],[10,-3],[11,5],
+        [4,7],[-7,5]],ink);
+      poly(g,[[-5,-2],[-2,-6],[5,-6],[9,-2],[9,4],
+        [3,5],[-5,3]],d.shade);
+      // Two engine nacelles and their pixel props (not over-sized turbines).
+      g.fillStyle='#35434a';g.fillRect(-2,-7,6,3);g.fillRect(-2,5,6,3);
+      g.fillStyle='#c9b38c';g.fillRect(4,-9,1,6);g.fillRect(4,4,1,6);
+      g.fillStyle='#e5d69f';g.fillRect(3,-7,2,2);g.fillRect(3,6,2,2);
+      g.fillStyle='#89aeb9';g.fillRect(9,-3,5,2); // glazed nose
+      g.fillStyle='#d8cda4';g.fillRect(-14,-1,3,1);
+      g.fillStyle='#4c655b';g.fillRect(-7,0,9,1);
     }
     if(p.parts.left<40||p.parts.right<40){
-      g.fillStyle='#323a41';g.fillRect(-3,p.parts.left<p.parts.right?-5:3,5,2);
+      g.fillStyle='#262f35';
+      g.fillRect(-2,p.parts.left<p.parts.right?-5:3,4,2);
     }
     if(p.boost>0){
-      g.fillStyle='#ffe6a0';g.fillRect(-d.radius-5,-2,5,3);
-      g.fillStyle='#f6a35d';g.fillRect(-d.radius-8,-1,3,1);
+      g.fillStyle='#ffe7a8';g.fillRect(-d.radius-4,-2,4,3);
+      g.fillStyle='#ee9554';g.fillRect(-d.radius-7,-1,3,1);
     }
     g.restore();
-    // Identifier remains legible when planes cross.
-    g.fillStyle=p.id===0?'#fff0bf':'#f4a1a4';
+    // High-contrast tags are much easier to track when aircraft overlap.
+    g.fillStyle='#243747';g.fillRect(x-9,y-d.radius-11,18,8);
+    g.fillStyle=p.id===0?'#ffebae':'#f6a1a0';
     g.font='bold 6px monospace';g.textAlign='center';
-    g.fillText(p.id===0?'YOU':'CPU',x,y-d.radius-6);
+    g.fillText(p.id===0?'YOU':'CPU',x,y-d.radius-10);
     g.textAlign='left';
   }
   function bar(x,y,w,value,max,color){
