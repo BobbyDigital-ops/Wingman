@@ -38,6 +38,8 @@ function launch(){
   };
   const instrumented=code.replace('  // All scenery is painted once;',
     '  window.__wingmanTest={state,triggerBomb,triggerSpecial};\n  // All scenery is painted once;');
+  const artCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/aircraft.js'),'utf8');
+  vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
   vm.runInNewContext(instrumented,sandbox,{timeout:3000,filename:'game.js'});
   return {
     listeners,canvas,internals:sandbox.window.__wingmanTest,
@@ -130,6 +132,13 @@ test('ramming planes causes no direct health or component damage',()=>{
  game.advance(2,200);
  assert.equal(fighter.health,health[0]);
  assert.equal(enemy.health,health[1]);
+});
+test('all three native-sized miniature sprites load in the renderer',()=>{
+ const game=launch();
+ const sprites=game.internals.state;
+ game.listeners.get('start:click')();
+ game.advance(40,1000);
+ assert.equal(sprites.fliers.length,2);
 });
 test('Spitfire swoop follows a timed arc without instant reversal',()=>{
  const game=launch();
