@@ -149,3 +149,15 @@
 @media(max-width:540px) and (orientation:portrait){
  .career-panel .character-roster{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* Keep faction selection visible while the pilot cards scroll independently. */
+.career-screen:has(.character-roster){overflow:hidden;align-items:center}
+.career-panel:has(.character-roster){display:flex;flex-direction:column;overflow:hidden;max-height:min(91dvh,900px)}
+.career-panel:has(.character-roster)>.career-head,
+.career-panel:has(.character-roster)>.candidate-identity,
+.career-panel:has(.character-roster)>.career-muted{flex:none}
+.career-panel .character-roster{min-height:0;flex:1;max-height:none;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;align-content:start}
+@media(pointer:coarse) and (orientation:landscape){
+ .career-panel:has(.character-roster){max-height:calc(100svh - 16px)}
+ .career-panel .character-roster{max-height:none}
+}
