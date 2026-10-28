@@ -147,31 +147,28 @@ test('all three native-sized miniature sprites load in the renderer',()=>{
  game.advance(40,1000);
  assert.equal(sprites.fliers.length,2);
 });
-test('fighter special is a short, predictable 180-degree reversal',()=>{
+test('Fighter Overdrive activates for a bounded duration and has a cooldown',()=>{
  const game=launch();game.listeners.get('start:click')();
- const p=game.internals.state.fliers[0],heading=p.angle;
+ const p=game.internals.state.fliers[0];
  game.internals.triggerSpecial(p);
- assert.ok(p.swoopTime<.5&&p.swoopTime>.25);
- game.advance(30,1000);
- assert.equal(p.swoop,null);
- assert.ok(Math.abs(Math.atan2(Math.sin(p.angle-heading-Math.PI),
-   Math.cos(p.angle-heading-Math.PI)))<.04);
+ assert.ok(p.overdriveTime>2.5);
+ assert.equal(p.specialCooldown,12);
+ game.advance(8,1000);
+ assert.equal(p.boosting,true);
+ assert.ok(p.overdriveTime<2.8);
 });
-test('Bomber climb does not release bombs, separate BOMB button does',()=>{
- const game=launch();
- game.listeners.get('bomber:click')();
+test('Bomber E releases exactly three spaced bombs and retains the rear gunner',()=>{
+ const game=launch();game.listeners.get('bomber:click')();
  game.listeners.get('start:click')();
- const bomber=game.internals.state.fliers[0];
- assert.equal(game.internals.state.bombs.length,0);
- game.internals.triggerSpecial(bomber);
- assert.ok(bomber.climbAssist>0);
- assert.equal(game.internals.state.bombs.length,0);
- game.listeners.get('bomb:pointerdown')({pointerId:3,preventDefault(){}});
- assert.equal(game.internals.state.bombs.length,1);
- assert.ok(bomber.bombCooldown>0);
+ const p=game.internals.state.fliers[0];
+ game.internals.triggerSpecial(p);
+ assert.equal(p.bombQueue,3);
+ assert.equal(p.specialCooldown,20);
+ assert.ok('rearCooldown' in p);
+ game.advance(8,1000);
+ assert.ok(game.internals.state.bombs.length>=1);
+ assert.equal(p.bombQueue,2);
 });
-
-
 test('Spitfire has effective guns while remaining controllable',()=>{
  const game=launch();
  game.listeners.get('start:click')();
@@ -194,21 +191,13 @@ test('overlapping aircraft cannot inflict point-blank gun damage',()=>{
  game.advance(3,1000);
  assert.equal(a.health,health);
 });
-test('180 reversal animates smoothly without teleporting across the map',()=>{
+test('Overdrive does not teleport the aircraft or force a reverse turn',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0],origin=p.angle;
  game.internals.triggerSpecial(p);
- let previous={x:p.x,y:p.y};
- let changed=false;
- for(let i=0;i<30;i++){
-   game.advance(1,2000+i*16.6667);
-   const step=Math.hypot(p.x-previous.x,p.y-previous.y);
-   assert.ok(step<5,'180 turn cannot teleport the aircraft');
-   if(Math.abs(p.angle-origin)>.3)changed=true;
-   previous={x:p.x,y:p.y};
- }
- assert.ok(changed);
  assert.equal(p.swoop,null);
+ game.advance(5,1000);
+ assert.ok(Math.abs(p.angle-origin)<.5);
 });
 test('plane models have a dedicated display-sized rendering surface',()=>{
  const game=launch();
@@ -337,17 +326,15 @@ test('damaged aircraft still turn and are not component-disabled',()=>{
  assert.notEqual(p.angle,angle);
  assert.ok(p.alive);
 });
-test('holding boost uses charge and releasing it recharges',()=>{
+test('Universal W boost is removed and only fighter E triggers Overdrive',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];
  game.listeners.get('document:keydown')({code:'KeyW',repeat:false,preventDefault(){}});
- game.advance(50,1000);
- const charged=p.boostCharge;
- assert.ok(charged<90,'holding boost consumes charge');
+ game.advance(5,1000);
+ assert.equal(p.boosting,false);
+ game.internals.triggerSpecial(p);
+ game.advance(5,2000);
  assert.equal(p.boosting,true);
- game.listeners.get('document:keyup')({code:'KeyW'});
- game.advance(35,2000);
- assert.ok(p.boostCharge>charged,'charge regenerates while not boosting');
 });
 test('stall depends on rapid altitude gain, not height or low energy alone',()=>{
  const game=launch();game.listeners.get('start:click')();
@@ -365,17 +352,15 @@ test('stall depends on rapid altitude gain, not height or low energy alone',()=>
  assert.equal(p.health,health);
  assert.ok(p.flightRisk<.2,'diving clears accumulated climb load');
 });
-test('swoop briefly evades guns and exits at a bounded speed',()=>{
+test('Heavy fighter shield reduces damage while active',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];
+ p.role='heavy';
  game.internals.triggerSpecial(p);
- assert.ok(p.evasiveTime>0);
- game.advance(100,1000);
- assert.equal(p.swoop,null);
- assert.ok(p.speed<=p.d.speed*1.4);
+ assert.ok(p.armourTime>0);
+ assert.equal(p.specialCooldown,20);
 });
-
-test('ground-threat prediction takes priority over AI pursuit',()=>{
+test('Ground-threat prediction still overrides AI pursuit without universal boost',()=>{
  const game=launch();game.listeners.get('start:click')();
  const enemy=game.internals.state.fliers[1];
  enemy.y=165;enemy.vy=78;enemy.angle=.8;enemy.aiThink=20;
@@ -383,7 +368,7 @@ test('ground-threat prediction takes priority over AI pursuit',()=>{
  game.internals.aiInput(enemy,target);
  assert.equal(enemy.aiMode,'recover');
  assert.ok(enemy.aiRecoveryTime>0);
- assert.ok(enemy.aiBoost,'AI uses available boost to pull out of dives');
+ assert.equal(enemy.aiBoost,false);
 });
 test('gentle tail assist only engages when lined up behind an opponent',()=>{
  const game=launch();game.listeners.get('start:click')();
