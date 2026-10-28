@@ -267,7 +267,7 @@ test('ceiling allows exit then re-enters with reversed horizontal heading and no
  p.y=-p.d.radius-1;
  game.internals.steerPlane(p,0,1/60);
  assert.ok(p.alive);assert.equal(p.health,hp);
- assert.ok(p.y>31&&p.y<50,'aircraft returns just below top edge');
+ assert.ok(p.y<=0&&p.y>=-p.d.radius-0.1,'aircraft turns around at precisely its offscreen boundary');
  assert.ok(p.vx<0,'horizontal direction reverses');
  assert.ok(p.vy>0,'aircraft flies back into arena');
  assert.equal(p.flightRisk,0);
@@ -278,7 +278,7 @@ test('ceiling re-entry works during a special reversal too',()=>{
  game.internals.triggerSpecial(p);
  p.y=-p.d.radius-2;
  game.internals.steerPlane(p,0,1/60);
- assert.ok(p.y>31&&p.vy>0);
+ assert.ok(p.y<=0&&p.y>=-p.d.radius-.1&&p.vy>0);
  assert.ok(p.alive);
 });
 

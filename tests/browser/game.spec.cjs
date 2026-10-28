@@ -63,3 +63,38 @@ test('reverse manoeuvre and wind boost run without browser errors',async ({page}
  await page.keyboard.up('KeyW');
  expect(errors).toEqual([]);
 });
+
+test('Road to Ace creates a pilot licence and persists it across reloads',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ await page.locator('#career-open').click();
+ await expect(page.getByRole('heading',{name:'CREATE YOUR PILOT'})).toBeVisible();
+ await page.locator('#career-name').fill('Test Squadron');
+ await page.locator('#career-faction').selectOption('Axis');
+ await page.locator('#career-portrait').selectOption('1');
+ await page.getByRole('button',{name:'ISSUE PILOT LICENCE'}).click();
+ await expect(page.getByText('Test Squadron',{exact:true})).toBeVisible();
+ await expect(page.getByText('AXIS · ACTIVE SERVICE')).toBeVisible();
+ await page.reload();
+ await page.locator('#career-license').click();
+ await expect(page.getByText('Test Squadron',{exact:true})).toBeVisible();
+ expect(errors).toEqual([]);
+});
+test('Road to Ace starts and saves a locked-aircraft three-life run',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ await page.locator('#career-open').click();
+ await page.locator('#career-name').fill('Flight Leader');
+ await page.getByRole('button',{name:'ISSUE PILOT LICENCE'}).click();
+ await page.getByRole('button',{name:'ROAD TO ACE'}).last().click();
+ await page.getByRole('button',{name:'Spitfire',exact:true}).click();
+ await expect(page.getByText('RANK 1/8')).toBeVisible();
+ await expect(page.locator('[data-choice]')).toHaveCount(3);
+ await page.locator('[data-choice="0"]').click();
+ await expect(page.locator('#career-screen')).toBeHidden();
+ await expect(page.locator('#menu')).toHaveClass(/hidden/);
+ await page.reload();
+ await page.locator('#career-open').click();
+ await expect(page.getByText('RANK 1/8')).toBeVisible();
+ expect(errors).toEqual([]);
+});
