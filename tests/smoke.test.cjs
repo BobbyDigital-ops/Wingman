@@ -42,7 +42,7 @@ function launch(){
     console
   };
   const instrumented=code.replace('  // All scenery is painted once;',
-    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,hit,steerPlane,updatePlane,controls,aiInput,assignCampaignAI,tailMagnet,shoot,PLANES};\n  // All scenery is painted once;');
+    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,hit,steerPlane,updatePlane,controls,aiInput,assignCampaignAI,tailMagnet,shoot,rollWind,updateWind,projectiles,PLANES};\n  // All scenery is painted once;');
   const artCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/aircraft.js'),'utf8');
   vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
   vm.runInNewContext(instrumented,sandbox,{timeout:3000,filename:'game.js'});
@@ -489,4 +489,38 @@ test('campaign rank AI changes tactical decision level without modifying hull or
  game.internals.assignCampaignAI(p,{rank:8,id:'von-test'});
  assert.equal(p.aiSkillLevel,1);assert.equal(p.aiStyle,style);
  assert.equal(p.d.hull,hull);assert.equal(p.d.damage,damage);
+});
+
+test('real touch hold keeps continuous steering active until the actual touchend',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0];
+ const startAngle=p.angle;
+ let prevented=0;const e={changedTouches:[{identifier:14}],preventDefault(){prevented++;}};
+ game.listeners.get('right:touchstart')(e);
+ assert.equal(game.internals.controls.right,true);
+ game.advance(35,1000);
+ assert.ok(Math.abs(p.angle-startAngle)>.15,'steering continues across frames');
+ game.listeners.get('right:touchend')(e);
+ assert.equal(game.internals.controls.right,false);
+ assert.ok(prevented>=2,'native select/scroll action was prevented');
+});
+test('wind affects both aircraft symmetrically and drifts bullets much less',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const s=game.internals.state, p=s.fliers[0];
+ const dt=1/60,original={...p};
+ s.wind={active:true,base:14,current:14,elapsed:0};
+ game.internals.steerPlane(p,0,dt);const right=p.x;
+ Object.assign(p,original);s.wind={active:true,base:-14,current:-14,elapsed:0};
+ game.internals.steerPlane(p,0,dt);const left=p.x;
+ assert.ok(right>left,'eastward wind moves the same aircraft further east');
+ const b={owner:0,x:120,y:80,vx:0,vy:0,damage:0,age:0.1,life:1};
+ s.bullets=[b];s.wind={active:true,base:14,current:14,elapsed:0};
+ game.internals.projectiles(dt);
+ assert.ok(b.x-120>0 && b.x-120<14*dt*.5,'bullet drift is weaker than aircraft drift');
+});
+test('no-wind round leaves the wind force at zero',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const w=game.internals.state.wind;
+ if(!w.active)assert.equal(w.current,0);
+ else {assert.ok(Math.abs(w.current)>0);}
 });

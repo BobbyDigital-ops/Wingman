@@ -141,3 +141,6 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
 .game-frame,.control-layer,.control-cluster,.control-btn,.control-btn *{touch-action:none!important;-webkit-touch-callout:none!important;-webkit-user-select:none!important;user-select:none!important;-webkit-tap-highlight-color:transparent!important}
 .control-btn{appearance:none;-webkit-appearance:none;outline:none;}
 @media(pointer:coarse){.control-btn:focus{outline:none}.control-btn:focus-visible{outline:2px solid #ffe2a0;outline-offset:3px}}
+
+.menu-card .career-entry{display:block;margin:10px auto 2px;padding:10px 16px;min-height:42px;border:1px solid #d6b784;background:#3b4f57;color:#ffe4b2;font-size:12px;font-weight:800;letter-spacing:.08em}
+@media(pointer:coarse){.menu-card .career-entry{min-height:50px;width:100%}}

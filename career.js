@@ -251,5 +251,6 @@ screen.addEventListener('change',e=>{
  }
 });
 nav.addEventListener('click',()=>show('ladder'));licenceBtn.addEventListener('click',()=>show('licence'));
+document.getElementById('career-open-mobile')?.addEventListener('click',()=>show('ladder'));
 window.WingmanCareer={finishEncounter,open:show};
 })();
