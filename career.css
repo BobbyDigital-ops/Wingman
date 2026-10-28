@@ -37,3 +37,5 @@
 .airframe-card strong{font-size:14px;color:#f6ddb1}
 .airframe-card small{font-size:11px;letter-spacing:.04em;color:#cee0dd}
 .airframe-card span{margin-top:auto;color:#f4cd82;font-size:10px}
+
+.pilot-skill-picker{display:grid;gap:5px;color:#e6d4a6;font-size:12px;margin:12px 0}.pilot-skill-picker select{background:#132a38;color:#f9e5b6;padding:10px;border:1px solid #a48c62}

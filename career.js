@@ -2,6 +2,8 @@
 (()=>{
 'use strict';
 const STORE='wingman-road-to-ace-v1',MAX_RANK=8;
+const PILOT_SKILLS=[['reverse','180° REVERSE'],['roll','BARREL ROLL'],['smoke','SMOKESCREEN'],['harden','HARDEN'],['deadeye','DEADEYE'],['cut','ENGINE CUT'],['dive','EMERGENCY DIVE']];
+
 const AXIS=['bf109','bf110','he111'],ALLIES=['fighter','heavy','bomber'];
 const CATALOG=[
  ['Arthur "Sparrow" Miles','fighter','rookie'],['James "Lucky" Mercer','fighter','rookie'],['Peter "Pip" Collins','heavy','rookie'],
@@ -89,6 +91,7 @@ function show(which='ladder'){
 function close(){showing=false;screen.hidden=true;window.WingmanGame?.showMenu();}
 const ATTRS=['manoeuvrability','gunnery','engine'];
 let candidates=[];
+let selectedSkill='roll';
 const SILLY_NAMES={Allies:{first:['Chocs','Bertie','Bangers','Nigel','Pip','Monty','Cecil','Basil','Waffles','Reginald','Archibald','Tally-Ho'],last:['McGinty','Wobblebottom','Puddington','Crumpet','Bumblesnatch','Flapworthy','Fotherington-Smythe','Porkington','Wingnut','Teacup','Muffinworth','Tweedle']},Axis:{first:['Dietrich','Günter','Wolfgang','Klaus','Otto','Fritz','Helmut','Hans','Rolf','Heinrich','Ludwig','Manfred'],last:['von Pooper','Schnitzelhosen','Wurstmeister','von Fluffel','Bratwurst','Knödelkopf','von Wobbel','Pumpernickel','Käsebrot','Schnurrbart','Blitzensocks','von Quack']}};
 function recruitName(faction,seed){const pool=SILLY_NAMES[faction==='Axis'?'Axis':'Allies'];return pool.first[seed%pool.first.length]+' '+pool.last[Math.floor(seed/17)%pool.last.length];}
 
@@ -120,7 +123,7 @@ function createProfile(index){
  const name=document.getElementById('career-name')?.value.trim().slice(0,30)||recruitName(document.getElementById('career-faction')?.value||'Allies',chosen.id);
  const faction=document.getElementById('career-faction')?.value==='Axis'?'Axis':'Allies';
  airframeOffers=[];
- data={profile:{name,faction,style:chosen.style,attributes:chosen.attributes},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
+ data={profile:{name,faction,style:chosen.style,attributes:chosen.attributes,skill:selectedSkill},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
  save();view='licence';render();
 }
 const BASE_AIRCRAFT={fighter:{speed:82,turn:3.15,hull:100,armour:30},heavy:{speed:75,turn:1.85,hull:125,armour:75},bomber:{speed:66,turn:1.30,hull:140,armour:115},bf109:{speed:84,turn:3.05,hull:96,armour:32},bf110:{speed:77,turn:1.78,hull:125,armour:70},he111:{speed:69,turn:1.35,hull:136,armour:105}};
@@ -195,6 +198,7 @@ function render(){
   <div class="candidate-identity"><label>OPTIONAL CUSTOM NAME <input id="career-name" maxlength="30" placeholder="Keep your recruit&#39;s name" autocomplete="off"></label>
   <label>ALLEGIANCE <select id="career-faction"><option>Allies</option><option>Axis</option></select></label></div>
   <div id="candidate-picker">${candidatePicker()}</div>
+  <label class="pilot-skill-picker">PILOT SKILL (Q)<select id="career-skill">${PILOT_SKILLS.map(([id,label])=>`<option value="${id}" ${id===selectedSkill?'selected':''}>${label}</option>`).join('')}</select></label>
   <button data-action="reroll">GENERATE THREE NEW RECRUITS</button>`);
   return;
  }
@@ -203,7 +207,7 @@ function render(){
   const nemesis=Object.entries(data.records).filter(([,r])=>r.losses>r.wins).sort((a,b)=>(b[1].losses-b[1].wins)-(a[1].losses-a[1].wins))[0];
   panel('PILOT LICENCE',`<div class="career-licence"><div class="career-photo">${pilotPortrait(p.faction,p.style)}</div>
    <div><strong>${escape(p.name)}</strong><small>${p.faction.toUpperCase()} · ACTIVE SERVICE</small>
-   <p>MANOEUVRABILITY <b>${p.attributes?.manoeuvrability??65}</b></p><p>GUNNERY <b>${p.attributes?.gunnery??65}</b></p><p>ENGINE HANDLING <b>${p.attributes?.engine??65}</b></p><p>CONFIRMED KILLS <b>${data.kills}</b></p><p>VICTORIES <b>${wins}</b></p><p>DEFEATS <b>${losses}</b></p>
+   <p>ACTIVE SKILL <b>${escape(PILOT_SKILLS.find(x=>x[0]===(p.skill||'roll'))?.[1]||'BARREL ROLL')}</b></p><p>MANOEUVRABILITY <b>${p.attributes?.manoeuvrability??65}</b></p><p>GUNNERY <b>${p.attributes?.gunnery??65}</b></p><p>ENGINE HANDLING <b>${p.attributes?.engine??65}</b></p><p>CONFIRMED KILLS <b>${data.kills}</b></p><p>VICTORIES <b>${wins}</b></p><p>DEFEATS <b>${losses}</b></p>
    <p>WIN / LOSS <b>${ratio}</b></p><p>HIGHEST RANK <b>${Math.min(MAX_RANK,data.best||1)}</b></p>
    <p>NEMESIS <b>${nemesis?escape(byId[nemesis[0]]?.name||'Unknown'):'None yet'}</b></p>
    <p>ACE RUNS COMPLETED <b>${data.completed}</b></p></div></div>
@@ -236,6 +240,7 @@ screen.addEventListener('click',e=>{
  if(el.dataset.choice!==undefined)fight(Number(el.dataset.choice));
 });
 screen.addEventListener('change',e=>{
+ if(e.target.id==='career-skill'){selectedSkill=e.target.value;}
  if(e.target.id==='career-faction'&&!data){
   const picker=document.getElementById('candidate-picker');
   if(picker)picker.innerHTML=candidatePicker();

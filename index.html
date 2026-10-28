@@ -7,7 +7,7 @@
   <meta name="description" content="Wingman — a tiny, tactical, single-screen aerial dogfighting game.">
   <title>Wingman · Pixel Dogfights</title>
   <link rel="stylesheet" href="./styles.css?v=20261028v08tactical">
-  <link rel="stylesheet" href="./career.css?v=20261028phase2b1">
+  <link rel="stylesheet" href="./career.css?v=20261028phase2c1">
 </head>
 <body>
   <div class="app">
@@ -15,7 +15,7 @@
       <strong>WINGMAN</strong><span>PIXEL DOGFIGHTS · ROAD TO ACE</span>
     </header>
     <nav class="career-nav"><button id="career-open" type="button">CHOOSE PILOT / ROAD TO ACE</button><button id="career-license" type="button">PILOT LICENCE</button></nav>
-    <main class="game-frame" id="frame">
+    <main class="game-frame" id="frame"><button id="fullscreen-toggle" type="button" aria-label="Enter full screen" title="Full screen">⛶</button>
       <canvas id="game" width="320" height="180" role="img" aria-label="Side-on aerial duel with fighter aircraft"></canvas>
       <canvas id="aircraft-layer" class="aircraft-layer" width="320" height="180" aria-hidden="true"></canvas>
       <div class="overlay" id="menu">
@@ -33,7 +33,7 @@
           </div>
           <button class="start-button" id="start" type="button">START DOGFIGHT <span aria-hidden="true">▶</span></button>
           <div class="mode-row"><label>OPPONENTS <select id="pilots-select"><option value="2">1 AI · DUEL</option><option value="3">2 AI · TRIPLE</option><option value="4">3 AI · FOUR-PLANE</option></select></label><label>AI <select id="difficulty-select"><option value="rookie">ROOKIE</option><option value="standard" selected>STANDARD</option><option value="ace">ACE</option></select></label><label>BATTLE <select id="team-select"><option value="ffa">FREE FOR ALL</option><option value="teams">2v2 TEAMS (4 PLANES)</option></select></label><label>MODE <select id="mode-select"><option value="duel">DUEL</option><option value="survival">SURVIVAL</option></select></label><label>HUD <select id="hud-style"><option value="arcade">MINIMAL ARCADE</option><option value="cockpit">WW2 INSTRUMENTS</option><option value="competitive">COMPETITIVE</option></select></label><label>ARENA <select id="arena-select"><option value="0">ALPINE</option><option value="1">COAST</option><option value="2">DESERT</option><option value="3">STORM</option></select></label></div>
-          <p class="tip">A/D turn · W boost · Space fire · E special · Q roll · B bomb. On touch: double-tap turn to roll.</p>
+          <p class="tip">A/D turn · W boost · Space fire · E special · Q pilot skill · B bomb. On touch: double-tap turn to roll.</p>
         </div>
       </div>
       <div class="overlay hidden" id="result" aria-live="polite">
@@ -52,7 +52,7 @@
           <button id="boost" type="button" class="control-btn boost" aria-label="Hold to boost">BOOST</button>
         </div>
         <div class="control-cluster attack">
-          <button id="roll" type="button" class="control-btn roll" aria-label="Defensive barrel roll">ROLL</button>
+          <button id="roll" type="button" class="control-btn roll" aria-label="Use pilot skill">SKILL</button>
           <button id="bomb" type="button" class="control-btn bomb" aria-label="Drop bomb" hidden>BOMB</button>
           <button id="special" type="button" class="control-btn special" aria-label="Activate special weapon">★</button>
           <button id="fire" type="button" class="control-btn fire" aria-label="Fire a committed burst">FIRE</button>
@@ -69,7 +69,7 @@
     </footer>
   </div>
   <script src="./src/art/aircraft.js?v=20261028v08tactical" defer></script>
-    <script src="./game.js?v=20261028phase2b1" defer></script>
-  <script src="./career.js?v=20261028phase2b1" defer></script>
+    <script src="./game.js?v=20261028phase2c1" defer></script>
+  <script src="./career.js?v=20261028phase2c1" defer></script>
 </body>
 </html>

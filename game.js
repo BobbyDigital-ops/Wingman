@@ -64,6 +64,7 @@
 function readPilotAttributes(){
  try{return JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')||'null')?.profile?.attributes;}catch{return null;}
 }
+function readPilotSkill(){try{return JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')||'null')?.profile?.skill||'roll';}catch{return 'roll';}}
 function pilotFactors(p){
  const a=p.attributes||pilotAttributes();
  return {turn:1+(a.manoeuvrability-65)*.0017,gun:1+(a.gunnery-65)*.0028,
@@ -72,7 +73,7 @@ function pilotFactors(p){
 }
 function plane(type,id,x,y,angle){
     const d=PLANES[type];
-    return {attributes:pilotAttributes(),id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
+    return {attributes:pilotAttributes(),pilotSkill:'roll',skillCooldown:0,smokescreen:0,hardenTime:0,deadeyeTime:0,engineCutTime:0,diveTime:0,id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
       vy:Math.sin(angle)*d.speed*.8,health:d.hull,armour:d.armour,rearCooldown:0,rearShots:0,rearShotTime:0,
       critical:false,criticalCause:'',flightRisk:0,climbLoad:0,aiRecoveryTime:0,tailAssist:0,
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boostCharge:100,boosting:false,aiBoost:false,
@@ -110,6 +111,7 @@ function plane(type,id,x,y,angle){
       state.fliers[0].armour=safe.armour;
     }
     state.fliers[0].attributes=pilotAttributes(readPilotAttributes());
+    state.fliers[0].pilotSkill=readPilotSkill();
     if(state.mode==='campaign'&&state.campaignEncounter?.attributes)
       for(const foe of state.fliers.slice(1))foe.attributes=pilotAttributes(state.campaignEncounter.attributes);
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
@@ -148,6 +150,12 @@ function plane(type,id,x,y,angle){
     background=makeBackground();newRound();
   }
   window.WingmanGame={startCampaignFight,showMenu:()=>showMenu()};
+  const fullscreenButton=document.getElementById('fullscreen-toggle');
+  fullscreenButton?.addEventListener('click',async()=>{
+    const frame=document.getElementById('frame');
+    try{if(document.fullscreenElement)await document.exitFullscreen();else if(frame.requestFullscreen)await frame.requestFullscreen();}catch{}
+  });
+  document.addEventListener('fullscreenchange',()=>{if(fullscreenButton)fullscreenButton.textContent=document.fullscreenElement?'×':'⛶';});
   function showMenu(){
     state.phase='menu';state.paused=false;controls.left=false;controls.right=false;controls.boost=false;
     ui.result.classList.add('hidden');ui.menu.classList.remove('hidden');
@@ -230,6 +238,7 @@ function plane(type,id,x,y,angle){
   function shoot(p){
     // Straight, readable cannon and machine-gun bursts; no component targeting.
     const skill=pilotFactors(p),dx=Math.cos(p.angle),dy=Math.sin(p.angle);
+    if(p.deadeyeTime>0)skill.gun*=1.09;
     state.bullets.push({x:p.x+dx*(p.d.radius+2),y:p.y+dy*(p.d.radius+2),
       vx:dx*p.d.bulletSpeed*skill.gun+p.vx*.35,vy:dy*p.d.bulletSpeed*skill.gun+p.vy*.35,
       owner:p.id,damage:p.d.damage,life:p.d.gunLife,age:0});
@@ -246,7 +255,7 @@ function plane(type,id,x,y,angle){
   }
   function hit(p,amount,x,y,zoneOverride,cause='GUN'){
     if(!p.alive||p.spawnSafe>0)return;
-    let remaining=amount*(p.armourTime>0?.45:1);
+    let remaining=amount*(p.armourTime>0?.45:1)*(p.hardenTime>0?.6:1);
     const absorbed=Math.min(p.armour,remaining);
     p.armour-=absorbed;remaining-=absorbed;
     p.health=Math.max(0,p.health-remaining);
@@ -256,6 +265,23 @@ function plane(type,id,x,y,angle){
       p.alive=false;emit(p.x,p.y,28,'#ffc47e',75);emit(p.x,p.y,16,'#625765',35);
       if(state.participants===2||p.id===0||opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
     }
+  }
+  function triggerPilotSkill(p){
+    if(!p||!p.alive||p.skillCooldown>0||state.phase!=='playing'||state.paused)return;
+    const kind=p.pilotSkill||'roll';
+    const durations={reverse:16,roll:14,smoke:20,harden:22,deadeye:17,cut:15,dive:16};
+    if(kind==='roll'){triggerRoll(p);if(p.rollTime<=0)return;}
+    else if(kind==='reverse'){
+      const right=Math.cos(p.angle)>=0,up=p.y>H*.5;
+      p.swoop={kind:'reverse',startAngle:p.angle,direction:up?(right?-1:1):(right?1:-1),elapsed:0,duration:.43};
+      p.swoopTime=.43;p.energy=Math.max(15,p.energy-8);
+    }
+    else if(kind==='smoke'){p.smokescreen=2.3;emit(p.x,p.y,14,'#b5c5c2',18);}
+    else if(kind==='harden'){p.hardenTime=3;}
+    else if(kind==='deadeye'){p.deadeyeTime=4;}
+    else if(kind==='cut'){p.engineCutTime=1.4;p.speed*=.72;}
+    else if(kind==='dive'){p.diveTime=.85;p.energy=Math.min(100,p.energy+12);}
+    p.skillCooldown=durations[kind]||14;sound('special');
   }
   function triggerRoll(p){
     if(!p||!p.alive||state.phase!=='playing'||state.paused||p.rollTime>0||p.rollRecovery>0)return;
@@ -341,12 +367,13 @@ function plane(type,id,x,y,angle){
     if(p.angle>Math.PI)p.angle-=TAU;
     if(p.angle< -Math.PI)p.angle+=TAU;
     const power=1-.15*clamp((.6-p.health/p.d.hull)/.6,0,1);
-    const wanted=p.d.speed*engine*power*(.87+.13*p.energy/100)*(p.boosting?1.27:1)*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
+    const wanted=p.d.speed*engine*(p.engineCutTime>0?.42:1)*(p.diveTime>0?1.15:1)*power*(.87+.13*p.energy/100)*(p.boosting?1.27:1)*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
     // Fighters retain less momentum than big, heavier aircraft.
     const drag=p.role==='fighter'?1.55:p.role==='heavy'?1.2:.98;
     const accel=p.role==='fighter'?2.1:p.role==='heavy'?1.65:1.25;
     p.speed+=(wanted-p.speed)*Math.min(1,dt*(p.speed>wanted?drag*skill.momentum:accel*skill.accel));
-    p.speed+=dt*(15*dive-9*climb);
+    p.speed+=dt*(15*dive-9*climb)+(p.diveTime>0?dt*12:0);
+    if(p.diveTime>0)p.vy+=dt*36;
     p.speed=clamp(p.speed,8,p.d.speed*engine*(p.boosting?1.48:1.36));
     // The velocity vector gently follows the fuselage, rather than snapping.
     const follow=Math.min(1,dt*(p.role==='bomber'?3.2:p.role==='heavy'?4:5.1));
@@ -398,6 +425,7 @@ function plane(type,id,x,y,angle){
     const range=distance(p,target);
     const targetAngle=Math.atan2(target.y-p.y,target.x-p.x);
     const facing=Math.abs(angleDiff(targetAngle,p.angle));
+    if(target.smokescreen>0&&p.aiMode==='attack'&&Math.random()<.36)p.aiThink=Math.max(p.aiThink,.28);
     const enemyBehind=Math.abs(angleDiff(Math.atan2(p.y-target.y,p.x-target.x),target.angle))<.65;
     // Begin pulling out BEFORE the impact point is reached. Account for
     // downward velocity, pitch, and the inertia of heavy aircraft.
@@ -474,6 +502,7 @@ function plane(type,id,x,y,angle){
     p.hitFlash=Math.max(0,p.hitFlash-dt);p.muzzleFlash=Math.max(0,p.muzzleFlash-dt);
     p.damageNotice=Math.max(0,p.damageNotice-dt);
     p.specialCooldown=Math.max(0,p.specialCooldown-dt);
+    for(const key of ['skillCooldown','smokescreen','hardenTime','deadeyeTime','engineCutTime','diveTime'])p[key]=Math.max(0,(p[key]||0)-dt);
     p.armourTime=Math.max(0,p.armourTime-dt);
     p.climbAssist=Math.max(0,p.climbAssist-dt);
     p.bombCooldown=Math.max(0,p.bombCooldown-dt);
@@ -865,7 +894,7 @@ function plane(type,id,x,y,angle){
       g.fillStyle='#de806e';g.fillRect(meterX+26,meterY,14,4);
       g.fillStyle='#f6f5e6';g.fillRect(meterX+Math.min(38,Math.round(risk*38)),meterY-2,2,8);
       g.fillStyle=p.rollTime>0?'#f8e4a2':'#c0d9df';
-      g.fillText(p.rollTime>0?'ROLLING':p.rollRecovery>0?'ROLL '+p.rollRecovery.toFixed(1):'ROLL READY',181,19);
+      g.fillText('SKILL '+(p.skillCooldown>0?Math.ceil(p.skillCooldown)+'s':'READY'),181,19);
       if(p.role==='bomber'){
         g.fillStyle='#ffd9a2';g.fillText(p.bombCooldown>0?'BOMB '+p.bombCooldown.toFixed(1):'BOMB READY',W*.50,27);
       }
@@ -993,7 +1022,7 @@ function plane(type,id,x,y,angle){
   bindButton('boost','boost');
   bindButton('fire',null,()=>triggerBurst(state.fliers[0]));
   bindButton('special',null,()=>triggerSpecial(state.fliers[0]));
-  bindButton('roll',null,()=>triggerRoll(state.fliers[0]));
+  bindButton('roll',null,()=>triggerPilotSkill(state.fliers[0]));
   bindButton('bomb',null,()=>triggerBomb(state.fliers[0]));
   // On touchscreen, double-tap either turn direction for defensive roll.
   // Ignore held touches: only two separate presses within the short window.
@@ -1001,7 +1030,7 @@ function plane(type,id,x,y,angle){
     let lastTap=0;
     document.getElementById(id).addEventListener('pointerdown',()=>{
       const now=Date.now();
-      if(now-lastTap>70&&now-lastTap<270)triggerRoll(state.fliers[0]);
+      if(now-lastTap>70&&now-lastTap<270)triggerPilotSkill(state.fliers[0]);
       lastTap=now;
     });
   }
@@ -1014,7 +1043,7 @@ function plane(type,id,x,y,angle){
     if(e.repeat)return;
     if(e.code==='Space'){audioUnlock();triggerBurst(state.fliers[0]);}
     if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyK'||e.code==='KeyE'){audioUnlock();triggerSpecial(state.fliers[0]);}
-    if(e.code==='KeyL'||e.code==='KeyQ'){audioUnlock();triggerRoll(state.fliers[0]);}
+    if(e.code==='KeyL'||e.code==='KeyQ'){audioUnlock();triggerPilotSkill(state.fliers[0]);}
     if(e.code==='KeyB'){audioUnlock();triggerBomb(state.fliers[0]);}
     if(e.code==='KeyP'&&state.phase==='playing')state.paused=!state.paused;
   });

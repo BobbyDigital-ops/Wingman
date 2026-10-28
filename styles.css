@@ -103,3 +103,13 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
    Retain the normal roll control on non-touch devices for accessibility. */
 @media(pointer:coarse){.control-btn.roll{display:none!important}}
 @media(pointer:coarse) and (orientation:landscape){.control-cluster.attack{gap:clamp(6px,1vw,12px)}}
+
+#fullscreen-toggle{position:absolute;top:39px;right:8px;z-index:9;background:#183545b8;color:#fff2d3;border:1px solid #d1b583;padding:5px 9px;font-size:19px;cursor:pointer}
+@media(pointer:coarse){.control-btn.roll{display:flex!important}.control-layer{z-index:10;pointer-events:none}.control-btn{pointer-events:auto;touch-action:none;font-weight:800}.control-cluster{pointer-events:none}}
+@media(pointer:coarse) and (orientation:landscape){
+  .control-layer{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:space-between;padding:0 max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));}
+  .control-cluster{display:flex;gap:6px}
+  .control-btn,.control-cluster.attack .control-btn{width:clamp(52px,13dvh,82px)!important;height:clamp(52px,13dvh,82px)!important;font-size:clamp(10px,2.8dvh,15px)}
+  .career-nav{display:none}
+}
+.game-frame:fullscreen{width:100vw!important;height:100dvh!important;max-height:none!important;border:0}
