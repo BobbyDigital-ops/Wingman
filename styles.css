@@ -153,3 +153,12 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
 
 /* career.css loads after styles.css: override its display:flex on phones. */
 @media(pointer:coarse){.career-nav{display:none!important}}
+
+/* Separate 'return to menu' from browser fullscreen control. */
+#menu-return{position:absolute;top:39px;right:64px;z-index:16;min-width:59px;min-height:38px;
+ padding:6px 11px;border:1px solid #d1b583;background:#183545e5;color:#fff2d3;
+ font-size:13px;font-weight:800;letter-spacing:.06em;touch-action:manipulation;
+ -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+#menu-return[hidden]{display:none!important}
+#menu-return:active{background:#b08c5f;color:#122938}
+@media(pointer:coarse){#menu-return{min-height:44px}#fullscreen-toggle{min-width:44px;min-height:44px}}

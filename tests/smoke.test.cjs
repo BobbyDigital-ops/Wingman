@@ -20,7 +20,7 @@ function launch(){
   el['mode-select']={value:'duel'};
   el['arena-select']={value:'0'};
   for(const id of ['menu','result','result-title','result-detail','start',
-    'rematch','change-plane','left','right','boost','fire','special','roll','bomb']){
+    'rematch','change-plane','menu-return','left','right','boost','fire','special','roll','bomb']){
     el[id]={textContent:'',dataset:{},setPointerCapture:noop,setAttribute:noop,
       classList:{add:noop,remove:noop,toggle:noop},
       addEventListener:(type,cb)=>listeners.set(id+':'+type,cb)};
@@ -442,11 +442,11 @@ test('bomber rear gunner triggers automatically on a pursuer behind it',()=>{
  game.listeners.get('start:click')();
  const [bomber,pursuer]=game.internals.state.fliers;
  bomber.x=220;bomber.y=130;bomber.angle=0;bomber.spawnSafe=0;
- pursuer.x=170;pursuer.y=130;pursuer.alive=true;
+ pursuer.x=170;pursuer.y=130;pursuer.alive=true;pursuer.spawnSafe=0;
  assert.equal(bomber.rearCooldown,0);
  game.internals.updatePlane(bomber,1/60,0);
- assert.ok(bomber.rearCooldown>2);
- assert.ok(game.internals.state.bullets.some(b=>b.owner===0&&b.damage===5.5));
+ assert.ok(bomber.rearCooldown>1.5);
+ assert.ok(game.internals.state.bullets.some(b=>b.owner===0&&b.damage===8&&b.rearGun));
 });
 test('depleted armour reduces hull; shield only protects and never recharges armour',()=>{
  const game=launch();game.listeners.get('start:click')();
@@ -570,4 +570,70 @@ test('duel timeouts count remaining armour as well as hull',()=>{
   state.time=.001;
   game.advance(3,1000);
   assert.equal(state.scores[1],1,'enemy with more total durability wins timeout');
+});
+
+test('mobile MENU button returns immediately to the aircraft selector without page reload',()=>{
+ const game=launch();
+ game.listeners.get('start:click')();
+ assert.equal(game.internals.state.phase,'playing');
+ assert.equal(game.listeners.has('menu-return:click'),true);
+ game.listeners.get('right:touchstart')({changedTouches:[{identifier:33}],preventDefault(){}});
+ assert.equal(game.internals.controls.right,true);
+ game.listeners.get('menu-return:click')();
+ assert.equal(game.internals.state.phase,'menu');
+ assert.equal(game.internals.controls.right,false);
+ game.listeners.get('start:click')();
+ assert.equal(game.internals.state.phase,'playing');
+});
+
+test('tail gunner covers the rear cone, not front or distant flank',()=>{
+ const game=launch();game.listeners.get('bomber:click')();game.listeners.get('start:click')();
+ const [bomber,enemy]=game.internals.state.fliers;
+ bomber.x=220;bomber.y=120;bomber.angle=0;
+ enemy.spawnSafe=0;enemy.alive=true;
+ enemy.x=260;enemy.y=120;
+ game.internals.updatePlane(bomber,1/60,0);
+ assert.equal(bomber.rearShots,0,'a fighter ahead does not draw turret fire');
+ enemy.x=170;enemy.y=190;
+ game.internals.updatePlane(bomber,1/60,0);
+ assert.equal(bomber.rearShots,0,'a fighter well outside the tail cone is safe');
+ enemy.x=160;enemy.y=120;
+ game.internals.updatePlane(bomber,1/60,0);
+ assert.ok(bomber.rearCooldown>0);
+ assert.ok(game.internals.state.bullets.some(b=>b.rearGun));
+});
+
+test('AI bombers wait for an aligned, below-target bombing opportunity',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const [target,bomber]=game.internals.state.fliers;
+ bomber.role='bomber';bomber.d=game.internals.PLANES.bomber;
+ bomber.x=195;bomber.y=90;bomber.vx=0;bomber.vy=0;bomber.angle=0;
+ bomber.aiThink=9;bomber.aiMode='attack';bomber.aiRecoveryTime=0;
+ target.x=195;target.y=155;target.vx=0;target.vy=0;target.spawnSafe=0;
+ bomber.aiBombDelay=4.5;
+ game.internals.aiInput(bomber,target);
+ assert.equal(bomber.bombQueue,0,'no bombs immediately after spawn');
+ bomber.aiBombDelay=0;
+ target.x=295;
+ game.internals.aiInput(bomber,target);
+ assert.equal(bomber.bombQueue,0,'no release unless horizontal approach is aligned');
+ target.x=195;
+ game.internals.aiInput(bomber,target);
+ assert.equal(bomber.bombQueue,3,'deliberate aligned pass releases the three-bomb salvo');
+});
+
+test('a fighter sitting directly behind a Lancaster takes sustained turret damage',()=>{
+ const game=launch();game.listeners.get('bomber:click')();game.listeners.get('start:click')();
+ const state=game.internals.state,[bomber,chaser]=state.fliers;
+ state.wind={active:false,base:0,current:0,elapsed:0};
+ bomber.x=220;bomber.y=125;bomber.angle=0;bomber.speed=0;bomber.vx=0;bomber.vy=0;
+ chaser.x=187;chaser.y=125;chaser.angle=0;chaser.vx=0;chaser.vy=0;
+ chaser.role='fighter';chaser.d=game.internals.PLANES.fighter;
+ chaser.armour=0;chaser.spawnSafe=0;bomber.spawnSafe=0;
+ const start=chaser.health;
+ for(let i=0;i<70;i++){
+   game.internals.updatePlane(bomber,1/60,0);
+   game.internals.projectiles(1/60);
+ }
+ assert.ok(chaser.health<start,'staying inside the rear firing lane should cost hull health');
 });
