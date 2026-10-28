@@ -132,7 +132,16 @@ function plane(type,id,x,y,angle){
     g.restore();
   }
   const ARENAS=['ALPINE','COAST','DESERT','STORM'];
+  function syncAbilityButton(){
+    const action=document.getElementById('special');
+    if(!action)return;
+    const role=PLANES[state.selected]?.class||state.selected;
+    const label=role==='fighter'?'BOOST':role==='heavy'?'SHIELD':'BOMBS';
+    action.textContent=label;
+    action.setAttribute('aria-label',role==='bomber'?'Release bomb salvo':role==='heavy'?'Activate defensive shield':'Activate overdrive');
+  }
   function newRound(){
+    syncAbilityButton();
     state.fliers=[
       plane(state.selected,0,W*.22,H*.45,-.14),
       plane(state.enemyType,1,W*.78,H*.52,Math.PI+.15)
@@ -174,6 +183,7 @@ function plane(type,id,x,y,angle){
     state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
     state.time=state.mode==='survival'?70:state.mode==='campaign'?120:90;state.impactLock=0;state.phase='playing';state.paused=false;
     if(menuReturn)menuReturn.hidden=false;
+    if(fullscreenButton)fullscreenButton.hidden=false;
     state.banner=state.wind.active?(state.wind.base>0?'CROSSWIND →':'← CROSSWIND'):'ROUND '+state.round;state.bannerTime=1.5;
     controls.left=false;controls.right=false;controls.boost=false;
   }
@@ -188,7 +198,7 @@ function plane(type,id,x,y,angle){
     state.difficulty=document.getElementById('difficulty-select')?.value||'standard';
     state.arena=Number(document.getElementById('arena-select')?.value||0);
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
-    document.getElementById('bomb').hidden=true;
+    document.getElementById('bomb')?.setAttribute('hidden','');
     background=makeBackground();newRound();
   }
   function startCampaignFight(encounter,aircraft,airframe){
@@ -204,7 +214,7 @@ function plane(type,id,x,y,angle){
     state.difficulty=encounter.difficulty||'standard';
     state.arena=encounter.arena||0;
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
-    document.getElementById('bomb').hidden=true;
+    document.getElementById('bomb')?.setAttribute('hidden','');
     background=makeBackground();newRound();
   }
   window.WingmanGame={startCampaignFight,showMenu:()=>showMenu()};
@@ -224,8 +234,10 @@ function plane(type,id,x,y,angle){
   function showMenu(){
     state.phase='menu';state.paused=false;controls.left=false;controls.right=false;controls.boost=false;
     if(menuReturn)menuReturn.hidden=true;
+    if(fullscreenButton)fullscreenButton.hidden=true;
     ui.result.classList.add('hidden');ui.menu.classList.remove('hidden');
-    document.getElementById('bomb').hidden=true;
+    window.WingmanFlow?.reset?.();
+    document.getElementById('bomb')?.setAttribute('hidden','');
   }
   function endRound(winner){
     if(state.phase!=='playing')return;
@@ -630,18 +642,20 @@ function plane(type,id,x,y,angle){
     p.bombCooldown=Math.max(0,p.bombCooldown-dt);
     p.rearCooldown=Math.max(0,p.rearCooldown-dt);
     if(p.role==='bomber'&&p.rearCooldown<=0&&p.rearShots===0){
-      // A bomber's tail/dorsal gunners defend its rear cone, not the whole sky.
+      // Fighters have forward weapons; bombers have an independent rear
+      // battery. A pilot sitting directly astern gets a sustained, physical
+      // gun burst. Approaches from ahead or the flank remain safer.
       const threats=opponents(p).filter(q=>{
         if(q.spawnSafe>0||q.rollTime>0)return false;
         const dx=wrappedDelta(p.x,q.x),dy=q.y-p.y;
         const along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle);
         const lateral=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
         const range=Math.hypot(dx,dy);
-        return along< -12&&range<142&&lateral<Math.min(50,range*.58);
+        return along< -11&&range<155&&lateral<Math.min(65,range*.70);
       }).sort((a,b)=>combatDistance(p,a)-combatDistance(p,b));
       if(threats.length){
-        p.rearShots=5;p.rearShotTime=0;p.rearTarget=threats[0].id;
-        p.rearCooldown=1.9;
+        p.rearShots=9;p.rearShotTime=0;p.rearTarget=threats[0].id;
+        p.rearCooldown=1.55;
       }
     }
     if(p.role==='bomber'&&p.rearShots>0){
@@ -653,18 +667,28 @@ function plane(type,id,x,y,angle){
           const range=Math.hypot(dx,dy);
           const along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle);
           const lateral=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
-          if(along< -10&&range<155&&lateral<Math.min(56,range*.65)){
-            const speed=205,lead=clamp(range/speed,.1,.65)*.72;
-            const aim=Math.atan2(dy+(target.vy-p.vy*.2)*lead,
-              dx+(target.vx-p.vx*.2)*lead)+random(-.095,.095);
-            state.bullets.push({x:p.x-Math.cos(p.angle)*(p.d.radius+2),
-              y:p.y-Math.sin(p.angle)*(p.d.radius+2),
-              vx:Math.cos(aim)*speed+p.vx*.2,vy:Math.sin(aim)*speed+p.vy*.2,
-              owner:p.id,damage:8,life:.85,age:0,rearGun:true});
-            p.turretFlash=.17;
+          if(along< -9&&range<165&&lateral<Math.min(70,range*.76)){
+            // Lead the target using relative airspeed and preserve real bullet
+            // collisions. Nine 7-damage rounds approach fighter cadence,
+            // but never match the fighter's 10 x 11 primary gun damage.
+            const speed=221;
+            const lead=clamp(range/speed,.05,.78);
+            const muzzleX=p.x-Math.cos(p.angle)*(p.d.radius+4);
+            const muzzleY=p.y-Math.sin(p.angle)*(p.d.radius+4);
+            const aim=Math.atan2(
+              target.y-muzzleY+(target.vy-p.vy*.32)*lead,
+              wrappedDelta(muzzleX,target.x)+(target.vx-p.vx*.32)*lead
+            )+random(-.035,.035);
+            state.bullets.push({
+              x:muzzleX,y:muzzleY,
+              vx:Math.cos(aim)*speed+p.vx*.32,
+              vy:Math.sin(aim)*speed+p.vy*.32,
+              owner:p.id,damage:7,life:1.0,age:0,rearGun:true
+            });
+            p.turretFlash=.12;
           }
         }
-        p.rearShots--;p.rearShotTime=.12;
+        p.rearShots--;p.rearShotTime=.073;
       }
     }
     p.evasiveTime=Math.max(0,(p.evasiveTime||0)-dt);
@@ -1037,93 +1061,101 @@ function plane(type,id,x,y,angle){
     g.fillStyle=color;g.fillRect(x,y,Math.ceil(w*clamp(value/max,0,1)),4);
   }
   function drawHud(){
-    const p=state.fliers[0],e=state.fliers[1];
-    // Switchable HUD studies, using one shared layout and damage logic.
-    const hudChoice=document.getElementById('hud-style')?.value||'arcade';
-    const hud=hudChoice==='cockpit'?{
-      panel:'#343b30ec',gold:'#f2d7a0',minor:'#c6ccb0',divider:'#a8996b',
-      ally:'#9eae7c',foe:'#c77d64'
-    }:hudChoice==='competitive'?{
-      panel:'#152a44f2',gold:'#f5f9ff',minor:'#a6c9e3',divider:'#4c80a6',
-      ally:'#5ed5ef',foe:'#f18186'
-    }:{
-      panel:'#182d3bdc',gold:'#f5e6c2',minor:'#a7d8e8',divider:'#37546a',
-      ally:'#78ba87',foe:'#d9776d'
+    // Flight instruments are etched, angular aluminium plates with thin
+    // progress scales. The sky remains visible; no full-width PowerPoint bar.
+    const pilot=state.fliers[0],foe=state.fliers[1];
+    const style=document.getElementById('hud-style')?.value||'arcade';
+    const brass=style==='competitive'?'#d2e9f4':'#d8c393';
+    const panel=style==='cockpit'?'#212d2bd9':'#102939d5';
+    const rim=style==='competitive'?'#79c1df99':'#b39a7399';
+    const shortName=q=>{
+      const names={fighter:'SPITFIRE',heavy:'BEAUFIGHTER',bomber:'LANCASTER',
+                   bf109:'BF 109',bf110:'BF 110',he111:'HE 111'};
+      return q?names[q.type]||q.d.name:'---';
     };
-    g.fillStyle=hud.panel;g.fillRect(0,0,W,38);
-    g.font='bold 7px monospace';g.textBaseline='top';
-    // Class must appear on the top line: the previous labels at y=9
-    // were painted over by the armour and hull meters.
-    const className=q=>q.role==='heavy'?'HEAVY FIGHTER':q.role==='bomber'?'BOMBER':'FIGHTER';
-    const own=p?p.d.name+' · '+className(p):'WINGMAN';
-    const opponent=e?className(e)+' · '+e.d.name+(state.participants>2?' +'+(state.participants-2):''):'SELECT PLANE';
-    g.fillStyle=hud.gold;g.fillText(own,7,3);
-    g.fillText(opponent,W-7-g.measureText(opponent).width,3);
-    if(state.participants>2){
-      for(const pilot of state.fliers){
-        const ix=W/2-40+pilot.id*27;
-        g.fillStyle=pilot.id===0?'#b1eea6':pilot.team===0?'#9ad5ec':'#e4aaa3';
-        g.fillRect(ix,24,23,3);
-        g.fillStyle=pilot.alive?'#f1e3c2':'#778594';
-        g.font='5px monospace';g.fillText(pilot.id===0?'YOU':'AI'+pilot.id,ix,19);
-        g.fillStyle='#293d45';g.fillRect(ix,28,23,2);
-        g.fillStyle=pilot.alive?'#e4bf81':'#8a9294';
-        g.fillRect(ix,28,Math.round(23*clamp(pilot.health/pilot.d.hull,0,1)),2);
-      }
+    const armourColor='#79b9cd',hullColor='#92c79b';
+    const pw=clamp(W*.296,108,157),cx=W/2;
+    g.save();g.textBaseline='top';g.textAlign='left';
+    // Opposing panels frame the centre reticle with clipped, angled corners.
+    function panelAt(x,isRight){
+      const edge=isRight?x-5:x+pw+5;
+      const pts=isRight
+        ?[[x-5,0],[x+pw,0],[x+pw,35],[x+3,35],[x-5,27]]
+        :[[x,0],[x+pw+5,0],[x+pw+5,27],[x+pw-3,35],[x,35]];
+      poly(g,pts,panel);
+      g.fillStyle=rim;g.fillRect(isRight?x+3:x,34,pw-3,1);
+      g.fillStyle=brass;
+      g.fillRect(isRight?x+pw-2:x,0,2,35);
     }
-    g.font='bold 8px monospace';g.textAlign='center';
-    g.fillText(state.participants>2?(state.teams?'2v2 TEAMS':'FREE FOR ALL'):state.mode==='survival'?'WAVE '+state.round:state.scores[0]+' : '+state.scores[1],W/2,3);
-    g.font='6px monospace';g.fillStyle='#bed5dc';
-    g.fillText(Math.max(0,Math.ceil(state.time))+'s '+ARENAS[state.arena],W/2,15);g.textAlign='left';
-    if(p&&e){
-      bar(7,16,105,p.health,p.d.hull,hud.ally);
-      bar(W-112,16,105,e.health,e.d.hull,hud.foe);
-      bar(7,11,105,p.armour,p.d.armour,'#79c2e6');
-      bar(W-112,11,105,e.armour,e.d.armour,'#79c2e6');
-      const gReady=p.burstLeft>0?'FIRING':p.gunCooldown>0?'RELOAD':'READY';
-      g.fillStyle=p.gunCooldown>0?'#eabc7f':'#c5ead4';
-      g.fillText('GUN '+gReady,7,24);
-      // A physical refill meter makes the risky post-burst window clear.
-      const charge=p.burstLeft>0 ? (p.d.burst-p.burstLeft)/p.d.burst :
-        p.gunCooldown>0 ? 1-p.gunCooldown/p.d.cooldown : 1;
-      bar(7,33,64,charge,1,p.burstLeft>0?'#e4aa68':p.gunCooldown>0?'#d88e63':'#80c69e');
-      const sc=p.specialCooldown>0?Math.ceil(p.specialCooldown)+'s':'READY';
-      g.fillStyle='#f0d8a2';
-      g.fillText((p.role==='fighter'?'OVERDRIVE':p.role==='heavy'?'SHIELD':'BOMBS')+' '+sc,78,24);
-      bar(78,33,64,p.specialCooldown>0?1-p.specialCooldown/(p.role==='fighter'?12:20):1,
-        1,'#c4b6df');
-      // No second overlapping OVERDRIVE label on small mobile displays.
-      const risk=clamp(p.flightRisk||0,0,1);
-      g.fillStyle='#d8e9d8';g.font='bold 7px monospace';g.fillText('CLIMB',W/2-13,44);
-      // Clear tricolour risk scale: safe green → warning amber → stall red.
-      const meterX=W/2-13,meterY=54,meterW=40;
-      g.fillStyle='#29434a';g.fillRect(meterX-1,meterY-1,meterW+2,6);
-      g.fillStyle='#83c495';g.fillRect(meterX,meterY,13,4);
-      g.fillStyle='#e5c16d';g.fillRect(meterX+13,meterY,13,4);
-      g.fillStyle='#de806e';g.fillRect(meterX+26,meterY,14,4);
-      g.fillStyle='#f6f5e6';g.fillRect(meterX+Math.min(38,Math.round(risk*38)),meterY-2,2,8);
-      // Readable airspeed makes the climb/dive tradeoff apparent during play.
-      const speedPercent=clamp(p.speed/(p.d.speed*1.43),0,1);
-      g.fillStyle='#cfe2e3';g.font='bold 6px monospace';
-      g.fillText('SPD '+Math.round(p.speed),W/2+34,44);
-      bar(W/2+34,54,38,speedPercent,1,p.speed<p.d.speed*.67?'#e2a068':'#81c9d1');
-      g.fillStyle=p.rollTime>0?'#f8e4a2':'#c0d9df';
-      g.fillText('SKILL '+(p.skillCooldown>0?Math.ceil(p.skillCooldown)+'s':'READY'),165,24);
-      if(p.role==='bomber'&&p.bombQueue>0){
-        g.fillStyle='#ffd9a2';g.fillText('BOMBS AWAY',W*.50,33);
-      }
-      g.fillStyle='#9ed2e8';g.font='bold 6px monospace';g.fillText('ARM '+Math.round(e.armour),W-100,24);
-      g.fillStyle='#bce3b4';g.fillText('HULL '+Math.round(e.health),W-100,33);
+    panelAt(0,false);panelAt(W-pw,true);
+    function craft(q,x,enemy){
+      const padding=7;
+      const title=shortName(q);
+      g.fillStyle=enemy?'#f1c2ac':'#ece1c8';
+      g.font='bold 8px monospace';
+      g.textAlign=enemy?'right':'left';
+      g.fillText(title,enemy?x+pw-padding:x+padding,4,pw-12);
+      g.font='6px monospace';g.fillStyle='#99b5be';
+      g.fillText(enemy?'HOSTILE  ·  '+(q?.role||'AIRCRAFT').toUpperCase()
+        :'YOU  ·  '+(q?.role||'PILOT').toUpperCase(),
+        enemy?x+pw-padding:x+padding,14,pw-12);
+      const start=x+padding,barW=pw-padding*2;
+      // Armour is the narrow cyan stripe; the hull has its own steel scale.
+      g.fillStyle='#334a57';g.fillRect(start,24,barW,2.7);
+      g.fillStyle=armourColor;
+      g.fillRect(start,24,barW*clamp((q?.armour||0)/Math.max(q?.d.armour||1,1),0,1),2.7);
+      g.fillStyle='#334a47';g.fillRect(start,29,barW,3);
+      g.fillStyle=enemy?'#e6a18c':hullColor;
+      g.fillRect(start,29,barW*clamp((q?.health||0)/Math.max(q?.d.hull||1,1),0,1),3);
     }
+    craft(pilot,0,false);craft(foe,W-pw,true);
+    // Compact centre scoring instrument. A mechanical dial instead of the
+    // former enormous title/time bar.
+    g.fillStyle='#0e2533c4';g.fillRect(cx-37,0,74,34);
+    g.fillStyle=rim;g.fillRect(cx-28,0,56,1);
+    g.font='bold 14px monospace';g.textAlign='center';g.fillStyle='#f1ddac';
+    const score=state.mode==='survival'?'WAVE '+state.round:
+      state.participants>2?(state.teams?'2v2':state.participants+' PLANES'):
+      state.scores[0]+'  :  '+state.scores[1];
+    g.fillText(score,cx,3,72);
+    g.font='bold 7px monospace';g.fillStyle='#b7cdd3';
+    g.fillText(Math.max(0,Math.ceil(state.time))+'s  ·  '+(ARENAS[state.arena]||'ALPINE'),cx,22,74);
+    // Thin speed and climb instruments positioned below the scoreboard.
+    // Each has an engraved label and needle with contextual colour.
+    const left=cx-71,right=cx+11,y=40;
+    const speed=pilot?.speed||0,normal=pilot?.d.speed||82;
+    const risk=clamp(pilot?.flightRisk||0,0,1);
+    g.fillStyle='#102939a8';g.fillRect(left-3,y-4,68,22);
+    g.fillRect(right-3,y-4,65,22);
+    g.fillStyle='#aabec3';g.textAlign='left';g.font='bold 7px monospace';
+    g.fillText('SPD '+Math.round(speed),left,y-1);
+    g.fillText('CLIMB',right,y-1);
+    const speedT=clamp(speed/(normal*1.43),0,1);
+    g.fillStyle='#405660';g.fillRect(left,y+10,59,3);
+    g.fillStyle=speed<normal*.68?'#e4a66b':'#8cc8d1';
+    g.fillRect(left,y+10,59*speedT,3);
+    g.fillStyle='#405660';g.fillRect(right,y+10,56,3);
+    g.fillStyle='#86c6a6';g.fillRect(right,y+10,24,3);
+    g.fillStyle='#cfb878';g.fillRect(right+24,y+10,18,3);
+    g.fillStyle='#d48372';g.fillRect(right+42,y+10,14,3);
+    g.fillStyle='#f8f1de';g.fillRect(right+clamp(risk,0,.97)*54,y+8,2,7);
     if(state.wind?.active){
-      const label=state.wind.current>0?'WIND →':'← WIND';
-      g.fillStyle='#213847d8';g.fillRect(W/2-31,65,62,13);
-      g.strokeStyle='#a9cad7';g.strokeRect(W/2-31,65,62,13);
-      g.fillStyle='#e6f4f1';g.font='bold 8px monospace';g.textAlign='center';
-      g.fillText(label+' '+Math.round(Math.abs(state.wind.current)),W/2,67);
-      g.textAlign='left';
+      g.fillStyle='#102939b8';g.fillRect(cx-34,67,68,12);
+      g.fillStyle='#c4d4d6';g.font='bold 7px monospace';g.textAlign='center';
+      g.fillText((state.wind.current>0?'WIND → ':'← WIND ')+
+        Math.round(Math.abs(state.wind.current)),cx,70);
     }
-    g.fillStyle=hud.divider;g.fillRect(0,37,W,1);
+    if(pilot&&foe?.role==='bomber'&&foe.alive){
+      const dx=wrappedDelta(foe.x,pilot.x),dy=pilot.y-foe.y;
+      const along=dx*Math.cos(foe.angle)+dy*Math.sin(foe.angle);
+      const lateral=Math.abs(-dx*Math.sin(foe.angle)+dy*Math.cos(foe.angle));
+      if(along< -11&&Math.hypot(dx,dy)<155&&lateral<65){
+        g.fillStyle='#73342acb';g.fillRect(cx-40,83,80,13);
+        g.fillStyle='#f6d2ac';g.font='bold 8px monospace';g.textAlign='center';
+        g.fillText('TAIL GUNS!',cx,86);
+      }
+    }
+    g.restore();
   }
   function damageDiagram(){
     const p=state.fliers[0];if(!p)return;
@@ -1208,9 +1240,9 @@ function plane(type,id,x,y,angle){
       g.textAlign='left';g.globalAlpha=1;
     }
     if(pilot&&pilot.flightRisk>.62&&pilot.alive){
-      g.fillStyle='#81512bc9';g.fillRect(W/2-47,38,94,12);
+      g.fillStyle='#81512bc9';g.fillRect(W/2-47,116,94,12);
       g.fillStyle='#ffdfad';g.textAlign='center';g.font='bold 7px monospace';
-      g.fillText('STALL · DIVE',W/2,41);g.textAlign='left';
+      g.fillText('STALL · DIVE',W/2,119);g.textAlign='left';
     }
     if(false&&pilot&&pilot.critical&&pilot.alive){
       g.fillStyle='#6f2e2acb';g.fillRect(W*.5-60,38,120,14);
@@ -1219,14 +1251,15 @@ function plane(type,id,x,y,angle){
     }
     if(pilot&&pilot.damageNotice>0){
       g.font='bold 7px monospace';g.textAlign='center';
-      g.fillStyle='#ffd39c';g.fillText('HIT BY '+pilot.damageCause,W*.5,36);
+      g.fillStyle='#ffd39c';g.fillText('HIT BY '+pilot.damageCause,W*.5,115);
       g.textAlign='left';
     }
     if(state.bannerTime>0){
-      g.fillStyle='#1d3043b9';g.fillRect(W/2-47,44,94,19);
-      g.strokeStyle='#c5a780';g.strokeRect(W/2-46.5,44.5,93,18);
-      g.font='bold 9px monospace';g.textAlign='center';g.fillStyle='#ffdfaa';
-      g.fillText(state.banner,W/2,50);g.textAlign='left';
+      // Announcements live below the speed gauges, not on top of them.
+      g.fillStyle='#172f3cc7';g.fillRect(W/2-52,100,104,13);
+      g.strokeStyle='#bb9f6fa1';g.strokeRect(W/2-52,100,104,13);
+      g.font='bold 7px monospace';g.textAlign='center';g.fillStyle='#ffe0ad';
+      g.fillText(state.banner,W/2,103,100);g.textAlign='left';
     }
     if(state.paused&&state.phase==='playing'){
       g.fillStyle='#172738bb';g.fillRect(W/2-64,75,128,29);
@@ -1330,13 +1363,14 @@ function plane(type,id,x,y,angle){
   });
   for(const btn of document.querySelectorAll('[data-plane]')){
     btn.addEventListener('click',()=>{
-      state.selected=btn.dataset.plane;
+      state.selected=btn.dataset.plane;syncAbilityButton();
       for(const b of document.querySelectorAll('[data-plane]')){
         const chosen=b===btn;b.classList.toggle('selected',chosen);
         b.setAttribute('aria-pressed',String(chosen));
       }
     });
   }
+  syncAbilityButton();
   ui.start.addEventListener('click',startMatch);
   ui.rematch.addEventListener('click',startMatch);
   ui.change.addEventListener('click',showMenu);

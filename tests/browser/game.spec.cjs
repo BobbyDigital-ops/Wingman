@@ -4,6 +4,16 @@ async function openCareer(page){
   if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
   else await page.locator('#career-open-mobile').click();
 }
+
+async function openSetup(page,mode='duel'){
+ if(await page.locator('#splash-panel').isVisible())await page.locator('#splash-continue').click();
+ if(await page.locator('#mode-panel').isVisible()){
+   await page.locator('[data-mode-choice="'+mode+'"]').click();
+   await page.locator('#mode-next').click();
+ }
+ await expect(page.locator('#options-panel')).toBeVisible();
+}
+
 async function openLicence(page){
   if(await page.locator('#career-license').isVisible())await page.locator('#career-license').click();
   else {await openCareer(page);await page.locator('[data-action="licence"]').click();}
@@ -34,6 +44,7 @@ test('selects aircraft, starts a duel and accepts steering and firing', async ({
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
+  await openSetup(page);
   const bf109 = page.locator('[data-plane="bf109"]');
   await bf109.click();
   await expect(bf109).toHaveAttribute('aria-pressed', 'true');
@@ -51,10 +62,9 @@ test('launches four-plane team combat with class-labelled aircraft', async ({ pa
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
+  await openSetup(page,'teams');
   await expect(page.locator('[data-plane="bomber"] small')).toContainText('Bomber');
   await expect(page.locator('[data-plane="heavy"] small')).toContainText('Heavy Fighter');
-  await page.locator('#pilots-select').selectOption('4');
-  await page.locator('#team-select').selectOption('teams');
   await page.locator('#difficulty-select').selectOption('ace');
   await page.locator('#start').click();
   await expect(page.locator('#menu')).toHaveClass(/hidden/);
@@ -65,6 +75,7 @@ test('launches four-plane team combat with class-labelled aircraft', async ({ pa
 test('reverse manoeuvre and wind boost run without browser errors',async ({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/');
+ await openSetup(page);
  await page.locator('[data-plane="fighter"]').click();
  await page.locator('#start').click();
  await page.keyboard.down('KeyW');
@@ -130,6 +141,7 @@ test('rolled airframe is saved and locked for the run',async({page})=>{await pag
 test('mobile landscape controls stay onscreen, hold steering and render at increased resolution',async({page})=>{
   await page.goto('/');
   if(!(await page.evaluate(()=>matchMedia('(pointer: coarse)').matches)))return;
+  await openSetup(page);
   await page.locator('#start').click();
   const dimensions=await page.evaluate(()=>{
     const canvas=document.getElementById('game'),r=canvas.getBoundingClientRect();
@@ -141,8 +153,8 @@ test('mobile landscape controls stay onscreen, hold steering and render at incre
   });
   expect(dimensions.canvasPixels).toBeGreaterThan(dimensions.screenWidth*1.4);
   for(const b of dimensions.controls){
-    expect(b.size).toBeGreaterThanOrEqual(44);
-    expect(b.size).toBeLessThanOrEqual(68);
+    expect(b.size).toBeGreaterThanOrEqual(b.id==='left'||b.id==='right'?84:64);
+    expect(b.size).toBeLessThanOrEqual(b.id==='left'||b.id==='right'?120:95);
     expect(b.bottom).toBeLessThanOrEqual(dimensions.screenHeight+1);
     expect(b.left).toBeGreaterThanOrEqual(0);
     expect(b.right).toBeLessThanOrEqual(dimensions.screenWidth+1);
@@ -169,12 +181,14 @@ test('visible MENU control returns to aircraft selection while preserving game n
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/');
   await expect(page.locator('#menu-return')).toBeHidden();
+  await openSetup(page);
   await page.locator('#start').click();
   await expect(page.locator('#menu')).toHaveClass(/hidden/);
   await expect(page.locator('#menu-return')).toBeVisible();
   await page.locator('#menu-return').click();
   await expect(page.locator('#menu')).not.toHaveClass(/hidden/);
   await expect(page.locator('#menu-return')).toBeHidden();
+  await openSetup(page);
   await page.locator('#start').click();
   await expect(page.locator('#menu')).toHaveClass(/hidden/);
   expect(errors).toEqual([]);
@@ -185,6 +199,7 @@ test('Phase 8 arenas render distinct cached landscape colours without JS excepti
   await page.goto('/');
   const signatures=[];
   for(const choice of ['0','1','2','3']){
+    await openSetup(page);
     await page.locator('#arena-select').selectOption(choice);
     await page.locator('#start').click();
     await page.waitForTimeout(120);
@@ -204,6 +219,7 @@ test('Phase 8 arenas render distinct cached landscape colours without JS excepti
 test('mobile buttons use centred labels and utilities do not cover the top HUD',async({page})=>{
  await page.goto('/');
  if(!(await page.evaluate(()=>matchMedia('(pointer: coarse)').matches)))return;
+ await openSetup(page);
  await page.locator('#start').click();
  const ui=await page.evaluate(()=>{
    const frame=document.getElementById('frame').getBoundingClientRect();
@@ -220,10 +236,41 @@ test('mobile buttons use centred labels and utilities do not cover the top HUD',
    expect(ui[key].display).toBe('grid');
    expect(ui[key].align).toBe('center');
    expect(ui[key].justify).toBe('center');
-   expect(ui[key].width).toBeLessThanOrEqual(68);
+   expect(ui[key].width).toBeGreaterThanOrEqual(key==='left'||key==='right'?84:64);
+   expect(ui[key].width).toBeLessThanOrEqual(key==='left'||key==='right'?120:95);
  }
- expect(ui.skill.font).toBeLessThanOrEqual(14);
- expect(ui.menu.y).toBeGreaterThanOrEqual(ui.frame.top+ui.frame.height*.152-2);
+ expect(ui.skill.font).toBeLessThanOrEqual(18);
+ expect(ui.menu.y).toBeGreaterThanOrEqual(ui.frame.top+Math.min(94,Math.max(54,ui.frame.height*.17))-3);
  expect(ui.full.y).toBeGreaterThanOrEqual(ui.frame.top+ui.frame.height*.152-2);
  expect(ui.menu.x+ui.menu.width).toBeLessThanOrEqual(ui.full.x-4);
+});
+
+test('branded splash leads to mode selection, equipment and a match',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ await expect(page.locator('#splash-panel')).toBeVisible();
+ await expect(page.locator('#mode-panel')).toBeHidden();
+ await page.locator('#splash-continue').click();
+ await expect(page.locator('#mode-panel')).toBeVisible();
+ await page.locator('[data-mode-choice="triple"]').click();
+ await page.locator('#mode-next').click();
+ await expect(page.locator('#options-panel')).toBeVisible();
+ await page.locator('[data-plane="bf109"]').click();
+ await page.locator('#start').click();
+ await expect(page.locator('#menu')).toHaveClass(/hidden/);
+ await expect(page.locator('#bomb')).toHaveCount(0);
+ await expect(page.locator('#special')).toHaveText('BOOST');
+ expect(errors).toEqual([]);
+});
+test('fighter does not have a bomb control and bomber ability is labelled correctly',async({page})=>{
+ await page.goto('/');await openSetup(page);
+ await page.locator('[data-plane="fighter"]').click();
+ await page.locator('#start').click();
+ await expect(page.locator('#bomb')).toHaveCount(0);
+ await expect(page.locator('#special')).toHaveText('BOOST');
+ await page.locator('#menu-return').click();
+ await openSetup(page);
+ await page.locator('[data-plane="bomber"]').click();
+ await page.locator('#start').click();
+ await expect(page.locator('#special')).toHaveText('BOMBS');
 });
