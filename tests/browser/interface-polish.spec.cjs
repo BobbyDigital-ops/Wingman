@@ -353,7 +353,7 @@ test('active rivals use stable defined identities, separate from historic record
  await page.locator('[data-action="ladder"]').last().click();
  if(await page.locator('[data-aircraft]').first().isVisible())await page.locator('[data-aircraft]').first().click();
  await expect(page.locator('#active-rung [data-choice]')).toHaveCount(3);
- await expect(page.locator('#active-rung .pilot-face-shape')).toHaveCount(3);
+ await expect(page.locator('#active-rung .pilot-avatar')).toHaveCount(3);
  const names=await page.locator('#active-rung .route-opponent strong').allTextContents();
  expect(new Set(names).size).toBe(3);
 });
@@ -390,40 +390,39 @@ test('fixed roster gives persistent predesigned identities without erasing caree
  }
 });
 
-test('the roster artwork contains 32 individually addressable paintings with distinct image offsets',async({page})=>{
+test('forty fixed pilots have distinct RAF and German painted portrait slots',async({page})=>{
  await page.goto('/');
  const dimensions=await page.evaluate(async()=>{
-  const img=new Image();img.src=window.WingmanRosterPortraitAtlas;
-  await img.decode();return [img.naturalWidth,img.naturalHeight];
+  const refs=[window.WingmanRosterPortraitAtlas,window.WingmanGermanPortraitAtlas];
+  return await Promise.all(refs.map(async src=>{const img=new Image();img.src=src;await img.decode();return [img.naturalWidth,img.naturalHeight];}));
  });
- expect(dimensions).toEqual([768,448]);
+ expect(dimensions).toEqual([[768,448],[384,560]]);
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
  else await page.locator('#career-open-mobile').click();
- const allOffsets=async()=>page.locator('.candidate-portrait .unique-pilot-portrait image').evaluateAll(els=>
-  els.map(x=>x.getAttribute('x')+','+x.getAttribute('y')));
- const rafOffsets=await allOffsets();
- expect(rafOffsets).toHaveLength(20);
- expect(new Set(rafOffsets).size).toBe(20);
+ const offsets=async locator=>page.locator(locator).evaluateAll(els=>els.map(x=>x.getAttribute('x')+','+x.getAttribute('y')));
+ const raf=await offsets('.candidate-portrait .unique-pilot-portrait image');
+ expect(raf).toHaveLength(20);
+ expect(new Set(raf).size).toBe(20);
  await page.locator('#career-faction').selectOption('Axis');
- const axisOffsets=await allOffsets();
- expect(axisOffsets).toHaveLength(12);
- expect(new Set([...rafOffsets,...axisOffsets]).size).toBe(32);
+ const german=await offsets('.candidate-portrait .german-painted image');
+ expect(german).toHaveLength(20);
+ expect(new Set(german).size).toBe(20);
 });
 
 test('every roster name has a portrait-matched gender and no new pilot is preselected',async({page})=>{
  await page.goto('/');
  const result=await page.evaluate(()=>{
   const rs=window.WingmanRoster;
-  const female=[8,9,13,17,18,19,23,26,31];
+  const female=[8,9,13,17,18,19,23,26,31,34,36,38];
   return {length:rs.length,uniqueIds:new Set(rs.map(p=>p.id)).size,
    uniquePortraits:new Set(rs.map(p=>p.portrait)).size,
    errors:rs.flatMap((p,i)=>[
      p.gender!==(female.includes(i)?'female':'male')?'gender '+i:null,
-     (p.portrait<0||p.portrait>=32)?'portrait '+i:null,
+     (p.portrait<0||p.portrait>=40)?'portrait '+i:null,
      !(p.name.includes('"'))?'name '+i:null
    ].filter(Boolean))};
  });
- expect(result).toEqual({length:32,uniqueIds:32,uniquePortraits:32,errors:[]});
+ expect(result).toEqual({length:40,uniqueIds:40,uniquePortraits:40,errors:[]});
  const chocsSlot=await page.evaluate(()=>window.WingmanRoster.find(p=>p.name.includes('Chocs'))?.portrait);
  expect(chocsSlot).toBe(0);
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
