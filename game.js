@@ -710,12 +710,24 @@
   }
   function drawHud(){
     const p=state.fliers[0],e=state.fliers[1];
-    g.fillStyle='#182d3bdc';g.fillRect(0,0,W,31);
+    // Switchable HUD studies, using one shared layout and damage logic.
+    const hudChoice=document.getElementById('hud-style')?.value||'arcade';
+    const hud=hudChoice==='cockpit'?{
+      panel:'#343b30ec',gold:'#f2d7a0',minor:'#c6ccb0',divider:'#a8996b',
+      ally:'#9eae7c',foe:'#c77d64'
+    }:hudChoice==='competitive'?{
+      panel:'#152a44f2',gold:'#f5f9ff',minor:'#a6c9e3',divider:'#4c80a6',
+      ally:'#5ed5ef',foe:'#f18186'
+    }:{
+      panel:'#182d3bdc',gold:'#f5e6c2',minor:'#a7d8e8',divider:'#37546a',
+      ally:'#78ba87',foe:'#d9776d'
+    };
+    g.fillStyle=hud.panel;g.fillRect(0,0,W,31);
     g.font='bold 7px monospace';g.textBaseline='top';
-    g.fillStyle='#f5e6c2';g.fillText(p?p.d.name:'WINGMAN',7,3);
+    g.fillStyle=hud.gold;g.fillText(p?p.d.name:'WINGMAN',7,3);
     const en=e?e.d.name+(state.participants>2?' + '+(state.participants-2):''):'SELECT PLANE';
     g.fillText(en,W-7-g.measureText(en).width,3);
-    g.font='bold 5px monospace';g.fillStyle='#a7d8e8';
+    g.font='bold 5px monospace';g.fillStyle=hud.minor;
     if(p)g.fillText(p.role==='heavy'?'HEAVY FIGHTER':p.role==='bomber'?(p.type==='he111'?'MEDIUM BOMBER':'HEAVY BOMBER'):'FIGHTER',7,9);
     if(e){const cls=e.role==='heavy'?'HEAVY FIGHTER':e.role==='bomber'?(e.type==='he111'?'MEDIUM BOMBER':'HEAVY BOMBER'):'FIGHTER';g.fillText(cls,W-7-g.measureText(cls).width,9);}
     if(state.participants>2){
@@ -735,8 +747,8 @@
     g.font='6px monospace';g.fillStyle='#bed5dc';
     g.fillText(Math.max(0,Math.ceil(state.time))+'s '+ARENAS[state.arena],W/2,15);g.textAlign='left';
     if(p&&e){
-      bar(7,12,100,p.health,p.d.hull,'#78ba87');
-      bar(W-107,12,100,e.health,e.d.hull,'#d9776d');
+      bar(7,12,100,p.health,p.d.hull,hud.ally);
+      bar(W-107,12,100,e.health,e.d.hull,hud.foe);
       const gReady=p.burstLeft>0?'FIRING':p.gunCooldown>0?'RELOAD':'READY';
       g.fillStyle=p.gunCooldown>0?'#eabc7f':'#c5ead4';
       g.fillText('GUN '+gReady,7,19);
@@ -775,7 +787,7 @@
         g.fillStyle='#192c35';g.font='bold 6px monospace';g.fillText(zones[i][0],x+1,20);
       }
     }
-    g.fillStyle='#37546a';g.fillRect(0,30,W,1);
+    g.fillStyle=hud.divider;g.fillRect(0,30,W,1);
   }
   function damageDiagram(){
     // High-resolution miniature component schematic, overlaid on the HUD.

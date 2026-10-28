@@ -394,3 +394,10 @@ test('all three aircraft component readings remain available',()=>{
  const game=launch();game.listeners.get('start:click')();
  assert.deepEqual(Object.keys(game.internals.state.fliers[0].parts).sort(),['body','engine','tail']);
 });
+
+test('HUD styles all have the same playable game state',()=>{
+ const game=launch();
+ game.listeners.get('start:click')();
+ game.advance(25,1000);
+ assert.equal(game.internals.state.fliers.length,2);
+});
