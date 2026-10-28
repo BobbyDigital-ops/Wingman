@@ -120,7 +120,7 @@ function germanPilotPortrait(slot){
   '<path d="M89 112l9 8l-9 8l-9-8Z" fill="#b6afa2"/>'
  ][i%4];
  // All artwork uses a consistent 120x144 viewBox, centred at x=60.
- return '<svg class="pilot-avatar german-unique" viewBox="0 0 120 144" role="img" aria-label="'+(p?.name||'Luftwaffe pilot')+' portrait">'+
+ return '<svg class="pilot-avatar german-unique" viewBox="0 0 120 144" role="img" aria-label="'+escape(p?.name||'Luftwaffe pilot')+' portrait">'+
  '<rect width="120" height="144" fill="'+background+'"/><path d="M0 65L120 12V0H0Z" fill="#ffffff" opacity=".14"/>'+
  '<circle cx="92" cy="31" r="32" fill="#f4e7c4" opacity=".12"/>'+
  '<path d="M0 144Q3 105 37 100L49 91H72L83 100Q119 107 120 144Z" fill="'+uniform+'" stroke="#35463f" stroke-width="3"/>'+
