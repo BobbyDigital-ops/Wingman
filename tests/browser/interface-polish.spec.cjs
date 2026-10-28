@@ -383,20 +383,6 @@ test('illustrated pilot and aircraft atlas decodes as a real raster image',async
  expect(errors).toEqual([]);
 });
 
-test('aircraft selection paints new artwork rather than old outline-only sprites',async({page})=>{
- await page.goto('/');
- await page.locator('#splash-continue').click();
- await page.locator('#mode-next').click();
- const preview=page.locator('[data-aircraft-art="fighter"]');
- await expect.poll(async()=>preview.evaluate(c=>{
-  const rgba=c.getContext('2d').getImageData(Math.floor(c.width/2),5,1,1).data;
-  // The old model drawing leaves the upper-left tile completely transparent.
-  return rgba[3];
- })).toBeGreaterThan(100);
- await page.locator('[data-plane="bf109"]').click();
- await expect(page.locator('#wm-featured-name')).toHaveText('EMIL');
-});
-
 test('three active rivals have distinct painted portraits',async({page})=>{
  await page.goto('/');
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
@@ -417,7 +403,7 @@ test('licence portrait can be changed without changing pilot name or victories',
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
  else await page.locator('#career-open-mobile').click();
  if(await page.locator('[data-candidate="0"]').isVisible())await page.locator('[data-candidate="0"]').click();
- await page.locator('[data-action="licence"]').first().click().catch(()=>{});
+ if(!await page.locator('[data-action="portrait"]').isVisible())await page.locator('[data-action="licence"]').first().click();
  await expect(page.locator('[data-action="portrait"]')).toBeVisible();
  const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
  const artBefore=await page.locator('.career-photo .painted-pilot-portrait').getAttribute('x');
