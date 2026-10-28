@@ -163,3 +163,18 @@ test('mobile landscape controls stay onscreen, hold steering and render at incre
   });
   await expect(page.locator('#right')).not.toHaveClass(/pressed/);
 });
+
+test('visible MENU control returns to aircraft selection while preserving game navigation',async({page})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/');
+  await expect(page.locator('#menu-return')).toBeHidden();
+  await page.locator('#start').click();
+  await expect(page.locator('#menu')).toHaveClass(/hidden/);
+  await expect(page.locator('#menu-return')).toBeVisible();
+  await page.locator('#menu-return').click();
+  await expect(page.locator('#menu')).not.toHaveClass(/hidden/);
+  await expect(page.locator('#menu-return')).toBeHidden();
+  await page.locator('#start').click();
+  await expect(page.locator('#menu')).toHaveClass(/hidden/);
+  expect(errors).toEqual([]);
+});
