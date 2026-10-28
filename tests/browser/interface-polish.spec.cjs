@@ -199,6 +199,8 @@ test('cartoon pilots have distinct facial geometry and full-volume hairstyle pat
     };
   }));
   expect(features).toHaveLength(3);
+  expect(new Set(features.map(x=>x.face)).size).toBe(3);
+  expect(new Set(features.map(x=>x.hair)).size).toBe(3);
   for(const f of features){
     expect(f.facePath?.length).toBeGreaterThan(35);
     expect(f.hairPath?.length).toBeGreaterThan(35);
