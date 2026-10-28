@@ -20,7 +20,7 @@ function launch(){
   el['mode-select']={value:'duel'};
   el['arena-select']={value:'0'};
   for(const id of ['menu','result','result-title','result-detail','start',
-    'rematch','change-plane','left','right','fire','special','roll','bomb']){
+    'rematch','change-plane','left','right','boost','fire','special','roll','bomb']){
     el[id]={textContent:'',dataset:{},setPointerCapture:noop,setAttribute:noop,
       classList:{add:noop,remove:noop,toggle:noop},
       addEventListener:(type,cb)=>listeners.set(id+':'+type,cb)};
@@ -42,7 +42,7 @@ function launch(){
     console
   };
   const instrumented=code.replace('  // All scenery is painted once;',
-    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,hit};\n  // All scenery is painted once;');
+    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,hit,steerPlane,updatePlane,controls};\n  // All scenery is painted once;');
   const artCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/aircraft.js'),'utf8');
   vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
   vm.runInNewContext(instrumented,sandbox,{timeout:3000,filename:'game.js'});
@@ -295,23 +295,65 @@ test('the four-pilot arena continues after a single AI is destroyed',()=>{
  assert.equal(state.fliers.length,4);
 });
 
-test('repeated targeted hits detach a wing while hull remains intact',()=>{
+test('component failure needs repeated accurate hits and leaves hull intact',()=>{
  const game=launch();game.listeners.get('start:click')();
- const enemy=game.internals.state.fliers[1];
- enemy.spawnSafe=0;
- game.internals.hit(enemy,16,enemy.x,enemy.y,'left');
- game.internals.hit(enemy,16,enemy.x,enemy.y,'left');
- assert.equal(enemy.detached.left,true);
- assert.equal(enemy.critical,true);
- assert.equal(enemy.criticalCause,'WING FAILURE');
- assert.ok(enemy.health>0,'component destruction must precede hull destruction');
+ const p=game.internals.state.fliers[1];p.spawnSafe=0;
+ for(let i=0;i<6;i++)game.internals.hit(p,15,p.x,p.y,'engine');
+ assert.ok(p.parts.engine>0,'six targeted gun hits cannot kill the engine');
+ assert.equal(p.critical,false);
+ for(let i=0;i<9;i++)game.internals.hit(p,15,p.x,p.y,'engine');
+ assert.equal(p.parts.engine,0);
+ assert.equal(p.criticalCause,'ENGINE FAILURE');
+ assert.ok(p.health>0,'engine failure occurs before loss of hull');
 });
-test('repeated engine hits cause unrecoverable loss of thrust',()=>{
+test('tail damage limits turns without removing steering',()=>{
  const game=launch();game.listeners.get('start:click')();
- const enemy=game.internals.state.fliers[1];enemy.spawnSafe=0;
- game.internals.hit(enemy,19,enemy.x,enemy.y,'engine');
- game.internals.hit(enemy,19,enemy.x,enemy.y,'engine');
- assert.equal(enemy.parts.engine,0);
- assert.equal(enemy.criticalCause,'ENGINE FAILURE');
- assert.ok(enemy.health>0);
+ const p=game.internals.state.fliers[0];p.spawnSafe=0;
+ p.parts.tail=0;p.energy=90;
+ const angle=p.angle;
+ game.internals.steerPlane(p,1,1/60);
+ assert.ok(p.angle>angle,'steering still responds');
+ assert.ok(p.turnVelocity<.1,'tail damage limits turn authority');
+ assert.ok(p.alive);
+});
+test('body hits reduce structural health without instant failure',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[1];p.spawnSafe=0;
+ game.internals.hit(p,15,p.x,p.y,'body');
+ assert.ok(p.health>0);
+ assert.equal(p.critical,false);
+ assert.ok(p.parts.body<100);
+});
+test('holding boost uses charge and releasing it recharges',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0];
+ game.listeners.get('document:keydown')({code:'KeyW',repeat:false,preventDefault(){}});
+ game.advance(50,1000);
+ const charged=p.boostCharge;
+ assert.ok(charged<90,'holding boost consumes charge');
+ assert.equal(p.boosting,true);
+ game.listeners.get('document:keyup')({code:'KeyW'});
+ game.advance(35,2000);
+ assert.ok(p.boostCharge>charged,'charge regenerates while not boosting');
+});
+test('steep climbs stall gently, dives recover',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0];p.spawnSafe=0;
+ p.energy=0;p.angle=-Math.PI/3;p.y=100;
+ game.internals.steerPlane(p,1,1/60);
+ assert.ok(p.flightRisk>.5);assert.ok(p.stallTime>0);
+ const hp=p.health;
+ p.angle=Math.PI/3;
+ for(let i=0;i<30;i++)game.internals.steerPlane(p,0,1/60);
+ assert.equal(p.health,hp);
+ assert.equal(p.stallTime,0);
+});
+test('swoop briefly evades guns and exits at a bounded speed',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0];
+ game.internals.triggerSpecial(p);
+ assert.ok(p.evasiveTime>0);
+ game.advance(100,1000);
+ assert.equal(p.swoop,null);
+ assert.ok(p.speed<=p.d.speed*1.4);
 });
