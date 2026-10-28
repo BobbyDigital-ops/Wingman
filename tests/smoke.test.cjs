@@ -45,6 +45,8 @@ function launch(){
     '  window.__wingmanTest={state,triggerBomb,triggerSpecial,hit,steerPlane,updatePlane,controls,aiInput,assignCampaignAI,tailMagnet,shoot,rollWind,updateWind,projectiles,PLANES,wrappedDelta,combatDistance,interceptPoint};\n  // All scenery is painted once;');
   const artCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/aircraft.js'),'utf8');
   vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
+  const sceneryCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/scenery.js'),'utf8');
+  vm.runInNewContext(sceneryCode,sandbox,{timeout:3000,filename:'scenery.js'});
   vm.runInNewContext(instrumented,sandbox,{timeout:3000,filename:'game.js'});
   return {
     listeners,canvas,modelCanvas,internals:sandbox.window.__wingmanTest,
@@ -636,4 +638,38 @@ test('a fighter sitting directly behind a Lancaster takes sustained turret damag
    game.internals.projectiles(1/60);
  }
  assert.ok(chaser.health<start,'staying inside the rear firing lane should cost hull health');
+});
+
+test('Phase 8 environment generator paints four distinct cached WWII theatres',()=>{
+  const source=fs.readFileSync(require('node:path').join(__dirname,'../src/art/scenery.js'),'utf8');
+  const window={};vm.runInNewContext(source,{window},{timeout:3000});
+  assert.equal(window.WingmanScenery.version,'8.0');
+  const records=[];
+  for(let scene=0;scene<4;scene++){
+    const fills=[];let paths=0;
+    const ctx={
+      fillRect:(...a)=>fills.push(a),
+      fill(){paths++;},stroke(){paths++;},
+      beginPath(){},moveTo(){},lineTo(){},closePath(){},
+      ellipse(){},arc(){},save(){},restore(){},
+    };
+    window.WingmanScenery.paint(ctx,520,250,scene);
+    assert.ok(fills.length>120,'cached terrain draws atmosphere and detail');
+    assert.ok(paths>30,'scenery includes detailed terrain silhouettes');
+    records.push(fills.length+':'+paths);
+    window.WingmanScenery.weather(ctx,520,250,scene,6,{active:true,current:12});
+  }
+  assert.ok(new Set(records).size>=3,'four scenes differ in geometry');
+});
+test('Phase 8 damage smoke and shockwaves are bounded visual effects, not collision changes',()=>{
+  const game=launch();game.listeners.get('start:click')();
+  const s=game.internals.state,p=s.fliers[0];p.spawnSafe=0;
+  game.internals.hit(p,p.d.armour+45,p.x,p.y);
+  assert.ok(s.blasts.length>0,'impacts emit a short glow');
+  p.health=p.d.hull*.27;p.armour=0;
+  game.advance(25,3000);
+  assert.ok(s.trails.length>0,'damaged aircraft emit drifting smoke');
+  assert.ok(s.trails.length<=100,'mobile effect pool is capped');
+  game.advance(120,9000);
+  assert.ok(s.blasts.length<=12,'impact pulse pool is capped');
 });
