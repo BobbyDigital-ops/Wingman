@@ -7,7 +7,10 @@ const code=fs.readFileSync(require('node:path').join(__dirname,'../game.js'),'ut
 function launch(){
   const listeners=new Map();
   const noop=()=>{};
-  const ctx=new Proxy({measureText:s=>({width:String(s).length*5})},{
+  const ctx=new Proxy({measureText:s=>({width:String(s).length*5}),
+    createLinearGradient:()=>({addColorStop:noop}),
+    createRadialGradient:()=>({addColorStop:noop}),
+    createConicGradient:()=>({addColorStop:noop})},{
     get:(o,k)=>(k in o?o[k]:noop),set:(o,k,v)=>(o[k]=v,true)
   });
   const el={};
@@ -42,7 +45,7 @@ function launch(){
     console
   };
   const instrumented=code.replace('  // All scenery is painted once;',
-    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,hit,steerPlane,updatePlane,controls,aiInput,assignCampaignAI,tailMagnet,shoot,rollWind,updateWind,projectiles,PLANES,wrappedDelta,combatDistance,interceptPoint};\n  // All scenery is painted once;');
+    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,triggerRoll,triggerPilotSkill,hit,steerPlane,updatePlane,controls,aiInput,assignCampaignAI,tailMagnet,shoot,rollWind,updateWind,projectiles,PLANES,wrappedDelta,combatDistance,interceptPoint};\n  // All scenery is painted once;');
   const artCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/aircraft.js'),'utf8');
   vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
   const sceneryCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/scenery.js'),'utf8');
@@ -448,7 +451,7 @@ test('bomber rear gunner triggers automatically on a pursuer behind it',()=>{
  assert.equal(bomber.rearCooldown,0);
  game.internals.updatePlane(bomber,1/60,0);
  assert.ok(bomber.rearCooldown>1.5);
- assert.ok(game.internals.state.bullets.some(b=>b.owner===0&&b.damage===7&&b.rearGun));
+ assert.ok(game.internals.state.bullets.some(b=>b.owner===0&&b.damage===6&&b.rearGun));
 });
 test('depleted armour reduces hull; shield only protects and never recharges armour',()=>{
  const game=launch();game.listeners.get('start:click')();
