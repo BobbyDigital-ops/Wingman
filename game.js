@@ -254,7 +254,7 @@ function plane(type,id,x,y,angle){
     p.burstLeft=p.d.burst;p.shotTimer=0;
   }
   function opponents(p){return state.fliers.filter(other=>other.alive&&other.id!==p.id&&(!state.teams||other.team!==p.team));}
-  function nearestEnemy(p){return opponents(p).sort((a,b)=>distance(p,a)-distance(p,b))[0];}
+  function nearestEnemy(p){return opponents(p).sort((a,b)=>combatDistance(p,a)-combatDistance(p,b))[0];}
   function triggerSpecial(p){
     if(!p||!p.alive||p.specialCooldown>0||state.phase!=='playing'||state.paused)return;
     if(p.role==='fighter'){
@@ -458,8 +458,7 @@ function plane(type,id,x,y,angle){
     const enemy=nearestEnemy(p);
     if(!enemy||Math.abs(angleDiff(enemy.angle,p.angle))>.36)return 0;
     const dirX=Math.cos(enemy.angle),dirY=Math.sin(enemy.angle);
-    let dx=enemy.x-p.x;
-    if(dx>W*.5)dx-=W;else if(dx< -W*.5)dx+=W;
+    const dx=wrappedDelta(p.x,enemy.x);
     const dy=enemy.y-p.y;
     const range=Math.hypot(dx,dy);
     if(range<17||range>82||dx*Math.cos(p.angle)+dy*Math.sin(p.angle)<10)return 0;
@@ -669,7 +668,7 @@ function plane(type,id,x,y,angle){
       // by touching another airframe: rounds must leave the collision envelope.
       let struck=false;
       for(const target of targets){
-        const clear=shooter&&distance(target,shooter)>target.d.radius+shooter.d.radius+3;
+        const clear=shooter&&combatDistance(target,shooter)>target.d.radius+shooter.d.radius+3;
         if(!clear||target.rollTime>0||target.evasiveTime>0||b.age<=.035)continue;
         const vx=b.x-px,vy=b.y-py,denom=vx*vx+vy*vy;
         const t=denom>0?clamp(((target.x-px)*vx+(target.y-py)*vy)/denom,0,1):0;
@@ -677,16 +676,21 @@ function plane(type,id,x,y,angle){
         // Rotate the contact point into the airframe's own axes.
         // Extended fuselage and wing are independently hittable; no huge
         // circular hit area around larger bombers.
-        const rx=nx-target.x,ry=ny-target.y;
-        const longitudinal=rx*Math.cos(target.angle)+ry*Math.sin(target.angle);
-        const lateral=-rx*Math.sin(target.angle)+ry*Math.cos(target.angle);
         const halfLength=target.role==='bomber'?10.8:target.role==='heavy'?9.3:7.8;
         const wingWidth=target.role==='bomber'?4.5:target.role==='heavy'?4.1:3.5;
-        const hitBody=Math.abs(longitudinal)<=halfLength&&Math.abs(lateral)<=3.3;
-        const hitWing=Math.abs(longitudinal)<=halfLength*.55&&Math.abs(lateral)<=wingWidth;
-        if(hitBody||hitWing){
-          hit(target,b.damage,b.x,b.y,undefined,'GUN');struck=true;break;
+        // Adjacent ghost positions allow a bullet crossing the side boundary
+        // to strike an airframe just over the other edge during the same tick.
+        for(const shiftedX of [target.x-W,target.x,target.x+W]){
+          const rx=nx-shiftedX,ry=ny-target.y;
+          const longitudinal=rx*Math.cos(target.angle)+ry*Math.sin(target.angle);
+          const lateral=-rx*Math.sin(target.angle)+ry*Math.cos(target.angle);
+          const hitBody=Math.abs(longitudinal)<=halfLength&&Math.abs(lateral)<=3.3;
+          const hitWing=Math.abs(longitudinal)<=halfLength*.55&&Math.abs(lateral)<=wingWidth;
+          if(hitBody||hitWing){
+            hit(target,b.damage,b.x,b.y,undefined,'GUN');struck=true;break;
+          }
         }
+        if(struck)break;
       }
       if(struck){state.bullets.splice(i,1);continue;}
       if(b.x<0)b.x+=W;else if(b.x>W)b.x-=W;
@@ -740,7 +744,11 @@ function plane(type,id,x,y,angle){
         else if(opponents(user).every(p=>!p.alive))endRound(0);
         else if(state.time<=0)endRound(1);
       }else if(state.time<=0){
-        const enemy=enemies[0],a=user.health/user.d.hull,b=enemy.health/enemy.d.hull;
+        const enemy=enemies[0];
+        // Armour and hull both count: an intact hull with no armour is
+        // not equivalent to a completely undamaged aircraft at timeout.
+        const condition=p=>(p.health+p.armour)/(p.d.hull+p.d.armour);
+        const a=condition(user),b=condition(enemy);
         endRound(Math.abs(a-b)<.025?-1:a>b?0:1);
       }
     }
