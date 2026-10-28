@@ -11,12 +11,12 @@
   g.imageSmoothingEnabled=false;
 
   const PLANES={
-    fighter:{name:'SUPERMARINE SPITFIRE',speed:83,turn:3.15,hull:110,radius:5.5,burst:10,interval:.055,cooldown:1.35,damage:15,bulletSpeed:194,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'REVERSE'},
-    heavy:{name:'BRISTOL BEAUFIGHTER',speed:72,turn:1.55,hull:160,radius:8,burst:3,interval:.19,cooldown:2.8,damage:29,bulletSpeed:177,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
-    bomber:{name:'AVRO LANCASTER',speed:60,turn:1.05,hull:205,radius:9,burst:2,interval:.30,cooldown:3.2,damage:8,bulletSpeed:85,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'},
-    bf109:{name:'MESSERSCHMITT BF 109',class:'fighter',nation:'Germany',speed:86,turn:3.0,hull:104,radius:5.5,burst:8,interval:.067,cooldown:1.4,damage:15,bulletSpeed:187,specialCd:8,color:'#afb89d',shade:'#647a74',accent:'#ecd06c',special:'REVERSE'},
-    bf110:{name:'MESSERSCHMITT BF 110',class:'heavy',nation:'Germany',speed:75,turn:1.47,hull:149,radius:8,burst:3,interval:.20,cooldown:2.7,damage:30,bulletSpeed:173,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
-    he111:{name:'HEINKEL HE 111',class:'bomber',nation:'Germany',speed:64,turn:1.12,hull:170,radius:8.5,burst:2,interval:.32,cooldown:3.1,damage:8,bulletSpeed:89,specialCd:10,color:'#a5ae9d',shade:'#576b61',accent:'#b4baca',special:'CLIMB'}
+    fighter:{name:'SUPERMARINE SPITFIRE',speed:83,turn:3.15,hull:80,armour:20,radius:5.5,burst:10,interval:.055,cooldown:1.35,damage:9,bulletSpeed:194,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'REVERSE'},
+    heavy:{name:'BRISTOL BEAUFIGHTER',speed:72,turn:1.55,hull:100,armour:60,radius:8,burst:5,interval:.19,cooldown:2.8,damage:16,bulletSpeed:177,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
+    bomber:{name:'AVRO LANCASTER',speed:60,turn:1.05,hull:110,armour:100,radius:9,burst:4,interval:.30,cooldown:3.2,damage:10,bulletSpeed:85,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'},
+    bf109:{name:'MESSERSCHMITT BF 109',class:'fighter',nation:'Germany',speed:86,turn:3.0,hull:78,armour:22,radius:5.5,burst:9,interval:.067,cooldown:1.4,damage:10,bulletSpeed:187,specialCd:8,color:'#afb89d',shade:'#647a74',accent:'#ecd06c',special:'REVERSE'},
+    bf110:{name:'MESSERSCHMITT BF 110',class:'heavy',nation:'Germany',speed:75,turn:1.47,hull:102,armour:56,radius:8,burst:5,interval:.20,cooldown:2.7,damage:17,bulletSpeed:173,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
+    he111:{name:'HEINKEL HE 111',class:'bomber',nation:'Germany',speed:64,turn:1.12,hull:108,armour:90,radius:8.5,burst:4,interval:.32,cooldown:3.1,damage:10,bulletSpeed:89,specialCd:10,color:'#a5ae9d',shade:'#576b61',accent:'#b4baca',special:'CLIMB'}
   };
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
@@ -60,8 +60,7 @@
   function plane(type,id,x,y,angle){
     const d=PLANES[type];
     return {id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
-      vy:Math.sin(angle)*d.speed*.8,health:d.hull,
-      parts:{engine:100,body:100,tail:100},
+      vy:Math.sin(angle)*d.speed*.8,health:d.hull,armour:d.armour,rearCooldown:0,rearShots:0,rearShotTime:0,
       critical:false,criticalCause:'',flightRisk:0,climbLoad:0,aiRecoveryTime:0,tailAssist:0,
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boostCharge:100,boosting:false,aiBoost:false,
       spawnSafe:1.0,smokeTimer:0,hitFlash:0,alive:true,aiThink:0,
@@ -172,7 +171,7 @@
   }
   function shoot(p){
     // Tail damage adds a small aiming wobble without disabling weapons.
-    const spread=(1-p.parts.tail/100)*.065;
+    const spread=0;
     const a=p.angle+random(-spread,spread),dx=Math.cos(a),dy=Math.sin(a);
     state.bullets.push({x:p.x+dx*(p.d.radius+2),y:p.y+dy*(p.d.radius+2),
       vx:dx*p.d.bulletSpeed+p.vx*.35,vy:dy*p.d.bulletSpeed+p.vy*.35,
@@ -190,31 +189,12 @@
   }
   function hit(p,amount,x,y,zoneOverride,cause='GUN'){
     if(!p.alive||p.spawnSafe>0)return;
-    const ca=Math.cos(p.angle),sa=Math.sin(p.angle);
-    const lx=(x-p.x)*ca+(y-p.y)*sa;
-    // Side-on guns can meaningfully target only nose, centre and tail.
-    const zone=['engine','body','tail'].includes(zoneOverride)?zoneOverride:
-      lx>p.d.radius*.34?'engine':
-      lx< -p.d.radius*.46?'tail':'body';
-    const armour=p.armourTime>0?.45:1;
-    if(zone==='body'||cause!=='GUN'){
-      p.health=Math.max(0,p.health-amount*(cause!=='GUN'?.72:.64)*armour);
-    }else{
-      // More than one complete fighter burst of focused hits is required
-      // to disable a component. Glancing rounds still chip the hull.
-      p.parts[zone]=Math.max(0,p.parts[zone]-amount*(zone==='engine'?.47:.43)*armour);
-      p.health=Math.max(0,p.health-amount*.22*armour);
-    }
-    p.parts.body=clamp(p.health/p.d.hull*100,0,100);
-    if(p.parts.engine<=0&&p.criticalCause!=='ENGINE FAILURE'){
-      p.criticalCause='ENGINE FAILURE';emit(p.x,p.y,12,'#77777b',22);
-    }else if(p.parts.tail<=0&&p.parts.engine>0&&p.criticalCause!=='TAIL FAILURE'){
-      p.criticalCause='TAIL FAILURE';emit(p.x,p.y,10,'#c6ad8b',18);
-    }
-    p.critical=p.parts.engine<=0||p.parts.tail<=0;
-    p.hitFlash=.17;
-    p.damageCause=zone.toUpperCase()+' '+cause;p.damageNotice=1.15;
-    emit(x,y,p.role==='heavy'?11:7,'#ffe0a0',p.role==='heavy'?38:27);sound('hit');
+    let remaining=amount*(p.armourTime>0?.45:1);
+    const absorbed=Math.min(p.armour,remaining);
+    p.armour-=absorbed;remaining-=absorbed;
+    p.health=Math.max(0,p.health-remaining);
+    p.hitFlash=.17;p.damageCause=cause;p.damageNotice=1.15;
+    emit(x,y,7,'#ffe0a0',26);sound('hit');
     if(p.health<=0){
       p.alive=false;emit(p.x,p.y,28,'#ffc47e',75);emit(p.x,p.y,16,'#625765',35);
       if(state.participants===2||p.id===0||opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
@@ -243,7 +223,7 @@
       if(p.y<37){p.y=37;p.vy=Math.max(0,p.vy);}
       // The manoeuvre should not bypass the normal ground hazard.
       if(p.y>=H-13){
-        p.y=H-13;p.health=0;p.parts.body=0;p.alive=false;
+        p.y=H-13;p.health=0;p.alive=false;
         p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
         if(p.id===0||state.participants===2||opponents(state.fliers[0]).every(q=>!q.alive))endRound(p.id===0?1:0);
       }
@@ -258,7 +238,7 @@
       }
       return;
     }
-    const engine=p.parts.engine/100,tail=p.parts.tail/100;
+    const engine=1,tail=1;
     const climb=Math.max(0,-Math.sin(p.angle));
     const dive=Math.max(0,Math.sin(p.angle));
     // Airspeed and altitude trade off naturally; diving stores useful speed.
@@ -284,7 +264,7 @@
     p.angle+=p.turnVelocity*dt;
     if(p.angle>Math.PI)p.angle-=TAU;
     if(p.angle< -Math.PI)p.angle+=TAU;
-    const power=.25+.75*engine;
+    const power=1-.15*clamp((.6-p.health/p.d.hull)/.6,0,1);
     const wanted=p.d.speed*power*(.87+.13*p.energy/100)*(p.boosting?1.27:1)*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
     // Fighters retain less momentum than big, heavier aircraft.
     const drag=p.role==='fighter'?1.55:p.role==='heavy'?1.2:.98;
@@ -297,8 +277,7 @@
     p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
     p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
     // Engine failure causes a controlled glide instead of instant forced death.
-    if(p.parts.engine<=0)p.vy+=dt*13;
-    if(p.parts.tail<=0)p.vy+=dt*3.5;
+
     if(p.flightRisk>0)p.vy+=dt*(5+15*p.flightRisk);
     const oldY=p.y;
     p.x+=p.vx*dt;p.y+=p.vy*dt;
@@ -311,7 +290,7 @@
     else if(p.x>W+p.d.radius)p.x-=W+2*p.d.radius;
     if(p.y<37){p.y=37;p.vy=Math.max(3,p.vy);p.angle+=clamp(angleDiff(.3,p.angle),-dt*2,dt*2);}
     if(p.y>=H-13){
-      p.y=H-13;p.health=0;p.parts.body=0;p.alive=false;
+      p.y=H-13;p.health=0;p.alive=false;
       p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
       if(p.id===0||state.participants===2||opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
     }
@@ -356,7 +335,7 @@
     if(p.vy< -8&&p.y<H-70)p.aiRecoveryTime=0;
     if(p.aiRecoveryTime>0){
       p.aiMode='recover';p.aiThink=0;
-      p.aiBoost=p.boostCharge>18&&p.parts.engine>25;
+      p.aiBoost=p.boostCharge>18;
       // Never follow a target into the ground. The climb-out heading
       // is independent of the target's x-coordinate and screen wrap.
       const climbHeading=-Math.PI/2;
@@ -390,7 +369,7 @@
     }
     // The AI can spend limited boost to intercept or extend out of danger.
     p.aiBoost=(p.aiMode==='intercept'&&range>130||
-      p.aiMode==='extend'&&p.y>70)&&p.boostCharge>30&&p.parts.engine>25;
+      p.aiMode==='extend'&&p.y>70)&&p.boostCharge>30;
     // Bombers seek the high ground and track crossing opportunities.
     if(p.role==='bomber'&&p.aiMode!=='recover'){
       tx=target.x+target.vx*.3;
@@ -423,8 +402,34 @@
     p.armourTime=Math.max(0,p.armourTime-dt);
     p.climbAssist=Math.max(0,p.climbAssist-dt);
     p.bombCooldown=Math.max(0,p.bombCooldown-dt);
+    p.rearCooldown=Math.max(0,p.rearCooldown-dt);
+    if(p.role==='bomber'&&p.rearCooldown<=0&&p.rearShots===0){
+      const target=nearestEnemy(p);
+      if(target){
+        let dx=target.x-p.x;if(dx>W*.5)dx-=W;else if(dx< -W*.5)dx+=W;
+        const dy=target.y-p.y,range=Math.hypot(dx,dy);
+        const along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle);
+        if(along< -14&&range<95&&Math.abs(dx*Math.sin(p.angle)-dy*Math.cos(p.angle))<55){
+          p.rearShots=3;p.rearShotTime=0;p.rearTarget=target.id;p.rearCooldown=2.4;
+        }
+      }
+    }
+    if(p.role==='bomber'&&p.rearShots>0){
+      p.rearShotTime-=dt;
+      if(p.rearShotTime<=0){
+        const target=state.fliers.find(q=>q.id===p.rearTarget&&q.alive);
+        if(target){
+          let dx=target.x-p.x;if(dx>W*.5)dx-=W;else if(dx< -W*.5)dx+=W;
+          const aim=Math.atan2(target.y-p.y,dx)+random(-.15,.15),speed=175;
+          state.bullets.push({x:p.x-Math.cos(p.angle)*p.d.radius,y:p.y-Math.sin(p.angle)*p.d.radius,
+            vx:Math.cos(aim)*speed+p.vx*.2,vy:Math.sin(aim)*speed+p.vy*.2,
+            owner:p.id,damage:5.5,life:.65,age:0});
+        }
+        p.rearShots--;p.rearShotTime=.14;
+      }
+    }
     p.evasiveTime=Math.max(0,(p.evasiveTime||0)-dt);
-    p.boosting=!!(wantsBoost&&p.boostCharge>0&&p.parts.engine>10&&!p.swoop);
+    p.boosting=!!(wantsBoost&&p.boostCharge>0&&!p.swoop);
     p.boostCharge=clamp(p.boostCharge+dt*(p.boosting?-29:9),0,100);
     p.rollTime=Math.max(0,p.rollTime-dt);
     p.rollRecovery=Math.max(0,p.rollRecovery-dt);
@@ -437,8 +442,8 @@
       }
     }else p.gunCooldown=Math.max(0,p.gunCooldown-dt);
     p.smokeTimer-=dt;
-    if((p.parts.engine<48||p.health<p.d.hull*.35)&&p.smokeTimer<=0){
-      p.smokeTimer=.09;
+    if((p.health<p.d.hull*.6)&&p.smokeTimer<=0){
+      p.smokeTimer=p.health<p.d.hull*.3?.075:.2;
       const x=p.x-Math.cos(p.angle)*p.d.radius;
       const y=p.y-Math.sin(p.angle)*p.d.radius;
       emit(x,y,1,'#6d7480',6);
@@ -749,6 +754,8 @@
     if(p&&e){
       bar(7,12,100,p.health,p.d.hull,hud.ally);
       bar(W-107,12,100,e.health,e.d.hull,hud.foe);
+      bar(7,9,100,p.armour,p.d.armour,'#79c2e6');
+      bar(W-107,9,100,e.armour,e.d.armour,'#79c2e6');
       const gReady=p.burstLeft>0?'FIRING':p.gunCooldown>0?'RELOAD':'READY';
       g.fillStyle=p.gunCooldown>0?'#eabc7f':'#c5ead4';
       g.fillText('GUN '+gReady,7,19);
@@ -777,33 +784,22 @@
       if(p.role==='bomber'){
         g.fillStyle='#ffd9a2';g.fillText(p.bombCooldown>0?'BOMB '+p.bombCooldown.toFixed(1):'BOMB READY',W*.50,27);
       }
-      g.fillStyle='#dce8e1';g.fillText('DAMAGE',W-106,19);
-      const zones=[['E','engine'],['B','body'],['T','tail']];
-      for(let i=0;i<zones.length;i++){
-        const health=p.parts[zones[i][1]];
-        const x=W-43+i*14;
-        g.fillStyle=health>65?'#76b68a':health>30?'#e6b96c':'#e77267';
-        g.fillRect(x,19,8,8);
-        g.fillStyle='#192c35';g.font='bold 6px monospace';g.fillText(zones[i][0],x+1,20);
-      }
+      g.fillStyle='#9ed2e8';g.font='bold 6px monospace';g.fillText('ARM '+Math.round(p.armour),W-100,19);
+      g.fillStyle='#bce3b4';g.fillText('HULL '+Math.round(p.health),W-100,26);
     }
     g.fillStyle=hud.divider;g.fillRect(0,30,W,1);
   }
   function damageDiagram(){
-    // High-resolution miniature component schematic, overlaid on the HUD.
     const p=state.fliers[0];if(!p)return;
-    const c=modelCtx,cx= W-62,cy=42;
-    c.save();c.fillStyle='#182b36d9';c.fillRect(cx-34,cy-5,67,35);
-    c.strokeStyle='#7c9ba7';c.lineWidth=.45;c.strokeRect(cx-34,cy-5,67,35);
-    c.font='bold 4.5px monospace';c.fillStyle='#f6e3ba';c.fillText('AIRFRAME',cx-30,cy-2);
-    const stages=[['E','engine'],['B','body'],['T','tail']];
-    for(let i=0;i<stages.length;i++){
-      const [symbol,key]=stages[i],value=p.parts[key],x=cx-25+i*20;
-      c.fillStyle=value>65?'#8dd5a0':value>30?'#f0bd75':'#ee7469';
-      c.fillRect(x,cy+7,13,11);
-      c.fillStyle='#172a35';c.font='bold 6px monospace';c.fillText(symbol,x+4,cy+9);
-      c.fillStyle='#f0e5d1';c.font='4px monospace';c.fillText(Math.round(value)+'%',x,cy+21);
-    }
+    const c=modelCtx,x=W-78,y=39;
+    c.save();c.fillStyle='#152b3de0';c.fillRect(x,y,71,31);
+    c.strokeStyle='#7d9cac';c.lineWidth=.6;c.strokeRect(x,y,71,31);
+    c.font='bold 6px monospace';c.fillStyle='#a9d8ed';c.fillText('ARMOUR',x+5,y+3);
+    c.fillStyle='#223c4d';c.fillRect(x+5,y+13,60,4);
+    c.fillStyle='#7cc3e7';c.fillRect(x+5,y+13,60*clamp(p.armour/p.d.armour,0,1),4);
+    c.fillStyle='#e1eabf';c.fillText('HULL',x+5,y+19);
+    c.fillStyle='#223c4d';c.fillRect(x+27,y+22,38,4);
+    c.fillStyle='#91c994';c.fillRect(x+27,y+22,38*clamp(p.health/p.d.hull,0,1),4);
     c.restore();
   }
   function draw(){
@@ -853,7 +849,7 @@
       g.fillStyle='#ffdfad';g.textAlign='center';g.font='bold 7px monospace';
       g.fillText('STALL · DIVE',W/2,41);g.textAlign='left';
     }
-    if(pilot&&pilot.critical&&pilot.alive){
+    if(false&&pilot&&pilot.critical&&pilot.alive){
       g.fillStyle='#6f2e2acb';g.fillRect(W*.5-60,38,120,14);
       g.fillStyle='#ffdb9b';g.textAlign='center';g.font='bold 8px monospace';
       g.fillText(pilot.criticalCause+' · GLIDE',W*.5,42);g.textAlign='left';
