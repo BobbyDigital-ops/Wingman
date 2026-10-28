@@ -334,40 +334,30 @@ test('German aircraft display recognisable identities with accurate original des
  }
 });
 
-test('illustrated pilot and aircraft atlas decodes as a real raster image',async({page})=>{
- const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/');
- const decoded=await page.evaluate(async()=>{
-  const src=window.WingmanPaintedAtlas;
-  if(!src?.startsWith('data:image/webp;base64,'))return null;
-  const img=new Image();img.src=src;
-  await img.decode();
-  return {width:img.naturalWidth,height:img.naturalHeight};
- });
- expect(decoded).toEqual({width:516,height:144});
- if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
- else await page.locator('#career-open-mobile').click();
- const painted=page.locator('.pilot-avatar .painted-pilot-portrait');
- await expect(painted.first()).toBeAttached();
- expect(await painted.first().getAttribute('href')).toContain('data:image/webp;base64,');
- expect(errors).toEqual([]);
-});
-
-test('three active rivals have distinct painted portraits',async({page})=>{
+test('defined pilot character portraits use vector art, not repeated tiny atlas crops',async({page})=>{
  await page.goto('/');
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
  else await page.locator('#career-open-mobile').click();
- if(await page.locator('[data-candidate="0"]').isVisible()){
-  await page.locator('[data-candidate="0"]').click();
-  await page.locator('[data-action="ladder"]').last().click();
-  if(await page.locator('[data-aircraft]').first().isVisible())await page.locator('[data-aircraft]').first().click();
- }
- const portraits=page.locator('#active-rung .painted-pilot-portrait');
- await expect(portraits).toHaveCount(3);
- const positions=await portraits.evaluateAll(els=>els.map(x=>x.getAttribute('x')));
- expect(new Set(positions).size).toBe(3);
+ await expect(page.locator('.pilot-avatar')).toHaveCount(20);
+ await expect(page.locator('.pilot-avatar .painted-pilot-portrait')).toHaveCount(0);
+ const variety=await page.locator('.pilot-avatar').evaluateAll(els=>new Set(els.map(el=>
+  (el.querySelector('.pilot-face-shape')?.getAttribute('d')||'')+'|'+
+  (el.querySelector('.pilot-hair-style')?.getAttribute('data-hair-style')||'')
+ )).size);
+ expect(variety).toBeGreaterThanOrEqual(20);
 });
-
+test('active rivals use stable defined identities, separate from historic records',async({page})=>{
+ await page.goto('/');
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ await page.locator('[data-candidate="0"]').click();
+ await page.locator('[data-action="ladder"]').last().click();
+ if(await page.locator('[data-aircraft]').first().isVisible())await page.locator('[data-aircraft]').first().click();
+ await expect(page.locator('#active-rung [data-choice]')).toHaveCount(3);
+ await expect(page.locator('#active-rung .pilot-face-shape')).toHaveCount(3);
+ const names=await page.locator('#active-rung .route-opponent strong').allTextContents();
+ expect(new Set(names).size).toBe(3);
+});
 test('aircraft preview remains crisp transparent original geometry instead of enlarged 86px paintings',async({page})=>{
  await page.goto('/');
  await page.locator('#splash-continue').click();
