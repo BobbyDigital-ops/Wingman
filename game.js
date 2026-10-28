@@ -11,12 +11,12 @@
   g.imageSmoothingEnabled=false;
 
   const PLANES={
-    fighter:{name:'SUPERMARINE SPITFIRE',speed:83,turn:3.15,hull:80,armour:20,radius:5.5,burst:10,interval:.055,cooldown:1.35,damage:9,bulletSpeed:194,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'REVERSE'},
-    heavy:{name:'BRISTOL BEAUFIGHTER',speed:72,turn:1.55,hull:100,armour:60,radius:8,burst:5,interval:.19,cooldown:2.8,damage:16,bulletSpeed:177,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
-    bomber:{name:'AVRO LANCASTER',speed:60,turn:1.05,hull:110,armour:100,radius:9,burst:4,interval:.30,cooldown:3.2,damage:10,bulletSpeed:85,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'},
-    bf109:{name:'MESSERSCHMITT BF 109',class:'fighter',nation:'Germany',speed:86,turn:3.0,hull:78,armour:22,radius:5.5,burst:9,interval:.067,cooldown:1.4,damage:10,bulletSpeed:187,specialCd:8,color:'#afb89d',shade:'#647a74',accent:'#ecd06c',special:'REVERSE'},
-    bf110:{name:'MESSERSCHMITT BF 110',class:'heavy',nation:'Germany',speed:75,turn:1.47,hull:102,armour:56,radius:8,burst:5,interval:.20,cooldown:2.7,damage:17,bulletSpeed:173,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
-    he111:{name:'HEINKEL HE 111',class:'bomber',nation:'Germany',speed:64,turn:1.12,hull:108,armour:90,radius:8.5,burst:4,interval:.32,cooldown:3.1,damage:10,bulletSpeed:89,specialCd:10,color:'#a5ae9d',shade:'#576b61',accent:'#b4baca',special:'CLIMB'}
+    fighter:{name:'SUPERMARINE SPITFIRE',speed:88,turn:3.15,hull:100,armour:30,radius:5.5,burst:10,interval:.055,cooldown:1.5,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'REVERSE'},
+    heavy:{name:'BRISTOL BEAUFIGHTER',speed:80,turn:1.85,hull:125,armour:75,radius:8,burst:5,interval:.19,cooldown:2.45,damage:16,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
+    bomber:{name:'AVRO LANCASTER',speed:70,turn:1.3,hull:140,armour:115,radius:9,burst:4,interval:.30,cooldown:2.85,damage:10,bulletSpeed:158,gunLife:1.22,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'},
+    bf109:{name:'MESSERSCHMITT BF 109',class:'fighter',nation:'Germany',speed:90,turn:3.05,hull:96,armour:32,radius:5.5,burst:9,interval:.067,cooldown:1.48,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#afb89d',shade:'#647a74',accent:'#ecd06c',special:'REVERSE'},
+    bf110:{name:'MESSERSCHMITT BF 110',class:'heavy',nation:'Germany',speed:82,turn:1.78,hull:125,armour:70,radius:8,burst:5,interval:.20,cooldown:2.5,damage:17,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
+    he111:{name:'HEINKEL HE 111',class:'bomber',nation:'Germany',speed:73,turn:1.35,hull:136,armour:105,radius:8.5,burst:4,interval:.32,cooldown:2.82,damage:10,bulletSpeed:162,gunLife:1.22,specialCd:10,color:'#a5ae9d',shade:'#576b61',accent:'#b4baca',special:'CLIMB'}
   };
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
@@ -170,12 +170,11 @@
     sound('special');
   }
   function shoot(p){
-    // Tail damage adds a small aiming wobble without disabling weapons.
-    const spread=0;
-    const a=p.angle+random(-spread,spread),dx=Math.cos(a),dy=Math.sin(a);
+    // Straight, readable cannon and machine-gun bursts; no component targeting.
+    const dx=Math.cos(p.angle),dy=Math.sin(p.angle);
     state.bullets.push({x:p.x+dx*(p.d.radius+2),y:p.y+dy*(p.d.radius+2),
       vx:dx*p.d.bulletSpeed+p.vx*.35,vy:dy*p.d.bulletSpeed+p.vy*.35,
-      owner:p.id,damage:p.d.damage,life:.9,age:0});
+      owner:p.id,damage:p.d.damage,life:p.d.gunLife,age:0});
     emit(p.x+dx*(p.d.radius+3),p.y+dy*(p.d.radius+3),2,'#fff0a3',7);
     p.muzzleFlash=.12;
     sound('shot');
@@ -276,8 +275,7 @@
     const follow=Math.min(1,dt*(p.role==='bomber'?3.2:p.role==='heavy'?4:5.1));
     p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
     p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
-    // Engine failure causes a controlled glide instead of instant forced death.
-
+    // Phase 1 climb, dive, drag and steering physics are unchanged.
     if(p.flightRisk>0)p.vy+=dt*(5+15*p.flightRisk);
     const oldY=p.y;
     p.x+=p.vx*dt;p.y+=p.vy*dt;
@@ -818,7 +816,8 @@
     for(const b of state.bullets){
       const heavy=state.fliers[b.owner]?.role==='heavy';
       g.strokeStyle=heavy?'#ffd093':'#fff1b0';g.lineWidth=heavy?2:1;
-      g.beginPath();g.moveTo(b.x,b.y);g.lineTo(b.x-b.vx*.024,b.y-b.vy*.024);g.stroke();
+      g.beginPath();g.moveTo(b.x,b.y);
+      g.lineTo(b.x-b.vx*.042,b.y-b.vy*.042);g.stroke();
       g.fillStyle=heavy?'#653e33':'#574c43';g.fillRect(Math.round(b.x)-1,Math.round(b.y)-1,heavy?5:3,heavy?3:2);
       g.fillStyle=heavy?'#ffd19b':'#fff1ac';g.fillRect(Math.round(b.x),Math.round(b.y),heavy?4:2,1);
     }
