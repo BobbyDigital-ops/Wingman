@@ -308,7 +308,7 @@ test('Wingman 2.0 airframe gallery uses six genuine live aircraft previews',asyn
  }));
  expect(painted.every(n=>n>250)).toBe(true);
  await page.locator('[data-plane="bf110"]').click();
- await expect(page.locator('#wm-featured-name')).toHaveText('BF 110');
+ await expect(page.locator('#wm-featured-name')).toHaveText('ZERSTÖRER');
  await expect(page.locator('#wm-featured-description')).toContainText('LUFTWAFFE');
  expect(await page.locator('#wm-stat-armour').evaluate(el=>el.style.getPropertyValue('--wm-stat'))).toBe('77%');
  await page.locator('#options-back').click();
