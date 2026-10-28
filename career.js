@@ -245,18 +245,20 @@ function appearanceControls(){
 }
 function ladder(run){
  const rows=[];
+ // A true 3-lane branching route: choices fan out from each tier and reconnect
+ // into the next rank. Completed and future tiers remain visible on the map.
  for(let rank=MAX_RANK;rank>=1;rank--){
-   const current=rank===run.rank;
-   let contents;
-   if(current){
-     contents='<div class="career-options tree-choices">'+run.choices.map((op,i)=>{
-       const p=byId[op.id],record=data.records[op.id];
-       return '<button class="career-opponent tree-node" data-choice="'+i+'"><div class="career-small-photo">'+pilotPortrait(p.faction,p.appearance)+'</div><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+' · '+(op.rank<=2?'ROOKIE':op.rank<=4?'REGULAR':op.rank<=6?'VETERAN':'ACE')+'</small>'+(op.types.length>1?'<em>1 VS 2</em>':'')+(record?'<em>'+record.wins+'–'+record.losses+(record.losses>record.wins?' · GRUDGE':'')+'</em>':'')+'<span>CHALLENGE →</span></button>';
-     }).join('')+'</div>';
-   }else contents='<div class="tree-rank-state">'+(rank<run.rank?'✓ CLEARED':'🔒 LOCKED')+'</div>';
-   rows.push('<section class="ladder-rung tree-tier '+(current?'current':rank<run.rank?'cleared':'locked')+'" '+(current?'id="active-rung"':'')+'><div class="ladder-rank">'+(rank===MAX_RANK?'★ FINAL ACE':'RANK '+rank)+(current?' · CHOOSE YOUR RIVAL':'')+'</div>'+contents+'</section>');
+  const current=rank===run.rank,cleared=rank<run.rank;
+  const status=current?'current':cleared?'cleared':'locked';
+  const options=[0,1,2].map((lane)=>{
+   if(!current)return '<div class="route-node '+status+'" aria-label="Rank '+rank+' route '+(lane+1)+' '+status+'"><span class="route-node-symbol">'+(cleared?'✓':'◆')+'</span><small>'+(cleared?'CLEARED':'UNKNOWN ACE')+'</small></div>';
+   const op=run.choices[lane],p=byId[op?.id],record=data.records[op?.id];
+   if(!p)return '<div class="route-node locked">?</div>';
+   return '<button class="route-node route-opponent" data-choice="'+lane+'" aria-label="Challenge '+escape(p.name)+'"><span class="route-photo">'+pilotPortrait(p.faction,p.appearance)+'</span><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+'</small>'+(record?'<em>'+record.wins+'–'+record.losses+' RIVALRY</em>':'')+'<span class="route-cta">CHALLENGE →</span></button>';
+  }).join('');
+  rows.push('<section class="route-tier '+status+'" '+(current?'id="active-rung"':'')+'><div class="route-rank">'+(rank===MAX_RANK?'★ FINAL ACE':'RANK '+rank)+(current?' • CHOOSE A BRANCH':'')+'</div><div class="route-fork" aria-hidden="true"><span></span><span></span><span></span></div><div class="route-three">'+options+'</div><div class="route-join" aria-hidden="true"><span></span><span></span><span></span></div></section>');
  }
- return '<div class="ladder-scroll campaign-tree" role="region" aria-label="Eight rank branching pilot ladder" tabindex="0"><div class="tree-spine">'+rows.join('')+'</div></div>';
+ return '<div class="ladder-scroll campaign-tree career-route-map" role="region" aria-label="Eight rank branching career map with three routes per rank" tabindex="0"><div class="tree-spine route-spine">'+rows.join('')+'</div></div>';
 }
 function render(){
  if(!data||view==='select'){
