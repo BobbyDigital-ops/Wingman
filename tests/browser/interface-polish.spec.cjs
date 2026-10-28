@@ -95,7 +95,7 @@ test('preflight fullscreen is available on title, operations and loadout',async(
  await page.addInitScript(()=>{
    window.fullscreenInvocations=0;
    Element.prototype.requestFullscreen=function(){
-     if(this.id==='frame')window.fullscreenInvocations++;
+     if(this.classList.contains('app'))window.fullscreenInvocations++;
      return Promise.resolve();
    };
  });
@@ -156,4 +156,23 @@ test('new portraits render colourful gradients and detailed facial features',asy
  expect(avatar.whiteEyes).toBe(2);
  expect(avatar.eyeDetail).toBe(2);
  expect(['#63bac4','#ba7770','#539e8e','#8799c7','#d39a59','#4688b8']).toContain(avatar.gradient);
+});
+
+test('Road to Ace has a preflight fullscreen control outside its rerendered panel',async({page})=>{
+ await page.addInitScript(()=>{
+   window.careerFull=0;
+   Element.prototype.requestFullscreen=function(){
+     if(this.classList.contains('app'))window.careerFull++;
+     return Promise.resolve();
+   };
+ });
+ await page.goto('/');
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ await expect(page.locator('#career-screen')).toBeVisible();
+ await expect(page.locator('#career-fullscreen')).toBeVisible();
+ await page.locator('#career-fullscreen').click();
+ await expect.poll(()=>page.evaluate(()=>window.careerFull)).toBe(1);
+ await page.locator('[data-candidate="0"]').click();
+ await expect(page.locator('#career-fullscreen')).toBeVisible();
 });
