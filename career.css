@@ -107,3 +107,25 @@
 .route-tier:not(.current) .route-fork,.route-tier:not(.current) .route-join{height:12px}
 .career-bottom-actions{display:flex;justify-content:space-between;flex-wrap:wrap;gap:9px;margin-top:8px}
 @media(max-height:500px){.career-route-map{height:min(48dvh,240px);min-height:110px}.route-tier.current .route-opponent{min-height:110px}.route-photo{width:44px}.route-rank{font-size:10px}.route-fork,.route-join{height:12px}}
+
+/* Portraits are an explicit, named career choice rather than a hidden cycle. */
+.character-portrait-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:clamp(5px,1.1vw,14px);margin:14px 0 18px}
+.character-portrait-choice{min-width:0;display:flex;flex-direction:column;align-items:center;gap:7px;padding:8px 5px;background:linear-gradient(150deg,#254456,#0b2434);color:#f2d9aa;border:1px solid #a89065;box-shadow:0 4px 12px #0006;cursor:pointer;touch-action:manipulation}
+.character-portrait-choice.selected{border:3px solid #ffdda4;box-shadow:0 0 0 2px #cda268,0 0 20px #e0ac514a;background:linear-gradient(155deg,#3e5a61,#183449)}
+.character-portrait-image{display:block;width:100%;max-width:150px;aspect-ratio:5/6;overflow:hidden;border:1px solid #dec69b;box-shadow:0 5px 12px #0008}
+.character-portrait-image .pilot-avatar{width:100%;height:100%;display:block}
+.character-portrait-choice strong{font:700 clamp(9px,1.2vw,15px) Georgia,serif;text-align:center;line-height:1.1}
+.character-portrait-choice small{font:9px monospace;text-align:center;color:#d5b77c}
+.character-name-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.character-name-row label{font:700 12px Georgia,serif;color:#efdbb5}
+.character-name-row input{min-width:170px;flex:1;padding:11px 14px;color:#f6e6c5;background:#0b1e2e;border:1px solid #bc9c68;font:15px monospace}
+.character-name-row button{min-height:43px}
+@media(pointer:coarse) and (orientation:landscape){
+ .character-portrait-grid{margin:4px 0 8px;gap:5px}
+ .character-portrait-choice{padding:3px;gap:3px}
+ .character-portrait-image{max-width:80px}
+ .character-portrait-choice strong{font-size:9px}
+ .character-portrait-choice small{font-size:8px}
+ .character-name-row{margin-bottom:4px;gap:6px}
+ .character-name-row input{padding:6px}
+}
