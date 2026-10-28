@@ -389,7 +389,7 @@ test('aircraft selection paints new artwork rather than old outline-only sprites
  await page.locator('#mode-next').click();
  const preview=page.locator('[data-aircraft-art="fighter"]');
  await expect.poll(async()=>preview.evaluate(c=>{
-  const rgba=c.getContext('2d').getImageData(5,5,1,1).data;
+  const rgba=c.getContext('2d').getImageData(Math.floor(c.width/2),5,1,1).data;
   // The old model drawing leaves the upper-left tile completely transparent.
   return rgba[3];
  })).toBeGreaterThan(100);
