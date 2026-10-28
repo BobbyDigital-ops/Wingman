@@ -9,7 +9,7 @@ const palettes={
  fighter:{base:'#6d7b5d',light:'#d4c3a0',dark:'#34483c',glass:'#9fcfda',nation:'raf',camouflage:['#345849','#958362'],trim:'#ead7b2',serial:'DW-K'},
  heavy:{base:'#51717a',light:'#b0c6bb',dark:'#29464c',glass:'#9fd0d8',nation:'raf',camouflage:['#365e69','#708d81'],trim:'#dae0bc',serial:'NE-O'},
  bomber:{base:'#746c50',light:'#c0ac85',dark:'#34493e',glass:'#a5cad0',nation:'raf',camouflage:['#365548','#887d58'],trim:'#dccf9e',serial:'VN-A'},
- bf109:{base:'#91a9b1',light:'#d9dbd4',dark:'#566c70',glass:'#a9d5df',nation:'german',camouflage:['#5d7265','#9baca5'],trim:'#e8e6db',serial:'Y-1'},
+ bf109:{base:'#91a9b1',light:'#d9dbd4',dark:'#566c70',glass:'#a9d5df',nation:'german',camouflage:['#53665d','#9baca5'],trim:'#e8e6db',serial:'Y-1'},
  bf110:{base:'#4f657a',light:'#9cabb4',dark:'#2b3d51',glass:'#91c4d1',nation:'german',camouflage:['#314a60','#657786'],trim:'#becbcc',serial:'S-2'},
  he111:{base:'#918767',light:'#d6c9a2',dark:'#586650',glass:'#b2d1cd',nation:'german',camouflage:['#697852','#a18c65'],trim:'#ddd5b5',serial:'K-3'}
 };
@@ -148,6 +148,12 @@ function fighter(g,p,is109){
  path(g,p.light,null,c=>{c.moveTo(-2.7,1.45);c.lineTo(2,1.15);c.lineTo(8.8,4.45);c.lineTo(-1.7,3);});
  wingSkin(g,p,'single');finishDetail(g,p,'single');
  roundel(g,3.8,3.3,p.nation,.75);
+ if(is109){
+  // Emil's yellow theatre identification nose and narrow fuselage band stay inside the legacy silhouette.
+  g.save();g.globalAlpha=.91;g.fillStyle='#e6c64f';
+  path(g,'#e6c64f',null,c=>{c.moveTo(9.25,-1.75);c.lineTo(11.45,-1.58);c.lineTo(12.9,-.7);c.lineTo(13.3,.15);c.lineTo(12.7,.85);c.lineTo(10.5,1.6);c.lineTo(9.25,1.63);});
+  g.fillRect(-8.2,-.82,.65,2.15);g.restore();
+ }
  // Different cockpit lines make the Spitfire and Bf 109 recognisable.
  if(is109){
   path(g,p.glass,p.dark,c=>{c.moveTo(-3.5,-1.7);c.lineTo(-2.1,-4.25);c.lineTo(1,-4.6);c.lineTo(2.7,-1.7);});
@@ -192,6 +198,7 @@ function twin(g,p,is110){
   prop(g,xx+4.4,yy-3.3,yy+3.6);
  }
  roundel(g,2.1,3.25,p.nation,.85);
+ if(is110){g.save();g.fillStyle='#d6c55d';g.globalAlpha=.75;g.fillRect(-9,-1.4,.7,2.55);g.restore();}
  if(is110){
   path(g,p.glass,p.dark,c=>{c.moveTo(-6,-2);c.lineTo(-3.6,-5.1);c.lineTo(1.6,-5.05);c.lineTo(4.4,-2.1);});
   line(g,-1.4,-5,-1.4,-2.05,p.dark,.55);line(g,1.2,-5,1.2,-2.05,p.dark,.55);
