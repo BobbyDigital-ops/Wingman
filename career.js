@@ -99,7 +99,12 @@ function pilotPortrait(faction,look=0){
  const artIndex=Number.isInteger(opt.rosterPortrait)?((opt.rosterPortrait%5)+5)%5:
    Number.isInteger(opt.portraitIndex)?((opt.portraitIndex%5)+5)%5:
    ((Number(opt.face)||0)*3+(Number(opt.hair)||0))%5;
- const paintedArt=window.WingmanPaintedAtlas?
+ const portraitSlot=Number.isInteger(opt.rosterPortrait)?opt.rosterPortrait:-1;
+ const rosterArt=portraitSlot>=0&&portraitSlot<32&&window.WingmanRosterPortraitAtlas?
+  `<svg class="unique-pilot-portrait" viewBox="0 0 120 144" x="0" y="0" width="120" height="144" overflow="hidden">
+    <image href="${window.WingmanRosterPortraitAtlas}" x="${-(portraitSlot%8)*120}" y="${-Math.floor(portraitSlot/8)*144}" width="960" height="576" preserveAspectRatio="none"/>
+   </svg>`:'';
+ const paintedArt=portraitSlot<0&&window.WingmanPaintedAtlas?
   `<image class="painted-pilot-portrait" href="${window.WingmanPaintedAtlas}" x="${-artIndex*120}" y="0" width="774" height="247" preserveAspectRatio="none"/>`:'';
  return `<svg class="pilot-avatar" viewBox="0 0 120 144" role="img" aria-label="${faction} pilot wearing a customised uniform">
  <defs><linearGradient id="${bgId}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${bg[0]}"/><stop offset="1" stop-color="${bg[1]}"/></linearGradient><linearGradient id="${bgId}-skin" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="${skin}"/><stop offset=".73" stop-color="${skin}"/><stop offset="1" stop-color="#754545"/></linearGradient><linearGradient id="${bgId}-coat" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="${axis?'#8ca894':'#61a1bd'}"/><stop offset="1" stop-color="${axis?'#253e42':'#183c5b'}"/></linearGradient></defs>
@@ -126,6 +131,7 @@ function pilotPortrait(faction,look=0){
  <path d="M93 108l9 5m-9 2l9 5" stroke="${trim}" stroke-width="2"/>
  <path d="M4 140H116" stroke="#e9e1c4" opacity=".42"/><path d="M104 17l6 8m-6 0l6-8" stroke="#fff" opacity=".20" stroke-width="1.4"/>
  ${paintedArt}
+ ${rosterArt}
  </svg>`;
 }
 function makeChoices(run){
@@ -149,6 +155,10 @@ function makeChoices(run){
  }));
 }
 function show(which='ladder'){
+ // Existing unconfirmed legacy pilots are not treated as a default choice.
+ // Do not discard their records; require the player to confirm an identity.
+ if(!data)which='select';
+ else if(!data.profile.characterConfirmed)which='character';
  if((!data||which==='select')&&!candidates.length)candidates=generateCandidates();
  showing=true;view=which;screen.hidden=false;menu.classList.add('hidden');result.classList.add('hidden');render();
 }
@@ -167,7 +177,7 @@ function rollAttributes(){
 function generateCandidates(){
  // Preview all defined characters, not three random names/stats.
  return ROSTER.filter(p=>p.faction===selectFaction).map(p=>({
-  id:p.id,roster:p,style:{...appearance(p.portrait*47+9),portraitIndex:p.portrait%5},
+  id:p.id,roster:p,style:{...appearance(p.portrait*47+9),rosterPortrait:p.portrait},
   attributes:{...p.attributes}
  }));
 }
@@ -187,7 +197,7 @@ function createProfile(index){
  const name=chosen.roster.name;
  const faction=chosen.roster.faction;
  airframeOffers=[];
- data={profile:{name,faction,rosterId:chosen.roster.id,plane:chosen.roster.plane,style:chosen.style,attributes:chosen.attributes,skill:chosen.roster.signature},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
+ data={profile:{name,faction,rosterId:chosen.roster.id,plane:chosen.roster.plane,style:chosen.style,attributes:chosen.attributes,skill:chosen.roster.signature,characterConfirmed:true,gender:chosen.roster.gender},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
  save();view='licence';render();
 }
 const BASE_AIRCRAFT={fighter:{speed:82,turn:3.15,hull:130,armour:40},heavy:{speed:75,turn:1.85,hull:160,armour:96},bomber:{speed:66,turn:1.30,hull:180,armour:147},bf109:{speed:84,turn:3.05,hull:125,armour:42},bf110:{speed:77,turn:1.78,hull:160,armour:90},he111:{speed:69,turn:1.35,hull:175,armour:135}};
@@ -271,7 +281,7 @@ function characterPicker(){
  const members=ROSTER.filter(x=>x.faction===p.faction);
  return '<p class="career-muted">32 defined pilots across both squadrons. Switching an existing career changes identity and ability while retaining earned wins, rank and progression.</p>'+
  '<div class="character-roster" role="group" aria-label="Choose your Wingman pilot">'+members.map(pilot=>{
- const selected=data.profile.rosterId===pilot.id;
+ const selected=data.profile.characterConfirmed===true&&data.profile.rosterId===pilot.id;
  return '<button type="button" data-roster="'+pilot.id+'" class="candidate-card '+(selected?'selected':'')+'" aria-pressed="'+selected+'">'+
  '<div class="candidate-portrait">'+pilotPortrait(pilot.faction,{...appearance(pilot.portrait*47+9),rosterPortrait:pilot.portrait})+'</div>'+
  '<strong>'+escape(pilot.name)+'</strong><small>'+escape(pilot.archetype)+' · '+escape(aircraft[pilot.plane])+'</small>'+
@@ -280,7 +290,7 @@ function characterPicker(){
  }).join('')+'</div><button type="button" data-action="licence">BACK TO LICENCE</button>';
 }
 function render(){
- if(data&&view==='character'){panel('CHOOSE YOUR CHARACTER',characterPicker());return;}
+ if(data&&view==='character'){panel('CHOOSE YOUR PILOT',characterPicker());return;}
  if(!data||view==='select'){
   if(!candidates.length)candidates=generateCandidates();
   panel('SELECT YOUR ACE',`<p class="career-muted">Choose one of 32 predefined pilots. Each has a fixed identity, aircraft, stats and signature skill. The opposing squadron supplies your rivals.</p>
@@ -349,6 +359,7 @@ screen.addEventListener('click',e=>{
    // Existing career progress is retained; current sortie's chosen plane
    // remains unchanged until the next run.
    data.profile.rosterId=newPilot.id;data.profile.name=newPilot.name;
+   data.profile.gender=newPilot.gender;data.profile.characterConfirmed=true;
    data.profile.plane=newPilot.plane;data.profile.skill=newPilot.signature;
    data.profile.attributes={...newPilot.attributes};
    data.profile.style={...appearance(newPilot.portrait*47+9),portraitIndex:newPilot.portrait%5,rosterPortrait:newPilot.portrait};

@@ -514,5 +514,12 @@
     "legacyId": null
   }
 ];
+ const names=[[8,"Geraldine \"Ginny\" Featherstone"],[9,"Ivy \"Sparky\" Cranleigh"],[13,"Edith \"Pudding\" Pennyworth"],[17,"Beatrice \"Sprocket\" Wilkins"],[18,"Dorothy \"Dusty\" Weatherby"],[19,"Elsie \"Tinker\" Marlowe"],[23,"Erika \"Die Katze\" Neumann"],[26,"Lotte \"Schwalbe\" Fischer"],[31,"Ingrid \"Teufel\" Falk"]];
+ for(const [index,name] of names){roster[index].name=name;}
+ roster[9].bio="A reliable old hand who never removes her flying goggles, even at breakfast.";
+ roster[19].bio="A battle-hardened veteran who can mend an engine with a teaspoon.";
+ roster[23].bio="Her opponents swear she vanishes between passes.";
+ const portraitSlots=[1,2,0,5,7,4,6,3,8,9,11,10,16,13,12,14,15,17,18,19,21,22,20,23,28,25,26,30,24,27,29,31];
+ roster.forEach((p,i)=>{p.gender=names.some(([idx])=>idx===i)?'female':'male';p.portrait=portraitSlots[i];});
  window.WingmanRoster=Object.freeze(roster.map(p=>Object.freeze({...p,attributes:Object.freeze(p.attributes)})));
 })();
