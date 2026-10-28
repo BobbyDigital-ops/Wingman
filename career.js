@@ -88,6 +88,9 @@ function show(which='ladder'){
 function close(){showing=false;screen.hidden=true;window.WingmanGame?.showMenu();}
 const ATTRS=['manoeuvrability','gunnery','engine'];
 let candidates=[];
+const SILLY_NAMES={Allies:{first:['Chocs','Bertie','Bangers','Nigel','Pip','Monty','Cecil','Basil','Waffles','Reginald','Archibald','Tally-Ho'],last:['McGinty','Wobblebottom','Puddington','Crumpet','Bumblesnatch','Flapworthy','Fotherington-Smythe','Porkington','Wingnut','Teacup','Muffinworth','Tweedle']},Axis:{first:['Dietrich','Günter','Wolfgang','Klaus','Otto','Fritz','Helmut','Hans','Rolf','Heinrich','Ludwig','Manfred'],last:['von Pooper','Schnitzelhosen','Wurstmeister','von Fluffel','Bratwurst','Knödelkopf','von Wobbel','Pumpernickel','Käsebrot','Schnurrbart','Blitzensocks','von Quack']}};
+function recruitName(faction,seed){const pool=SILLY_NAMES[faction==='Axis'?'Axis':'Allies'];return pool.first[seed%pool.first.length]+' '+pool.last[Math.floor(seed/17)%pool.last.length];}
+
 function rollAttributes(){
  const shuffled=[0,1,2].sort(()=>Math.random()-.5);
  const values=[82,65,53];
@@ -105,7 +108,7 @@ function candidatePicker(){
  return '<div class="candidate-grid">'+candidates.map((c,i)=>
   '<button type="button" data-candidate="'+i+'" class="candidate-card" aria-label="Select pilot '+(i+1)+'">'+
   '<div class="candidate-portrait">'+pilotPortrait(document.getElementById('career-faction')?.value||'Allies',c.style)+'</div>'+
-  '<strong>CADET '+(i+1)+'</strong>'+
+  '<strong>'+escape(recruitName(document.getElementById('career-faction')?.value||'Allies',c.id))+'</strong>'+
   '<small>MANOEUVRABILITY '+c.attributes.manoeuvrability+'</small>'+
   '<small>GUNNERY '+c.attributes.gunnery+'</small>'+
   '<small>ENGINE '+c.attributes.engine+'</small>'+
@@ -113,7 +116,7 @@ function candidatePicker(){
 }
 function createProfile(index){
  const chosen=candidates[index];if(!chosen)return;
- const name=document.getElementById('career-name')?.value.trim().slice(0,30)||'Unknown Pilot';
+ const name=document.getElementById('career-name')?.value.trim().slice(0,30)||recruitName(document.getElementById('career-faction')?.value||'Allies',chosen.id);
  const faction=document.getElementById('career-faction')?.value==='Axis'?'Axis':'Allies';
  data={profile:{name,faction,style:chosen.style,attributes:chosen.attributes},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
  save();view='licence';render();
@@ -173,7 +176,7 @@ function render(){
  if(!data){
   if(!candidates.length)candidates=generateCandidates();
   panel('CHOOSE YOUR PILOT',`<p class="career-muted">Three unique recruits. Pick one to keep across your sorties; each has a different flight speciality.</p>
-  <div class="candidate-identity"><label>CALLSIGN <input id="career-name" maxlength="30" placeholder="Your pilot name" autocomplete="off"></label>
+  <div class="candidate-identity"><label>OPTIONAL CUSTOM NAME <input id="career-name" maxlength="30" placeholder="Keep your recruit&#39;s name" autocomplete="off"></label>
   <label>ALLEGIANCE <select id="career-faction"><option>Allies</option><option>Axis</option></select></label></div>
   <div id="candidate-picker">${candidatePicker()}</div>
   <button data-action="reroll">GENERATE THREE NEW RECRUITS</button>`);

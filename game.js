@@ -11,12 +11,12 @@
   g.imageSmoothingEnabled=false;
 
   const PLANES={
-    fighter:{name:'SUPERMARINE SPITFIRE',speed:88,turn:3.15,hull:100,armour:30,radius:5.5,burst:10,interval:.055,cooldown:1.5,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'REVERSE'},
-    heavy:{name:'BRISTOL BEAUFIGHTER',speed:80,turn:1.85,hull:125,armour:75,radius:8,burst:5,interval:.19,cooldown:2.45,damage:16,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
-    bomber:{name:'AVRO LANCASTER',speed:70,turn:1.3,hull:140,armour:115,radius:9,burst:4,interval:.30,cooldown:2.85,damage:10,bulletSpeed:158,gunLife:1.22,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'},
-    bf109:{name:'MESSERSCHMITT BF 109',class:'fighter',nation:'Germany',speed:90,turn:3.05,hull:96,armour:32,radius:5.5,burst:9,interval:.067,cooldown:1.48,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#afb89d',shade:'#647a74',accent:'#ecd06c',special:'REVERSE'},
-    bf110:{name:'MESSERSCHMITT BF 110',class:'heavy',nation:'Germany',speed:82,turn:1.78,hull:125,armour:70,radius:8,burst:5,interval:.20,cooldown:2.5,damage:17,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
-    he111:{name:'HEINKEL HE 111',class:'bomber',nation:'Germany',speed:73,turn:1.35,hull:136,armour:105,radius:8.5,burst:4,interval:.32,cooldown:2.82,damage:10,bulletSpeed:162,gunLife:1.22,specialCd:10,color:'#a5ae9d',shade:'#576b61',accent:'#b4baca',special:'CLIMB'}
+    fighter:{name:'SUPERMARINE SPITFIRE',speed:82,turn:3.15,hull:100,armour:30,radius:5.5,burst:10,interval:.055,cooldown:1.5,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'REVERSE'},
+    heavy:{name:'BRISTOL BEAUFIGHTER',speed:75,turn:1.85,hull:125,armour:75,radius:8,burst:5,interval:.19,cooldown:2.45,damage:16,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
+    bomber:{name:'AVRO LANCASTER',speed:66,turn:1.3,hull:140,armour:115,radius:9,burst:4,interval:.30,cooldown:2.85,damage:10,bulletSpeed:158,gunLife:1.22,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'},
+    bf109:{name:'MESSERSCHMITT BF 109',class:'fighter',nation:'Germany',speed:84,turn:3.05,hull:96,armour:32,radius:5.5,burst:9,interval:.067,cooldown:1.48,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#afb89d',shade:'#647a74',accent:'#ecd06c',special:'REVERSE'},
+    bf110:{name:'MESSERSCHMITT BF 110',class:'heavy',nation:'Germany',speed:77,turn:1.78,hull:125,armour:70,radius:8,burst:5,interval:.20,cooldown:2.5,damage:17,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
+    he111:{name:'HEINKEL HE 111',class:'bomber',nation:'Germany',speed:69,turn:1.35,hull:136,armour:105,radius:8.5,burst:4,interval:.32,cooldown:2.82,damage:10,bulletSpeed:162,gunLife:1.22,specialCd:10,color:'#a5ae9d',shade:'#576b61',accent:'#b4baca',special:'CLIMB'}
   };
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
@@ -618,9 +618,9 @@
     ctx.fillStyle={ALPINE:'#73adcf',COAST:'#6ebccc',DESERT:'#d6aa73',STORM:'#506b80'}[scene];ctx.fillRect(0,0,W,H);
     ctx.save();ctx.translate(0,H-180);
     // A few solid sky bands, rather than an expensive per-frame gradient.
-    const skies=['#6fa9cf','#80b6d4','#92c3d9','#a9d0da','#bfd9d8'];
+    const skies=scene==='DESERT'?['#669bb7','#80adc0','#a4c5c8','#c8d6cd','#e0d4b8']:scene==='STORM'?['#506780','#637789','#788b97','#98a5a6','#b4bcb1']:scene==='COAST'?['#6caabf','#83bfd0','#a1cccf','#bfdbd1','#d9e1d1']:['#6fa9cf','#80b6d4','#92c3d9','#a9d0da','#bfd9d8'];
     skies.forEach((v,i)=>{ctx.fillStyle=v;ctx.fillRect(0,30+i*18,W,19);});
-    ctx.fillStyle='#c3d9d5';ctx.fillRect(0,120,W,60);
+    ctx.fillStyle=scene==='DESERT'?'#d4cbb4':'#c3d9d5';ctx.fillRect(0,120,W,60);
     let seed=1337;
     const rnd=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
     function rect(x,y,w,h,color){
@@ -722,8 +722,8 @@
     }
     ctx.restore();
     if(scene!=='ALPINE'){
-      ctx.fillStyle=scene==='COAST'?'#397ca077':scene==='DESERT'?'#b67c4c77':'#182c4577';
-      ctx.fillRect(0,30,W,H-30);
+      ctx.fillStyle=scene==='COAST'?'#397ca01a':scene==='DESERT'?'#ad7b471c':'#182c4540';
+      ctx.fillRect(0,120,W,H-120);
     }
     return c;
   }
