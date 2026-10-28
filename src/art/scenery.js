@@ -31,38 +31,66 @@ function ellipse(c,x,y,rx,ry,color){
   c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=color;c.fill();
 }
 function mountain(c,x,tip,w,base,palette,snow,r){
-  const points=[[x-w*.57,base]];
-  // An irregular, broken cliffline: no identical triangular peaks.
-  points.push([x-w*.46,base-12-r()*11],[x-w*.28,tip+34+r()*12],
-    [x-w*.19,tip+19],[x-w*.09,tip+8+r()*7],[x,tip],
-    [x+w*.095,tip+11],[x+w*.20,tip+27+r()*5],
-    [x+w*.32,base-23],[x+w*.53,base]);
-  polygon(c,points,palette);
-  polygon(c,[[x,tip],[x+w*.095,tip+11],[x+w*.2,tip+27],[x+w*.32,base-23],
-    [x+w*.53,base],[x+w*.06,base-7]],'#233f50a8');
-  // Broken limestone/snow tongues, not a flat white roof triangle.
+  // Irregular serrated ridges with broken shoulders, never an identical
+  // triangle + oversized triangular snowcap on every mountain.
+  const left=x-w*(.60+r()*.12),right=x+w*(.56+r()*.13);
+  const shoulderL=x-w*(.22+r()*.09),shoulderR=x+w*(.22+r()*.09);
+  const ridge=[
+    [left,base],[left+w*.08,base-13],[left+w*.21,tip+55+r()*15],
+    [shoulderL,tip+35+r()*6],[x-w*.16,tip+31],
+    [x-w*.11,tip+12+r()*8],[x-w*.055,tip+18],
+    [x,tip],[x+w*.055,tip+15],[x+w*.095,tip+10+r()*10],
+    [shoulderR,tip+38],[right-w*.17,base-38-r()*8],
+    [right-w*.06,base-11],[right,base]];
+  polygon(c,ridge,palette);
+  polygon(c,[[x,tip],[x+w*.055,tip+15],[x+w*.095,tip+10],
+    [shoulderR,tip+38],[right-w*.17,base-38],
+    [right,base],[x+w*.03,base-5],[x-w*.03,tip+45]],'#24445590');
+  // Snow lives in cracked gullies instead of a solid white cone.
   if(snow){
-    polygon(c,[[x-w*.09,tip+8],[x,tip],[x+w*.095,tip+11],
-      [x+w*.13,tip+31],[x+w*.015,tip+23],[x-w*.032,tip+39],
-      [x-w*.105,tip+28],[x-w*.16,tip+37]],snow);
-    stroke(c,[[x-w*.2,tip+67],[x-w*.06,tip+44],[x,tip+57],[x+w*.06,tip+50]],'#e1e8e0a0',.8);
+    polygon(c,[[x-w*.055,tip+16],[x,tip],[x+w*.055,tip+15],
+      [x+w*.095,tip+10],[x+w*.085,tip+23],
+      [x+w*.018,tip+26],[x-w*.005,tip+38],
+      [x-w*.055,tip+27],[x-w*.10,tip+40]],snow);
+    polygon(c,[[x-w*.17,tip+38],[x-w*.12,tip+31],[x-w*.10,tip+46],
+      [x-w*.18,tip+60]],'#e2e9e3a1');
+    polygon(c,[[x+w*.16,tip+47],[x+w*.23,tip+40],[x+w*.19,tip+57],
+      [x+w*.10,tip+68]],'#dae3dea2');
   }
-  for(let j=0;j<6;j++){
-    const xx=x+(r()-.5)*w*.58,yy=tip+43+r()*(base-tip-62);
-    stroke(c,[[xx,yy],[xx+3+r()*6,yy+4+r()*7]],'#223a4480',.45);
+  // Shale striations and interrupted rock faces add scale.
+  for(let j=0;j<13;j++){
+    const xx=x+(r()-.5)*w*.66,yy=tip+39+r()*(base-tip-55);
+    stroke(c,[[xx,yy],[xx+2+r()*7,yy+2+r()*9]],'#243a4971',.4+r()*.2);
   }
 }
 function cloud(c,x,y,w,r,storm=false){
-  const highlight=storm?'#bac7c7':'#fff6e5';
-  const shadow=storm?'#415564':'#577b91';
-  const h=w*.25;
-  ellipse(c,x+1,y+4,w*.57,h*.62,radial(c,x,y+4,w*.75,[[0,storm?'#6075858a':'#a4c4d0ac'],[1,'#859aa100']],shadow+'48'));
-  for(const [ox,oy,rad] of [[-.4,.13,.24],[-.2,-.15,.36],[.14,-.22,.43],[.42,.05,.31]]){
-    ellipse(c,x+w*ox,y+h*oy,w*rad,h*(.65+r()*.3),
-      grad(c,x,y-h,x,y+h,[[0,highlight+'c5'],[.55,highlight+'8a'],[1,shadow+'6c']],highlight+'a0'));
-  }
-  ellipse(c,x,y+h*.43,w*.56,h*.18,storm?'#435d6e64':'#657d9260');
-  stroke(c,[[x-w*.3,y+h*.47],[x+w*.5,y+h*.50]],storm?'#d4d4c62e':'#fff9ed45',.7);
+  // One continuous, ragged cloud silhouette per bank. The previous version
+  // stacked translucent ellipses, creating the giant white-circle problem.
+  const h=w*(.18+r()*.035),shade=storm?'#506475':'#9bb6c3';
+  const light=storm?'#a3b2b7':'#f4eee0';
+  const left=x-w*.53,right=x+w*.51;
+  c.save();
+  c.globalAlpha=storm?.73:.58;
+  c.beginPath();
+  c.moveTo(left,y+h*.36);
+  c.bezierCurveTo(left-w*.04,y+h*.10,x-w*.43,y-h*.15,x-w*.32,y-h*.06);
+  c.bezierCurveTo(x-w*.28,y-h*.72,x-w*.14,y-h*.82,x-w*.05,y-h*.52);
+  c.bezierCurveTo(x+w*.07,y-h*1.32,x+w*.24,y-h*.96,x+w*.30,y-h*.33);
+  c.bezierCurveTo(x+w*.42,y-h*.52,x+w*.55,y-h*.03,right,y+h*.36);
+  c.bezierCurveTo(x+w*.39,y+h*.56,x+w*.15,y+h*.48,x+w*.06,y+h*.55);
+  c.bezierCurveTo(x-w*.14,y+h*.48,x-w*.36,y+h*.61,left,y+h*.36);
+  c.closePath();
+  c.fillStyle=grad(c,x,y-h*1.0,x,y+h*.60,
+    [[0,light+'ae'],[.52,light+'84'],[1,shade+'55']],shade+'80');
+  c.fill();
+  // A single diffuse lower rim and loose internal shadow, no round discs.
+  c.beginPath();c.moveTo(left+w*.07,y+h*.29);
+  c.bezierCurveTo(x-w*.19,y+h*.48,x+w*.14,y+h*.56,right-w*.08,y+h*.31);
+  c.strokeStyle=storm?'#2b4c6262':'#6b8b9e45';c.lineWidth=1.2;c.stroke();
+  c.beginPath();c.moveTo(x-w*.31,y-h*.06);
+  c.bezierCurveTo(x-w*.18,y-h*.54,x-w*.12,y-h*.56,x-w*.02,y-h*.36);
+  c.strokeStyle=storm?'#d0d7d72d':'#fff9ef6c';c.lineWidth=.8;c.stroke();
+  c.restore();
 }
 function aircraftHangar(c,x,y,w,col='#4b5b5a'){
   polygon(c,[[x-2,y-11],[x+w*.22,y-20],[x+w*.77,y-20],[x+w+2,y-11]],'#7e8885');
@@ -114,19 +142,31 @@ function paint(c,W,H,sceneIndex){
     const x=r()*W,y=40+r()*90,len=35+r()*100;
     stroke(c,[[x,y],[x+len,y+(r()-.5)*2]],scene==='STORM'?'#c4cbd01b':'#fff7dc24',.35+r()*.5);
   }
-  // Distinct non-repeated cloud masses. They sit above the mountains,
-  // leaving the combat zone readable instead of becoming opaque fog.
-  for(let i=0;i<(scene==='STORM'?12:7);i++){
-    const x=(i+.3+r()*.6)*W/(scene==='STORM'?11:6)-35;
-    const y=scene==='STORM'?56+r()*115:56+r()*90;
-    const w=scene==='STORM'?52+r()*65:34+r()*69;
+  // Fewer, more varied cloud banks with open flying lanes between them.
+  // Don't tile large bright clouds over the entire arena.
+  const count=scene==='STORM'?7:scene==='DESERT'?3:4;
+  for(let i=0;i<count;i++){
+    const x=(i+.17+r()*.65)*W/count-25;
+    const y=scene==='STORM'?70+r()*82:67+r()*65;
+    const w=scene==='STORM'?49+r()*58:38+r()*45;
     cloud(c,x,y,w,r,scene==='STORM');
   }
   if(scene==='ALPINE'){
-    for(let i=-1;i<Math.ceil(W/95)+1;i++){
-      const x=i*100+52+(r()-.5)*32;
-      mountain(c,x,139+r()*32,102+r()*55,224,
-        i%2?'#748e9f':'#91a5ad',i%2?'#d1dbd7':'#e3e7dc',r);
+    // A receding pale massif and three irregular, overlapping rocky ridges.
+    // Avoid the regularly spaced, matching five-point mountain wallpaper.
+    polygon(c,[[0,194],[W*.11,176],[W*.19,185],[W*.32,158],
+      [W*.47,183],[W*.61,165],[W*.78,179],[W*.88,168],[W,188],
+      [W,224],[0,224]],'#8199a4a8');
+    const peaks=[
+      {x:W*.08,tip:160,w:W*.39},
+      {x:W*.37,tip:136,w:W*.50},
+      {x:W*.75,tip:151,w:W*.55}
+    ];
+    for(let i=0;i<peaks.length;i++){
+      const m=peaks[i];
+      mountain(c,m.x,m.tip+(r()-.5)*8,m.w,226,
+        ['#6c8594','#526d7e','#728b94'][i],
+        i===1?'#e2e6df':'#d5dedb',r);
     }
     polygon(c,[[0,208],[W*.12,205],[W*.25,196],[W*.42,209],[W*.61,191],[W*.78,201],[W,194],[W,H],[0,H]],'#536e70');
     // Rolling hills, scattered tall fir trees and a rocky airstrip.
@@ -229,5 +269,5 @@ function weather(c,W,H,sceneIndex,time,wind){
   }
   c.restore();
 }
-window.WingmanScenery={paint,weather,version:'8.0'};
+window.WingmanScenery={paint,weather,version:'8.1'};
 })();
