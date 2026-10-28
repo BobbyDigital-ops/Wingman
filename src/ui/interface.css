@@ -344,3 +344,82 @@ body:has(#career-screen:not([hidden])) #touch-controls{
 #result:not(.hidden) ~ #touch-controls .control-btn{
   pointer-events:none!important;
 }
+
+/* 2026-10: real Android landscape can expose <430px of usable CSS height
+   with address bar visible. Header/card content may scroll, but Back/Continue
+   must ALWAYS remain in view. Grid/flex children need explicit min-height:0. */
+.wingman-front .menu-fullscreen{
+ position:absolute;z-index:32;right:clamp(9px,1.6vw,18px);top:clamp(6px,1.5svh,12px);
+ display:flex;align-items:center;justify-content:center;gap:7px;
+ min-width:102px;min-height:34px;padding:5px 11px;
+ background:linear-gradient(#49554a,#1e302e);color:#f9e8c3;
+ border:1px solid #c9a46d;border-radius:3px;
+ box-shadow:inset 0 1px #ffffff4d,0 3px 7px #020b12a8;
+ font:700 10px Georgia,serif;letter-spacing:.06em;
+ touch-action:manipulation;-webkit-user-select:none;user-select:none;
+}
+.wingman-front .menu-fullscreen:active{transform:translateY(2px);box-shadow:inset 0 2px 4px #0007}
+.wingman-front .front-panel{box-sizing:border-box}
+@media (pointer:coarse) and (orientation:landscape), (max-height:540px){
+ .wingman-front{padding:4px!important;min-height:0!important;overflow:hidden;}
+ .wingman-front .front-panel.flow-panel,
+ .wingman-front .front-panel.setup-panel{
+   height:calc(100% - 8px)!important;max-height:calc(100% - 8px)!important;
+   width:min(98%,1040px)!important;margin:auto!important;
+   display:flex!important;flex-direction:column!important;
+   justify-content:flex-start!important;
+   padding:clamp(10px,2svh,14px)!important;overflow:hidden!important;
+ }
+ .wingman-front .front-panel.flow-panel[hidden],
+ .wingman-front .front-panel.setup-panel[hidden]{display:none!important}
+ .wingman-front .flow-step{flex:none;margin:1px 0 3px!important;font-size:10px!important}
+ .wingman-front .flow-panel h2,.wingman-front .setup-panel h2{
+  flex:none;font-size:clamp(19px,5svh,29px)!important;
+  line-height:1.02!important;margin:0 0 3px!important;
+ }
+ .wingman-front .flow-copy{flex:none;margin:0 0 6px!important;font-size:clamp(10px,2.3svh,13px)!important}
+ .wingman-front .mode-cards{flex:1 1 auto;min-height:0;overflow-y:auto;align-content:start;
+  gap:6px!important;scrollbar-width:thin;padding:2px 1px 5px;}
+ .wingman-front .mode-choice{min-height:clamp(48px,12svh,72px)!important;padding:6px 10px!important}
+ .wingman-front .mode-choice strong{font-size:clamp(15px,3.4svh,20px)!important}
+ .wingman-front .mode-choice span{font-size:clamp(9px,2.2svh,12px)!important}
+ .wingman-front .mode-choice small{font-size:clamp(8px,1.8svh,10px)!important}
+ .wingman-front .flow-actions{
+  position:relative;z-index:2;flex:0 0 auto!important;
+  margin:5px 0 0!important;padding:6px 3px 4px!important;
+  min-height:44px;gap:10px!important;
+  background:linear-gradient(0deg,#15282bf7,#15282b22);
+ }
+ .wingman-front .flow-actions .front-action,
+ .wingman-front .flow-actions .front-secondary{
+  min-height:34px!important;height:34px!important;
+  min-width:112px!important;padding:5px 14px!important;
+  font-size:11px!important;
+ }
+ .wingman-front .setup-columns{
+  flex:1 1 auto;min-height:0!important;overflow-y:auto!important;
+  margin-top:4px!important;gap:9px!important;padding-bottom:7px!important;
+  scrollbar-width:thin;
+ }
+ .wingman-front .setup-panel .plane-choice{min-height:52px!important}
+ .wingman-front .setup-hint{margin-top:8px!important}
+ .wingman-front .splash-panel{
+  max-height:calc(100% - 8px)!important;min-height:0!important;height:calc(100% - 8px)!important;
+  padding:8px 14px!important;overflow-y:auto!important;
+  justify-content:center;
+ }
+ .wingman-front .splash-topline{margin-top:2px;font-size:10px!important}
+ .wingman-front .splash-title{font-size:clamp(36px,13svh,69px)!important}
+ .wingman-front #splash-aircraft{height:clamp(32px,13svh,65px)!important;flex-shrink:1}
+ .wingman-front .splash-foot{padding-bottom:3px}
+ .wingman-front .menu-fullscreen{
+  right:7px;top:6px;min-width:96px;min-height:31px;
+  padding:4px 7px;font-size:9px;
+ }
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-height:350px){
+ .wingman-front .splash-panel{justify-content:flex-start!important}
+ .wingman-front .splash-mark{display:none!important}
+ .wingman-front .splash-tagline{margin-bottom:3px!important}
+ .wingman-front .mode-choice{min-height:44px!important}
+}
