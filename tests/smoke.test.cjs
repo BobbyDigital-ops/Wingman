@@ -643,14 +643,14 @@ test('a fighter sitting directly behind a Lancaster takes sustained turret damag
 test('Phase 8 environment generator paints four distinct cached WWII theatres',()=>{
   const source=fs.readFileSync(require('node:path').join(__dirname,'../src/art/scenery.js'),'utf8');
   const window={};vm.runInNewContext(source,{window},{timeout:3000});
-  assert.equal(window.WingmanScenery.version,'8.0');
+  assert.equal(window.WingmanScenery.version,'8.1');
   const records=[];
   for(let scene=0;scene<4;scene++){
     const fills=[];let paths=0;
     const ctx={
       fillRect:(...a)=>fills.push(a),
       fill(){paths++;},stroke(){paths++;},
-      beginPath(){},moveTo(){},lineTo(){},closePath(){},
+      beginPath(){},moveTo(){},lineTo(){},bezierCurveTo(){},closePath(){},
       ellipse(){},arc(){},save(){},restore(){},
     };
     window.WingmanScenery.paint(ctx,520,250,scene);
@@ -672,4 +672,23 @@ test('Phase 8 damage smoke and shockwaves are bounded visual effects, not collis
   assert.ok(s.trails.length<=100,'mobile effect pool is capped');
   game.advance(120,9000);
   assert.ok(s.blasts.length<=12,'impact pulse pool is capped');
+});
+
+test('climbing trades forward airspeed for height and diving restores it',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0],base=p.speed;
+ p.spawnSafe=0;p.y=120;p.topRecovery=0;
+ for(let i=0;i<95;i++){
+   p.angle=-Math.PI/2;p.y=125;p.topRecovery=0;
+   game.internals.steerPlane(p,0,1/60);
+ }
+ const afterClimb=p.speed;
+ assert.ok(afterClimb<base*.80,`a prolonged climb must be noticeably slower: ${afterClimb} vs ${base}`);
+ for(let i=0;i<95;i++){
+   p.angle=Math.PI/2;p.y=100;p.topRecovery=0;p.climbLoad=0;
+   game.internals.steerPlane(p,0,1/60);
+ }
+ assert.ok(p.speed>base,`a dive must recover and exceed initial speed: ${p.speed} vs ${base}`);
+ assert.ok(p.speed<=p.d.speed*1.43+1,'diving should not create unlimited speed');
+ assert.ok(p.alive,'normal altitude/speed exchange should not damage the plane');
 });
