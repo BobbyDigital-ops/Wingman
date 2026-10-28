@@ -73,7 +73,16 @@
       plane(state.selected,0,W*.22,H*.45,-.14),
       plane(state.enemyType,1,W*.78,H*.52,Math.PI+.15)
     ];
-    if(state.participants>2){
+    if(state.mode==='campaign'&&state.campaignEncounter){
+      const encounter=state.campaignEncounter;
+      state.fliers[1]=plane(encounter.types[0],1,W*.78,H*.52,Math.PI+.15);
+      if(encounter.types.length===2){
+        state.fliers.push(plane(encounter.types[1],2,W*.68,H*.36,Math.PI+.28));
+        state.fliers[0].team=0;
+        state.fliers[1].team=1;
+        state.fliers[2].team=1;
+      }
+    }else if(state.participants>2){
       const pool=Object.keys(PLANES).filter(t=>t!==state.selected);
       for(let id=2;id<state.participants;id++){
         const type=pool[(id+state.round)%pool.length];
@@ -82,7 +91,7 @@
       }
     }
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
-    state.time=state.mode==='survival'?70:90;state.impactLock=0;state.phase='playing';state.paused=false;
+    state.time=state.mode==='survival'?70:state.mode==='campaign'?120:90;state.impactLock=0;state.phase='playing';state.paused=false;
     state.banner='ROUND '+state.round;state.bannerTime=1.5;
     controls.left=false;controls.right=false;controls.boost=false;
   }
@@ -100,6 +109,22 @@
     document.getElementById('bomb').hidden=!['bomber','he111'].includes(state.selected);
     background=makeBackground();newRound();
   }
+  function startCampaignFight(encounter,aircraft){
+    if(!encounter||!Array.isArray(encounter.types)||!encounter.types.length)return;
+    audioUnlock();
+    state.selected=aircraft;
+    state.enemyType=encounter.types[0];
+    state.campaignEncounter=encounter;
+    state.scores=[0,0];state.round=1;state.kills=0;
+    state.mode='campaign';state.participants=encounter.types.length+1;
+    state.teams=encounter.types.length===2;
+    state.difficulty=encounter.difficulty||'standard';
+    state.arena=encounter.arena||0;
+    ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
+    document.getElementById('bomb').hidden=!['bomber','he111'].includes(aircraft);
+    background=makeBackground();newRound();
+  }
+  window.WingmanGame={startCampaignFight,showMenu:()=>showMenu()};
   function showMenu(){
     state.phase='menu';state.paused=false;controls.left=false;controls.right=false;controls.boost=false;
     ui.result.classList.add('hidden');ui.menu.classList.remove('hidden');
@@ -107,6 +132,16 @@
   }
   function endRound(winner){
     if(state.phase!=='playing')return;
+    if(state.mode==='campaign'){
+      state.phase='result';sound('boom');
+      const won=winner===0;
+      ui.resultTitle.textContent=won?'SORTIE WON':'SHOT DOWN';
+      ui.resultDetail.textContent=won?'Enemy pilots defeated.':'Your aircraft was lost.';
+      ui.result.classList.remove('hidden');
+      if(window.WingmanCareer?.finishEncounter)
+        window.WingmanCareer.finishEncounter(won,state.campaignEncounter);
+      return;
+    }
     if(winner===0||winner===1)state.scores[winner]++;
     if(winner===0)state.kills++;
     sound('boom');
@@ -209,7 +244,8 @@
     // Fly fully out above the playfield, then return on the opposite heading.
     // Reflect horizontal direction and descend into the playable area.
     if(p.y>=-p.d.radius)return false;
-    p.y=31+p.d.radius;
+    // Re-enter from the same offscreen coordinate: never teleport to HUD.
+    p.y=-p.d.radius;
     p.angle=Math.atan2(Math.sin(Math.PI-p.angle),Math.cos(Math.PI-p.angle));
     const incoming=Math.max(p.speed,Math.hypot(p.vx,p.vy),p.d.speed*.65);
     p.vx=Math.cos(p.angle)*incoming;
@@ -491,8 +527,17 @@
         const vx=b.x-px,vy=b.y-py,denom=vx*vx+vy*vy;
         const t=denom>0?clamp(((target.x-px)*vx+(target.y-py)*vy)/denom,0,1):0;
         const nx=px+t*vx,ny=py+t*vy;
-        if(Math.hypot(target.x-nx,target.y-ny)<target.d.radius+
-          (shooter.role==='fighter'?2.7:1.4)){
+        // Rotate the contact point into the airframe's own axes.
+        // Extended fuselage and wing are independently hittable; no huge
+        // circular hit area around larger bombers.
+        const rx=nx-target.x,ry=ny-target.y;
+        const longitudinal=rx*Math.cos(target.angle)+ry*Math.sin(target.angle);
+        const lateral=-rx*Math.sin(target.angle)+ry*Math.cos(target.angle);
+        const halfLength=target.role==='bomber'?10.8:target.role==='heavy'?9.3:7.8;
+        const wingWidth=target.role==='bomber'?4.5:target.role==='heavy'?4.1:3.5;
+        const hitBody=Math.abs(longitudinal)<=halfLength&&Math.abs(lateral)<=3.3;
+        const hitWing=Math.abs(longitudinal)<=halfLength*.55&&Math.abs(lateral)<=wingWidth;
+        if(hitBody||hitWing){
           hit(target,b.damage,b.x,b.y,undefined,'GUN');struck=true;break;
         }
       }
