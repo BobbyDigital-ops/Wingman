@@ -932,7 +932,8 @@ function plane(type,id,x,y,angle){
       g.fillStyle=p.color;g.fillRect(Math.round(p.x),Math.round(p.y),p.size,p.size);
     }
     g.globalAlpha=1;
-    drawHud();
+    // Text and meters are rendered only once, at native device resolution.
+    // Removing the stretched low-resolution duplicate eliminates fuzzy glyph halos.
     // Draw the entire HUD a second time on the high-DPI overlay, preserving
     // sharp glyphs instead of stretching the logical 250px canvas.
     const lowRes=g;g=modelCtx;
@@ -989,7 +990,10 @@ function plane(type,id,x,y,angle){
   }
   function bindButton(id,key,action){
     const el=document.getElementById(id);
+    let heldPointer=null;
     el.addEventListener('pointerdown',ev=>{
+      if(key&&heldPointer!==null)return;
+      if(key)heldPointer=ev.pointerId;
       ev.preventDefault();
       try{el.setPointerCapture(ev.pointerId);}catch{}
       el.classList.add('pressed');
@@ -998,7 +1002,8 @@ function plane(type,id,x,y,angle){
       if(action)action();
     });
     const release=ev=>{
-      if(key)controls[key]=false;
+      if(key&&ev?.pointerId!==heldPointer)return;
+      if(key){controls[key]=false;heldPointer=null;}
       el.classList.remove('pressed');
     };
     el.addEventListener('pointerup',release);
