@@ -80,3 +80,30 @@
  background:#264959;box-shadow:0 3px 15px #030d1ba8;
  border-color:#b7d3c8;
 }
+
+/* True three-route campaign chart, with forks and joins between ranked tiers. */
+.career-route-map{height:min(57dvh,520px);padding:12px;overflow:auto;overscroll-behavior:contain;background:radial-gradient(ellipse at center,#193748,#0d1b2b 78%);}
+.career-route-map .route-spine{display:flex;flex-direction:column;align-items:stretch;padding:5px 10px 20px;gap:0}
+.career-route-map .route-tier{width:100%;max-width:760px;margin:auto;padding:0 4px!important;border:0!important;background:transparent!important;text-align:center}
+.route-rank{display:inline-block;padding:5px 17px;border:1px solid #c5aa77;background:#142d3b;color:#f5d79f;font:700 12px Georgia,serif;letter-spacing:.12em;position:relative;z-index:2}
+.route-tier.current .route-rank{background:#7e603c;color:#fff0cb}
+.route-three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(6px,2vw,24px);position:relative;z-index:2}
+.route-node{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:65px;padding:7px 4px!important;background:#1c3442!important;border:1px solid #7b887e!important;box-shadow:0 4px 9px #0006!important;color:#f4e3be;text-align:center}
+.route-node.current{border-color:#e6c288!important}
+.route-tier.current .route-opponent{background:linear-gradient(140deg,#304c5e,#172e3b)!important;border:2px solid #c8ad77!important;min-height:156px}
+.route-tier.current .route-opponent:hover,.route-tier.current .route-opponent:focus-visible{background:#395769!important;border-color:#ffe4aa!important}
+.route-node.locked{opacity:.56}
+.route-node.cleared{background:#27493e!important}
+.route-node strong{font:700 clamp(10px,1.45vw,14px) Georgia,serif;line-height:1.12;overflow-wrap:anywhere}
+.route-node small{font:10px monospace;opacity:.8}
+.route-node em{font:italic 10px Georgia,serif;color:#e9c18d}
+.route-node-symbol{font-size:20px;color:#d7c18f}
+.route-photo{width:clamp(48px,7vw,72px);aspect-ratio:5/6;display:block;border:1px solid #d4c295;overflow:hidden;box-shadow:0 4px 11px #0008}
+.route-photo .pilot-avatar{width:100%;height:100%}
+.route-cta{font-size:10px;color:#e7c58d;margin-top:auto}
+.route-fork,.route-join{height:21px;position:relative;display:grid;grid-template-columns:repeat(3,1fr);align-items:stretch}
+.route-fork:before,.route-join:before{content:"";position:absolute;left:16.6667%;right:16.6667%;height:1.5px;top:10px;background:#ab9b75;opacity:.85}
+.route-fork span,.route-join span{justify-self:center;width:1.5px;height:100%;background:#ab9b75;opacity:.85}
+.route-tier:not(.current) .route-fork,.route-tier:not(.current) .route-join{height:12px}
+.career-bottom-actions{display:flex;justify-content:space-between;flex-wrap:wrap;gap:9px;margin-top:8px}
+@media(max-height:500px){.career-route-map{height:min(48dvh,240px);min-height:110px}.route-tier.current .route-opponent{min-height:110px}.route-photo{width:44px}.route-rank{font-size:10px}.route-fork,.route-join{height:12px}}

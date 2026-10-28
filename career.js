@@ -142,7 +142,7 @@ function makeChoices(run){
  }));
 }
 function show(which='ladder'){
- if(!data&&!candidates.length)candidates=generateCandidates();
+ if((!data||which==='select')&&!candidates.length)candidates=generateCandidates();
  showing=true;view=which;screen.hidden=false;menu.classList.add('hidden');result.classList.add('hidden');render();
 }
 function close(){showing=false;screen.hidden=true;window.WingmanGame?.showMenu();}
@@ -183,6 +183,7 @@ function candidatePicker(){
 }
 function createProfile(index){
  const chosen=candidates[index];if(!chosen)return;
+ if(data&&!window.confirm('Create a new pilot? This replaces your current career and Road to Ace progress.'))return;
  const name=document.getElementById('career-name')?.value.trim().slice(0,30)||recruitName(document.getElementById('career-faction')?.value||'Allies',chosen.id);
  const faction=document.getElementById('career-faction')?.value==='Axis'?'Axis':'Allies';
  airframeOffers=[];
@@ -244,28 +245,30 @@ function appearanceControls(){
 }
 function ladder(run){
  const rows=[];
+ // A true 3-lane branching route: choices fan out from each tier and reconnect
+ // into the next rank. Completed and future tiers remain visible on the map.
  for(let rank=MAX_RANK;rank>=1;rank--){
-   const current=rank===run.rank;
-   let contents;
-   if(current){
-     contents='<div class="career-options tree-choices">'+run.choices.map((op,i)=>{
-       const p=byId[op.id],record=data.records[op.id];
-       return '<button class="career-opponent tree-node" data-choice="'+i+'"><div class="career-small-photo">'+pilotPortrait(p.faction,p.appearance)+'</div><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+' · '+(op.rank<=2?'ROOKIE':op.rank<=4?'REGULAR':op.rank<=6?'VETERAN':'ACE')+'</small>'+(op.types.length>1?'<em>1 VS 2</em>':'')+(record?'<em>'+record.wins+'–'+record.losses+(record.losses>record.wins?' · GRUDGE':'')+'</em>':'')+'<span>CHALLENGE →</span></button>';
-     }).join('')+'</div>';
-   }else contents='<div class="tree-rank-state">'+(rank<run.rank?'✓ CLEARED':'🔒 LOCKED')+'</div>';
-   rows.push('<section class="ladder-rung tree-tier '+(current?'current':rank<run.rank?'cleared':'locked')+'" '+(current?'id="active-rung"':'')+'><div class="ladder-rank">'+(rank===MAX_RANK?'★ FINAL ACE':'RANK '+rank)+(current?' · CHOOSE YOUR RIVAL':'')+'</div>'+contents+'</section>');
+  const current=rank===run.rank,cleared=rank<run.rank;
+  const status=current?'current':cleared?'cleared':'locked';
+  const options=[0,1,2].map((lane)=>{
+   if(!current)return '<div class="route-node '+status+'" aria-label="Rank '+rank+' route '+(lane+1)+' '+status+'"><span class="route-node-symbol">'+(cleared?'✓':'◆')+'</span><small>'+(cleared?'CLEARED':'UNKNOWN ACE')+'</small></div>';
+   const op=run.choices[lane],p=byId[op?.id],record=data.records[op?.id];
+   if(!p)return '<div class="route-node locked">?</div>';
+   return '<button class="route-node route-opponent" data-choice="'+lane+'" aria-label="Challenge '+escape(p.name)+'"><span class="route-photo">'+pilotPortrait(p.faction,p.appearance)+'</span><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+'</small>'+(record?'<em>'+record.wins+'–'+record.losses+' RIVALRY</em>':'')+'<span class="route-cta">CHALLENGE →</span></button>';
+  }).join('');
+  rows.push('<section class="route-tier '+status+'" '+(current?'id="active-rung"':'')+'><div class="route-rank">'+(rank===MAX_RANK?'★ FINAL ACE':'RANK '+rank)+(current?' • CHOOSE A BRANCH':'')+'</div><div class="route-fork" aria-hidden="true"><span></span><span></span><span></span></div><div class="route-three">'+options+'</div><div class="route-join" aria-hidden="true"><span></span><span></span><span></span></div></section>');
  }
- return '<div class="ladder-scroll campaign-tree" role="region" aria-label="Eight rank branching pilot ladder" tabindex="0"><div class="tree-spine">'+rows.join('')+'</div></div>';
+ return '<div class="ladder-scroll campaign-tree career-route-map" role="region" aria-label="Eight rank branching career map with three routes per rank" tabindex="0"><div class="tree-spine route-spine">'+rows.join('')+'</div></div>';
 }
 function render(){
- if(!data){
+ if(!data||view==='select'){
   if(!candidates.length)candidates=generateCandidates();
-  panel('CHOOSE YOUR PILOT',`<p class="career-muted">Three unique recruits. Pick one to keep across your sorties; each has a different flight speciality.</p>
+  panel('CHOOSE YOUR PILOT',`<p class="career-muted">Choose a pilot for your career. Your existing progress is kept unless you confirm a replacement.</p>
   <div class="candidate-identity"><label>OPTIONAL CUSTOM NAME <input id="career-name" maxlength="30" placeholder="Keep your recruit&#39;s name" autocomplete="off"></label>
   <label>ALLEGIANCE <select id="career-faction"><option>Allies</option><option>Axis</option></select></label></div>
   <div id="candidate-picker">${candidatePicker()}</div>
   <label class="pilot-skill-picker">PILOT SKILL (Q)<select id="career-skill">${PILOT_SKILLS.map(([id,label])=>`<option value="${id}" ${id===selectedSkill?'selected':''}>${label}</option>`).join('')}</select></label>
-  <button data-action="reroll">GENERATE THREE NEW RECRUITS</button>`);
+  <button data-action="reroll">GENERATE THREE NEW RECRUITS</button>${data?'<button data-action="licence">BACK TO CURRENT PILOT</button>':''}`);
   return;
  }
  const p=data.profile,run=data.run,losses=data.losses,wins=data.wins,ratio=losses?(wins/losses).toFixed(2):wins?wins.toFixed(2):'0.00';
@@ -277,7 +280,7 @@ function render(){
    <p>WIN / LOSS <b>${ratio}</b></p><p>HIGHEST RANK <b>${Math.min(MAX_RANK,data.best||1)}</b></p>
    <p>NEMESIS <b>${nemesis?escape(byId[nemesis[0]]?.name||'Unknown'):'None yet'}</b></p>
    <p>ACE RUNS COMPLETED <b>${data.completed}</b></p></div></div>
-   <button class="career-primary" data-action="ladder">ROAD TO ACE</button>`);
+   <button class="career-primary" data-action="ladder">ROAD TO ACE</button><button data-action="select">CHOOSE A DIFFERENT PILOT</button>`);
   return;
  }
  if(!run){
@@ -290,7 +293,7 @@ function render(){
  }
  panel('ROAD TO ACE',`<div class="career-stats"><span>${escape(p.name)} · ${aircraft[run.aircraft]}</span><span>RANK ${run.rank}/${MAX_RANK}</span><span>${'♥'.repeat(run.lives)}${'♡'.repeat(3-run.lives)}</span></div>
  <p class="career-muted">Choose one of three rival branches to ascend. Cleared ranks remain below; future ranks are locked above.</p>
- ${ladder(run)}<button data-action="licence">VIEW PILOT LICENCE</button>`);
+ ${ladder(run)}<div class="career-bottom-actions"><button data-action="licence">VIEW PILOT LICENCE</button><button data-action="select">CHOOSE PILOT</button></div>`);
  const marker=screen.querySelector('#active-rung'),list=screen.querySelector('.ladder-scroll');
   // Only centre the active rank inside the ladder itself. scrollIntoView()
   // also scrolled the outer career panel and hid the title/navigation on phones.
@@ -304,6 +307,7 @@ screen.addEventListener('click',e=>{
  const el=e.target.closest('button');if(!el)return;
  const action=el.dataset.action;
  if(action==='close')close();
+ if(action==='select'){view='select';if(!candidates.length)candidates=generateCandidates();render();}
  if(action==='reroll'){candidates=generateCandidates();render();}
  if(el.dataset.candidate!==undefined)createProfile(Number(el.dataset.candidate));
  if(action==='ladder'){view=data?.run?'ladder':'licence';if(data&&!data.run)view='ladder';render();}
@@ -318,7 +322,7 @@ screen.addEventListener('change',e=>{
   if(picker)picker.innerHTML=candidatePicker();
  }
 });
-nav.addEventListener('click',()=>show('ladder'));licenceBtn.addEventListener('click',()=>show('licence'));
-document.getElementById('career-open-mobile')?.addEventListener('click',()=>show('ladder'));
+nav.addEventListener('click',()=>show(data?'ladder':'select'));licenceBtn.addEventListener('click',()=>show('licence'));
+document.getElementById('career-open-mobile')?.addEventListener('click',()=>show(data?'ladder':'select'));
 window.WingmanCareer={finishEncounter,open:show};
 })();
