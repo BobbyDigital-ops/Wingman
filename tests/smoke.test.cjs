@@ -410,10 +410,10 @@ test('all six aircraft use distinct tactical class statistics',()=>{
  const game=launch(),planes=game.internals.PLANES;
  const cases=[
   ['fighter',82,3.15,130,40,11],
-  ['heavy',75,1.85,160,96,16],
+  ['heavy',75,1.85,160,78,16],
   ['bomber',66,1.30,180,147,10],
   ['bf109',84,3.05,125,42,11],
-  ['bf110',77,1.78,160,90,17],
+  ['bf110',77,1.78,160,75,17],
   ['he111',69,1.35,175,135,10]
  ];
  for(const [type,speed,turn,hull,armour,damage] of cases){
@@ -764,4 +764,16 @@ test('Spitfire Overdrive gains about 25 percent power; BF 109 keeps previous boo
   assert.ok(spitfire>bf109*1.18,
     `Spitfire boost should exceed previous fighter tuning by roughly 25%: ${spitfire} vs ${bf109}`);
   assert.ok(spitfire<1.90+0.01,'Spitfire should respect the boosted speed ceiling');
+});
+
+test('player roll recovers quickly without making AI dodge more often',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const [player,enemy]=game.internals.state.fliers;
+ game.internals.triggerRoll(player);
+ assert.ok(player.rollRecovery<=.71,'player roll recovery is shortened');
+ game.internals.triggerRoll(enemy);
+ assert.ok(enemy.rollRecovery>=1.34,'AI keeps its original dodge interval');
+ player.rollTime=0;player.rollRecovery=0;player.pilotSkill='roll';
+ game.internals.triggerPilotSkill(player);
+ assert.equal(player.skillCooldown,7,'pilot roll cooldown reduced from 14s to 7s');
 });
