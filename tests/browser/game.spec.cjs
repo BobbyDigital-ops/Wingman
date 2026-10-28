@@ -123,10 +123,10 @@ test('career offers the full predetermined RAF and German pilot rosters',async({
  await openCareer(page);
  await expect(page.locator('[data-candidate]')).toHaveCount(20);
  await page.locator('#career-faction').selectOption('Axis');
- await expect(page.locator('[data-candidate]')).toHaveCount(12);
+ await expect(page.locator('[data-candidate]')).toHaveCount(20);
  await page.locator('[data-candidate="0"]').click();
  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
- expect(saved.profile.name).toContain('Schnapps');
+ expect(saved.profile.name).toContain('Sauerkraut');
  expect(saved.profile.attributes.gunnery).toBe(86);
  await page.reload();await openLicence(page);
  await expect(page.getByText('Otto',{exact:false}).first()).toBeVisible();
