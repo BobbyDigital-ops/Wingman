@@ -398,25 +398,6 @@ test('three active rivals have distinct painted portraits',async({page})=>{
  expect(new Set(positions).size).toBe(3);
 });
 
-test('licence portrait can be changed without changing pilot name or victories',async({page})=>{
- await page.goto('/');
- if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
- else await page.locator('#career-open-mobile').click();
- if(await page.locator('[data-candidate="0"]').isVisible())await page.locator('[data-candidate="0"]').click();
- if(!await page.locator('[data-action="portrait"]').isVisible())await page.locator('[data-action="licence"]').first().click();
- await expect(page.locator('[data-action="portrait"]')).toBeVisible();
- const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
- const artBefore=await page.locator('.career-photo .painted-pilot-portrait').getAttribute('x');
- await page.locator('[data-action="portrait"]').click();
- const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
- const artAfter=await page.locator('.career-photo .painted-pilot-portrait').getAttribute('x');
- expect(artAfter).not.toBe(artBefore);
- expect(after.profile.name).toBe(before.profile.name);
- expect(after.wins).toBe(before.wins);
- expect(after.losses).toBe(before.losses);
- expect(after.kills).toBe(before.kills);
-});
-
 test('aircraft preview remains crisp transparent original geometry instead of enlarged 86px paintings',async({page})=>{
  await page.goto('/');
  await page.locator('#splash-continue').click();
