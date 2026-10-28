@@ -514,7 +514,7 @@
     "legacyId": null
   }
 ];
- const names=[[8,"Geraldine \"Ginny\" Featherstone"],[9,"Ivy \"Sparky\" Cranleigh"],[13,"Edith \"Pudding\" Pennyworth"],[17,"Beatrice \"Sprocket\" Wilkins"],[18,"Elsie \"Tinker\" Marlowe"],[23,"Erika \"Die Katze\" Neumann"],[26,"Lotte \"Schwalbe\" Fischer"],[30,"Ingrid \"Teufel\" Falk"]];
+ const names=[[8,"Geraldine \"Ginny\" Featherstone"],[9,"Ivy \"Sparky\" Cranleigh"],[10,"Mavis \"Sparks\" Flitton"],[14,"Edith \"Pudding\" Pennyworth"],[17,"Beatrice \"Sprocket\" Wilkins"],[18,"Dorothy \"Dusty\" Weatherby"],[19,"Elsie \"Tinker\" Marlowe"],[24,"Erika \"Die Katze\" Neumann"],[27,"Lotte \"Schwalbe\" Fischer"],[31,"Ingrid \"Teufel\" Falk"]];
  for(const [index,name] of names){roster[index].name=name;}
  roster.forEach((p,i)=>{p.gender=names.some(([idx])=>idx===i)?'female':'male';p.portrait=i;});
  window.WingmanRoster=Object.freeze(roster.map(p=>Object.freeze({...p,attributes:Object.freeze(p.attributes)})));
