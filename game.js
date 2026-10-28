@@ -11,10 +11,10 @@
   g.imageSmoothingEnabled=false;
 
   const PLANES={
-    fighter:{name:'SUPERMARINE SPITFIRE',speed:83,turn:3.15,hull:110,radius:5.5,burst:10,interval:.055,cooldown:1.35,damage:15,bulletSpeed:194,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'SWOOP'},
+    fighter:{name:'SUPERMARINE SPITFIRE',speed:83,turn:3.15,hull:110,radius:5.5,burst:10,interval:.055,cooldown:1.35,damage:15,bulletSpeed:194,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'REVERSE'},
     heavy:{name:'BRISTOL BEAUFIGHTER',speed:72,turn:1.55,hull:160,radius:8,burst:3,interval:.19,cooldown:2.8,damage:29,bulletSpeed:177,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
     bomber:{name:'AVRO LANCASTER',speed:60,turn:1.05,hull:205,radius:9,burst:2,interval:.30,cooldown:3.2,damage:8,bulletSpeed:85,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'},
-    bf109:{name:'MESSERSCHMITT BF 109',class:'fighter',nation:'Germany',speed:86,turn:3.0,hull:104,radius:5.5,burst:8,interval:.067,cooldown:1.4,damage:15,bulletSpeed:187,specialCd:8,color:'#afb89d',shade:'#647a74',accent:'#ecd06c',special:'SWOOP'},
+    bf109:{name:'MESSERSCHMITT BF 109',class:'fighter',nation:'Germany',speed:86,turn:3.0,hull:104,radius:5.5,burst:8,interval:.067,cooldown:1.4,damage:15,bulletSpeed:187,specialCd:8,color:'#afb89d',shade:'#647a74',accent:'#ecd06c',special:'REVERSE'},
     bf110:{name:'MESSERSCHMITT BF 110',class:'heavy',nation:'Germany',speed:75,turn:1.47,hull:149,radius:8,burst:3,interval:.20,cooldown:2.7,damage:30,bulletSpeed:173,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
     he111:{name:'HEINKEL HE 111',class:'bomber',nation:'Germany',speed:64,turn:1.12,hull:170,radius:8.5,burst:2,interval:.32,cooldown:3.1,damage:8,bulletSpeed:89,specialCd:10,color:'#a5ae9d',shade:'#576b61',accent:'#b4baca',special:'CLIMB'}
   };
@@ -62,7 +62,7 @@
     return {id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
       vy:Math.sin(angle)*d.speed*.8,health:d.hull,
       parts:{engine:100,body:100,tail:100},
-      critical:false,criticalCause:'',flightRisk:0,
+      critical:false,criticalCause:'',flightRisk:0,climbLoad:0,aiRecoveryTime:0,tailAssist:0,
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boostCharge:100,boosting:false,aiBoost:false,
       spawnSafe:1.0,smokeTimer:0,hitFlash:0,alive:true,aiThink:0,
       energy:85,rollTime:0,rollRecovery:0,stallTime:0,wallGrace:0,armourTime:0,bombCooldown:0,climbAssist:0,
@@ -138,35 +138,17 @@
     if(!p||!p.alive||p.specialCooldown>0||state.phase!=='playing'||state.paused)return;
     p.specialCooldown=p.d.specialCd;
     if(p.role==='fighter'){
-      // The start of the repositioning loop briefly dodges gunfire.
-      p.evasiveTime=.38;
-      // A physically continuous high yo-yo: follow a single smooth arc
-      // through the upper air, then descend toward the rival's predicted tail.
-      // Its destination is captured at launch, so accurate timing matters.
-      const rival=nearestEnemy(p);
-      const heading={x:Math.cos(p.angle),y:Math.sin(p.angle)};
-      const p0={x:p.x,y:p.y};
-      const predicted=rival?{
-        x:rival.x+rival.vx*.29-Math.cos(rival.angle)*20,
-        y:rival.y+rival.vy*.29-Math.sin(rival.angle)*20
-      }:{x:p.x+heading.x*65,y:p.y};
-      const p3={
-        x:clamp(predicted.x,p.x-97,p.x+97),
-        y:clamp(predicted.y,p.y-56,p.y+56)
-      };
-      p3.x=clamp(p3.x,17,W-17);p3.y=clamp(p3.y,43,H-24);
-      const p1={
-        x:clamp(p.x+heading.x*21,17,W-17),
-        y:clamp(p.y+heading.y*14-9,40,H-25)
-      };
-      const p2={
-        x:clamp(p3.x-(rival?Math.cos(rival.angle):heading.x)*22,17,W-17),
-        y:clamp(Math.min(p1.y,p3.y)-28,39,H-28)
-      };
-      p.swoop={p0,p1,p2,p3,elapsed:0,duration:1.22};
-      p.swoopTime=1.22;
-      p.energy=Math.max(18,p.energy-17);
-      emit(p.x,p.y,5,'#d8e9d4',9);
+      // Predictable 180-degree reversal, no teleport or autopilot chase.
+      // Prefer the upward half-turn near the floor and the downward one
+      // near the ceiling so this can be used tactically at either height.
+      const right=Math.cos(p.angle)>=0;
+      const turnUp=p.y>H*.5;
+      const direction=turnUp?(right?-1:1):(right?1:-1);
+      p.swoop={kind:'reverse',startAngle:p.angle,direction,elapsed:0,duration:.38};
+      p.swoopTime=.38;
+      p.evasiveTime=.24;
+      p.energy=Math.max(15,p.energy-8);
+      emit(p.x,p.y,3,'#c5e1dc',7);
     }else if(p.role==='heavy'){
       p.armourTime=10;
       emit(p.x,p.y,5,'#a9dced',10);
@@ -248,23 +230,30 @@
     if(p.swoop){
       const a=p.swoop;
       a.elapsed=Math.min(a.duration,a.elapsed+dt);
-      const t=a.elapsed/a.duration,u=1-t;
-      const bez=(key)=>u*u*u*a.p0[key]+3*u*u*t*a.p1[key]+3*u*t*t*a.p2[key]+t*t*t*a.p3[key];
-      const deriv=(key)=>
-        (3*u*u*(a.p1[key]-a.p0[key])+6*u*t*(a.p2[key]-a.p1[key])+
-         3*t*t*(a.p3[key]-a.p2[key]))/a.duration;
-      const x=bez('x'),y=bez('y'),vx=deriv('x'),vy=deriv('y');
-      p.x=x;p.y=y;p.vx=vx;p.vy=vy;p.speed=Math.hypot(vx,vy);
+      const t=a.elapsed/a.duration, eased=t*t*(3-2*t);
+      // A smooth half-circle turn with continuous position and finite speed.
+      p.angle=a.startAngle+a.direction*Math.PI*eased;
+      const follow=Math.min(1,dt*9);
+      p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
+      p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
+      const oldY=p.y;
+      p.x+=p.vx*dt;p.y+=p.vy*dt;
       if(p.x<-p.d.radius)p.x+=W+2*p.d.radius;
       if(p.x>W+p.d.radius)p.x-=W+2*p.d.radius;
-      p.y=Math.max(37,p.y);
-      if(p.speed>3)p.angle=Math.atan2(vy,vx);
-      p.energy=Math.max(10,p.energy-dt*5);
+      if(p.y<37){p.y=37;p.vy=Math.max(0,p.vy);}
+      // The manoeuvre should not bypass the normal ground hazard.
+      if(p.y>=H-13){
+        p.y=H-13;p.health=0;p.parts.body=0;p.alive=false;
+        p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
+        if(p.id===0||state.participants===2||opponents(state.fliers[0]).every(q=>!q.alive))endRound(p.id===0?1:0);
+      }
+      // Reversals can consume existing climb reserve, never create altitude.
+      p.climbLoad=Math.max(0,p.climbLoad-dt*25)+Math.max(0,oldY-p.y);
       p.swoopTime=Math.max(0,a.duration-a.elapsed);
       if(a.elapsed>=a.duration){
         p.swoop=null;p.turnVelocity=0;
-        const cap=p.d.speed*1.28;
-        p.speed=Math.min(p.speed,cap);
+        p.angle=Math.atan2(Math.sin(p.angle),Math.cos(p.angle));
+        p.speed=Math.min(p.speed,p.d.speed*1.22);
         p.vx=Math.cos(p.angle)*p.speed;p.vy=Math.sin(p.angle)*p.speed;
       }
       return;
@@ -274,20 +263,29 @@
     const dive=Math.max(0,Math.sin(p.angle));
     // Airspeed and altitude trade off naturally; diving stores useful speed.
     p.energy=clamp(p.energy+dt*(19*dive-16*climb+4*(1-climb)),0,100);
-    const lowEnergy=climb>.55&&p.energy<19;
-    p.stallTime=lowEnergy?Math.min(.55,p.stallTime+dt):Math.max(0,p.stallTime-dt*1.6);
-    p.flightRisk=clamp((29-p.energy)/29,0,1)*(climb>.25?1:.3);
-    // Even a broken tail retains enough authority for a skilful recovery.
+    // Stall risk is based on altitude GAINED RAPIDLY, not the current
+    // height or an arbitrary low energy threshold. A rolling climb reserve
+    // naturally recovers when levelling out or diving.
+    const threshold=p.role==='fighter'?69:p.role==='heavy'?62:58;
+    p.flightRisk=clamp(((p.climbLoad||0)-threshold)/(threshold*.75),0,1);
+    p.stallTime=p.flightRisk>.25?
+      Math.min(.85,p.stallTime+dt*(.45+p.flightRisk)):
+      Math.max(0,p.stallTime-dt*1.2);
+    // A mild automatic nose drop is noticeable in a prolonged steep climb,
+    // but normal steering remains responsive and diving recovers promptly.
+    const dipHeading=Math.atan2(.25,Math.cos(p.angle)>=0?1:-1);
+    const noseDrop=clamp(angleDiff(dipHeading,p.angle),-.8,.8)*p.flightRisk*1.5;
     const authority=.54+.46*tail;
+    const magneticTurn=tailMagnet(p,steer);
     const desired=p.climbAssist>0
       ?clamp(angleDiff(Math.atan2(-43,Math.cos(p.angle)<0?-20:20),p.angle)*2,-p.d.turn,p.d.turn)
-      :steer*p.d.turn*authority*(1-p.flightRisk*.17)+p.stallTime*.15;
+      :steer*p.d.turn*authority*(1-p.flightRisk*.34)+noseDrop+magneticTurn;
     p.turnVelocity+=(desired-p.turnVelocity)*Math.min(1,dt*(p.role==='bomber'?6:7.5));
     p.angle+=p.turnVelocity*dt;
     if(p.angle>Math.PI)p.angle-=TAU;
     if(p.angle< -Math.PI)p.angle+=TAU;
     const power=.25+.75*engine;
-    const wanted=p.d.speed*power*(.87+.13*p.energy/100)*(p.boosting?1.27:1)*(p.climbAssist>0?1.16:1);
+    const wanted=p.d.speed*power*(.87+.13*p.energy/100)*(p.boosting?1.27:1)*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
     // Fighters retain less momentum than big, heavier aircraft.
     const drag=p.role==='fighter'?1.55:p.role==='heavy'?1.2:.98;
     const accel=p.role==='fighter'?2.1:p.role==='heavy'?1.65:1.25;
@@ -301,8 +299,14 @@
     // Engine failure causes a controlled glide instead of instant forced death.
     if(p.parts.engine<=0)p.vy+=dt*13;
     if(p.parts.tail<=0)p.vy+=dt*3.5;
-    if(p.stallTime>0)p.vy+=dt*5;
+    if(p.flightRisk>0)p.vy+=dt*(5+15*p.flightRisk);
+    const oldY=p.y;
     p.x+=p.vx*dt;p.y+=p.vy*dt;
+    // Fast, sustained ascents increase load. A dive drains it quickly.
+    // This is a rolling-memory proxy and independent of absolute altitude.
+    const altitudeGain=Math.max(0,oldY-p.y);
+    const decay=p.vy>10?85:climb<.35?44:16;
+    p.climbLoad=clamp(Math.max(0,(p.climbLoad||0)-dt*decay)+altitudeGain,0,180);
     if(p.x<-p.d.radius)p.x+=W+2*p.d.radius;
     else if(p.x>W+p.d.radius)p.x-=W+2*p.d.radius;
     if(p.y<37){p.y=37;p.vy=Math.max(3,p.vy);p.angle+=clamp(angleDiff(.3,p.angle),-dt*2,dt*2);}
@@ -312,6 +316,28 @@
       if(p.id===0||state.participants===2||opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
     }
   }
+  function tailMagnet(p,steer){
+    // Player-only, tiny angular correction when truly tucked behind an enemy.
+    // Never forces position, target swaps, or overrides active steering.
+    p.tailAssist=0;
+    if(p.id!==0||steer!==0||p.swoop||!p.alive)return 0;
+    const enemy=nearestEnemy(p);
+    if(!enemy||Math.abs(angleDiff(enemy.angle,p.angle))>.36)return 0;
+    const dirX=Math.cos(enemy.angle),dirY=Math.sin(enemy.angle);
+    let dx=enemy.x-p.x;
+    if(dx>W*.5)dx-=W;else if(dx< -W*.5)dx+=W;
+    const dy=enemy.y-p.y;
+    const range=Math.hypot(dx,dy);
+    if(range<17||range>82||dx*Math.cos(p.angle)+dy*Math.sin(p.angle)<10)return 0;
+    // Opponent must be ahead of us, with us behind its tail.
+    if(dx*dirX+dy*dirY<12)return 0;
+    const lateral=Math.abs(-dirY*dx+dirX*dy);
+    if(lateral>19)return 0;
+    const tailDx=dx-dirX*enemy.d.radius*1.8,tailDy=dy-dirY*enemy.d.radius*1.8;
+    const aim=Math.atan2(tailDy,tailDx);
+    p.tailAssist=clamp(angleDiff(aim,p.angle)*.32,-.14,.14);
+    return p.tailAssist;
+  }
   // Tactical AI: state changes prevent indefinite tail-chasing and combat orbits.
   function aiInput(p,target){
     p.aiThink=Math.max(0,p.aiThink-STEP);
@@ -319,8 +345,26 @@
     const targetAngle=Math.atan2(target.y-p.y,target.x-p.x);
     const facing=Math.abs(angleDiff(targetAngle,p.angle));
     const enemyBehind=Math.abs(angleDiff(Math.atan2(p.y-target.y,p.x-target.x),target.angle))<.65;
+    // Begin pulling out BEFORE the impact point is reached. Account for
+    // downward velocity, pitch, and the inertia of heavy aircraft.
+    const diveSpeed=Math.max(0,p.vy);
+    const projectedY=p.y+diveSpeed*(p.role==='bomber'?1.55:1.25)+
+      Math.max(0,Math.sin(p.angle))*25;
+    const floorDanger=projectedY>H-72&&p.y>H-145;
+    if(floorDanger)p.aiRecoveryTime=1.1;
+    else p.aiRecoveryTime=Math.max(0,(p.aiRecoveryTime||0)-STEP);
+    if(p.vy< -8&&p.y<H-70)p.aiRecoveryTime=0;
+    if(p.aiRecoveryTime>0){
+      p.aiMode='recover';p.aiThink=0;
+      p.aiBoost=p.boostCharge>18&&p.parts.engine>25;
+      // Never follow a target into the ground. The climb-out heading
+      // is independent of the target's x-coordinate and screen wrap.
+      const climbHeading=-Math.PI/2;
+      const diff=angleDiff(climbHeading,p.angle);
+      return Math.abs(diff)<.07?0:Math.sign(diff);
+    }
     if(p.aiThink<=0){
-      if(p.y<46||p.y>H-44) p.aiMode='recover';
+      if(p.y<46) p.aiMode='recover';
       else if(target.burstLeft>0&&range<95) p.aiMode='evade';
       else if(enemyBehind&&range<80) p.aiMode='break';
       else if(p.gunCooldown>0&&range<110) p.aiMode='extend';
@@ -329,7 +373,7 @@
       p.aiThink=(state.difficulty==='rookie'?.68:state.difficulty==='ace'?.23:.35)+Math.random()*.22;
     }
     let tx=target.x+target.vx*.36,ty=target.y+target.vy*.36;
-    if(p.aiMode==='recover'){tx=W*.5;ty=H*.48;}
+    if(p.aiMode==='recover'){tx=p.x+Math.cos(p.angle)*25;ty=H*.43;}
     if(p.aiMode==='extend'){
       tx=p.x+Math.cos(p.angle)*125;ty=p.y+Math.sin(p.angle)*85;
       if(p.y>H-50)ty=H*.4;
@@ -366,7 +410,7 @@
       (p.role!=='bomber'||range<65&&Math.random()<.12))triggerBurst(p);
     if(p.specialCooldown<=0){
       if(p.role==='heavy'&&range<100&&(p.health<p.d.hull*.7||target.burstLeft>0))triggerSpecial(p);
-      if(p.role==='fighter'&&p.aiMode==='break'&&range<70)triggerSpecial(p);
+      if(p.role==='fighter'&&p.aiMode==='break'&&range<70&&p.y<H-95)triggerSpecial(p);
     }
     return turn;
   }
@@ -632,7 +676,13 @@
     c.scale(.54,.54);
     aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':'level');
     if(p.boosting){
-      c.fillStyle='#ffdb91a8';c.beginPath();c.ellipse(-19,0,5,1.5,0,0,TAU);c.fill();
+      // Cool air streaks, not a jet flame: WWII engines don't have afterburners.
+      c.strokeStyle='#d7eff6a0';c.lineWidth=.65;
+      for(let i=-1;i<=1;i++){
+        c.beginPath();
+        c.moveTo(-17,i*5);c.lineTo(-25-i*2,i*5-1);
+        c.stroke();
+      }
     }
     if(p.muzzleFlash>0){c.fillStyle='#fff4ad';c.fillRect(13,-1,7,2);}
     if(p.hitFlash>0){
@@ -775,6 +825,11 @@
       g.fillStyle='#fff0cc';g.textAlign='center';g.font='bold 7px monospace';
       g.fillText('PULL UP · GROUND',W/2,H-25);
       g.textAlign='left';g.globalAlpha=1;
+    }
+    if(pilot&&pilot.flightRisk>.62&&pilot.alive){
+      g.fillStyle='#81512bc9';g.fillRect(W/2-47,38,94,12);
+      g.fillStyle='#ffdfad';g.textAlign='center';g.font='bold 7px monospace';
+      g.fillText('STALL · DIVE',W/2,41);g.textAlign='left';
     }
     if(pilot&&pilot.critical&&pilot.alive){
       g.fillStyle='#6f2e2acb';g.fillRect(W*.5-60,38,120,14);

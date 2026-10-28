@@ -51,3 +51,15 @@ test('launches four-plane team combat with class-labelled aircraft', async ({ pa
   await page.waitForTimeout(600);
   expect(errors).toEqual([]);
 });
+
+test('reverse manoeuvre and wind boost run without browser errors',async ({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ await page.locator('[data-plane="fighter"]').click();
+ await page.locator('#start').click();
+ await page.keyboard.down('KeyW');
+ await page.keyboard.press('KeyK');
+ await page.waitForTimeout(570);
+ await page.keyboard.up('KeyW');
+ expect(errors).toEqual([]);
+});

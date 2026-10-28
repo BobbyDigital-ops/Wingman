@@ -42,7 +42,7 @@ function launch(){
     console
   };
   const instrumented=code.replace('  // All scenery is painted once;',
-    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,hit,steerPlane,updatePlane,controls};\n  // All scenery is painted once;');
+    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,hit,steerPlane,updatePlane,controls,aiInput,tailMagnet};\n  // All scenery is painted once;');
   const artCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/aircraft.js'),'utf8');
   vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
   vm.runInNewContext(instrumented,sandbox,{timeout:3000,filename:'game.js'});
@@ -147,16 +147,15 @@ test('all three native-sized miniature sprites load in the renderer',()=>{
  game.advance(40,1000);
  assert.equal(sprites.fliers.length,2);
 });
-test('Spitfire swoop follows a timed arc without instant reversal',()=>{
- const game=launch();
- game.listeners.get('start:click')();
- const fighter=game.internals.state.fliers[0];
- const heading=fighter.angle,initialY=fighter.y;
- game.internals.triggerSpecial(fighter);
- assert.ok(fighter.swoopTime>1);
- assert.equal(fighter.angle,heading);
- game.advance(14,1000);
- assert.ok(fighter.y<initialY,'first part of swoop should climb');
+test('fighter special is a short, predictable 180-degree reversal',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0],heading=p.angle;
+ game.internals.triggerSpecial(p);
+ assert.ok(p.swoopTime<.5&&p.swoopTime>.25);
+ game.advance(30,1000);
+ assert.equal(p.swoop,null);
+ assert.ok(Math.abs(Math.atan2(Math.sin(p.angle-heading-Math.PI),
+   Math.cos(p.angle-heading-Math.PI)))<.04);
 });
 test('Bomber climb does not release bombs, separate BOMB button does',()=>{
  const game=launch();
@@ -195,22 +194,20 @@ test('overlapping aircraft cannot inflict point-blank gun damage',()=>{
  game.advance(3,1000);
  assert.equal(a.health,health);
 });
-test('swoop is a continuous curved move rather than an instant heading flip',()=>{
- const game=launch();
- game.listeners.get('start:click')();
- const p=game.internals.state.fliers[0];
- const originalAngle=p.angle,originY=p.y;
+test('180 reversal animates smoothly without teleporting across the map',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0],origin=p.angle;
  game.internals.triggerSpecial(p);
- assert.equal(p.angle,originalAngle);
- let previous={x:p.x,y:p.y},highest=p.y;
- for(let i=0;i<84;i++){
+ let previous={x:p.x,y:p.y};
+ let changed=false;
+ for(let i=0;i<30;i++){
    game.advance(1,2000+i*16.6667);
-   highest=Math.min(highest,p.y);
    const step=Math.hypot(p.x-previous.x,p.y-previous.y);
-   assert.ok(step<9.5,'swoop should have no sudden position jumps');
+   assert.ok(step<5,'180 turn cannot teleport the aircraft');
+   if(Math.abs(p.angle-origin)>.3)changed=true;
    previous={x:p.x,y:p.y};
  }
- assert.ok(highest<originY-5,'the aircraft should arc above its initial altitude');
+ assert.ok(changed);
  assert.equal(p.swoop,null);
 });
 test('plane models have a dedicated display-sized rendering surface',()=>{
@@ -336,17 +333,21 @@ test('holding boost uses charge and releasing it recharges',()=>{
  game.advance(35,2000);
  assert.ok(p.boostCharge>charged,'charge regenerates while not boosting');
 });
-test('steep climbs stall gently, dives recover',()=>{
+test('stall depends on rapid altitude gain, not height or low energy alone',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];p.spawnSafe=0;
- p.energy=0;p.angle=-Math.PI/3;p.y=100;
+ p.y=80;p.energy=0;p.angle=0;
+ game.internals.steerPlane(p,0,1/60);
+ assert.equal(p.flightRisk,0,'high altitude and low energy alone cannot stall');
+ p.climbLoad=110;p.angle=-Math.PI/3;p.y=110;
  game.internals.steerPlane(p,1,1/60);
- assert.ok(p.flightRisk>.5);assert.ok(p.stallTime>0);
- const hp=p.health;
- p.angle=Math.PI/3;
- for(let i=0;i<30;i++)game.internals.steerPlane(p,0,1/60);
- assert.equal(p.health,hp);
- assert.equal(p.stallTime,0);
+ assert.ok(p.flightRisk>.6,'rapid climb builds noticeable stall risk');
+ assert.ok(p.stallTime>0);
+ const health=p.health;
+ p.angle=Math.PI/3;p.vy=35;
+ for(let i=0;i<90;i++)game.internals.steerPlane(p,0,1/60);
+ assert.equal(p.health,health);
+ assert.ok(p.flightRisk<.2,'diving clears accumulated climb load');
 });
 test('swoop briefly evades guns and exits at a bounded speed',()=>{
  const game=launch();game.listeners.get('start:click')();
@@ -356,4 +357,27 @@ test('swoop briefly evades guns and exits at a bounded speed',()=>{
  game.advance(100,1000);
  assert.equal(p.swoop,null);
  assert.ok(p.speed<=p.d.speed*1.4);
+});
+
+test('ground-threat prediction takes priority over AI pursuit',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const enemy=game.internals.state.fliers[1];
+ enemy.y=165;enemy.vy=78;enemy.angle=.8;enemy.aiThink=20;
+ const target=game.internals.state.fliers[0];target.y=220;
+ game.internals.aiInput(enemy,target);
+ assert.equal(enemy.aiMode,'recover');
+ assert.ok(enemy.aiRecoveryTime>0);
+ assert.ok(enemy.aiBoost,'AI uses available boost to pull out of dives');
+});
+test('gentle tail assist only engages when lined up behind an opponent',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const [p,enemy]=game.internals.state.fliers;
+ p.x=180;p.y=120;p.angle=0;
+ enemy.x=231;enemy.y=126;enemy.angle=.1;enemy.alive=true;
+ p.swoop=null;
+ const help=game.internals.tailMagnet(p,0);
+ assert.ok(help>0&&help<=.14,'small positive alignment when near tail');
+ assert.equal(game.internals.tailMagnet(p,-1),0,'manual steering takes priority');
+ enemy.angle=Math.PI;
+ assert.equal(game.internals.tailMagnet(p,0),0,'head-on planes do not magnetise');
 });
