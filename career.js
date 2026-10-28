@@ -86,11 +86,11 @@ function germanPilotPortrait(slot){
  const p=pilots.find(x=>x.portrait===slot&&x.faction==='Axis');
  const i=p?pilots.filter(x=>x.faction==='Axis').findIndex(x=>x.id===p.id):Math.max(0,slot-20);
  const paintedReady=window.WingmanGermanPortraitsReady===true && !!window.WingmanGermanPortraitAtlas;
- if(i>=0&&i<16&&paintedReady){
+ if(i>=0&&i<20&&paintedReady){
   // Match the 4 female illustrations to female German pilots; no reused or mismatched faces.
   const portraitOrder=[0,1,2,3,4,6,5,7,8,9,10,11,12,13,14,15];
   const artworkSlot=portraitOrder[i],col=artworkSlot%4,row=Math.floor(artworkSlot/4);
-  return '<svg class="pilot-avatar german-painted" viewBox="0 0 96 112" role="img" aria-label="'+escape(p?.name||'German pilot')+' portrait" overflow="hidden"><image href="'+window.WingmanGermanPortraitAtlas+'" x="'+(-col*96)+'" y="'+(-row*112)+'" width="384" height="448" preserveAspectRatio="none"/></svg>';
+  return '<svg class="pilot-avatar german-painted" viewBox="0 0 96 112" role="img" aria-label="'+escape(p?.name||'German pilot')+' portrait" overflow="hidden"><image href="'+window.WingmanGermanPortraitAtlas+'" x="'+(-col*96)+'" y="'+(-row*112)+'" width="384" height="560" preserveAspectRatio="none"/></svg>';
  }
  const female=p?.gender==='female';
  const faces=['#e6b18c','#e2a77e','#c9906c','#efc4a3','#bd876b','#e9b897','#d6a081','#efc9a7','#b68161','#eabda0',
