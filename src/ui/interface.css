@@ -159,3 +159,5 @@
 }
 /* Even if an older hidden button remains in cached markup, hide it. */
 #bomb,.control-layer .control-cluster.attack #bomb{display:none!important}
+
+#fullscreen-toggle[hidden]{display:none!important}
