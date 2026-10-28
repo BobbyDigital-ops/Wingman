@@ -11,9 +11,12 @@
   g.imageSmoothingEnabled=false;
 
   const PLANES={
-    fighter:{name:'SPITFIRE',speed:83,turn:3.15,hull:110,radius:5.5,burst:10,interval:.055,cooldown:1.35,damage:15,bulletSpeed:194,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'SWOOP'},
-    heavy:{name:'HEAVY FIGHTER',speed:72,turn:1.55,hull:160,radius:8,burst:3,interval:.19,cooldown:2.8,damage:29,bulletSpeed:177,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
-    bomber:{name:'BOMBER',speed:60,turn:1.05,hull:205,radius:9,burst:2,interval:.30,cooldown:3.2,damage:8,bulletSpeed:85,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'}
+    fighter:{name:'SUPERMARINE SPITFIRE',speed:83,turn:3.15,hull:110,radius:5.5,burst:10,interval:.055,cooldown:1.35,damage:15,bulletSpeed:194,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'SWOOP'},
+    heavy:{name:'BRISTOL BEAUFIGHTER',speed:72,turn:1.55,hull:160,radius:8,burst:3,interval:.19,cooldown:2.8,damage:29,bulletSpeed:177,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
+    bomber:{name:'AVRO LANCASTER',speed:60,turn:1.05,hull:205,radius:9,burst:2,interval:.30,cooldown:3.2,damage:8,bulletSpeed:85,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'},
+    bf109:{name:'MESSERSCHMITT BF 109',class:'fighter',nation:'Germany',speed:86,turn:3.0,hull:104,radius:5.5,burst:8,interval:.067,cooldown:1.4,damage:15,bulletSpeed:187,specialCd:8,color:'#afb89d',shade:'#647a74',accent:'#ecd06c',special:'SWOOP'},
+    bf110:{name:'MESSERSCHMITT BF 110',class:'heavy',nation:'Germany',speed:75,turn:1.47,hull:149,radius:8,burst:3,interval:.20,cooldown:2.7,damage:30,bulletSpeed:173,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
+    he111:{name:'HEINKEL HE 111',class:'bomber',nation:'Germany',speed:64,turn:1.12,hull:170,radius:8.5,burst:2,interval:.32,cooldown:3.1,damage:8,bulletSpeed:89,specialCd:10,color:'#a5ae9d',shade:'#576b61',accent:'#b4baca',special:'CLIMB'}
   };
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
@@ -56,7 +59,7 @@
   }
   function plane(type,id,x,y,angle){
     const d=PLANES[type];
-    return {id,type,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
+    return {id,type,role:d.class||type,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
       vy:Math.sin(angle)*d.speed*.8,health:d.hull,
       parts:{engine:100,nose:100,body:100,left:100,right:100},
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boost:0,
@@ -83,7 +86,7 @@
     state.mode=document.getElementById('mode-select')?.value||'duel';
     state.arena=Number(document.getElementById('arena-select')?.value||0);
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
-    document.getElementById('bomb').hidden=state.selected!=='bomber';
+    document.getElementById('bomb').hidden=!['bomber','he111'].includes(state.selected);
     background=makeBackground();newRound();
   }
   function showMenu(){
@@ -120,7 +123,7 @@
   function triggerSpecial(p){
     if(!p||!p.alive||p.specialCooldown>0||state.phase!=='playing'||state.paused)return;
     p.specialCooldown=p.d.specialCd;
-    if(p.type==='fighter'){
+    if(p.role==='fighter'){
       // A physically continuous high yo-yo: follow a single smooth arc
       // through the upper air, then descend toward the rival's predicted tail.
       // Its destination is captured at launch, so accurate timing matters.
@@ -148,7 +151,7 @@
       p.swoopTime=1.22;
       p.energy=Math.max(18,p.energy-17);
       emit(p.x,p.y,5,'#d8e9d4',9);
-    }else if(p.type==='heavy'){
+    }else if(p.role==='heavy'){
       p.armourTime=10;
       emit(p.x,p.y,5,'#a9dced',10);
     }else{
@@ -161,7 +164,7 @@
   }
   function triggerBomb(p){
     // Bombing is an independent bomber weapon, available between climb assists.
-    if(!p||p.type!=='bomber'||!p.alive||state.phase!=='playing'||
+    if(!p||p.role!=='bomber'||!p.alive||state.phase!=='playing'||
       state.paused||p.bombCooldown>0||p.rollTime>0)return;
     p.bombCooldown=2.5;
     state.bombs.push({x:p.x+p.vx*.035,y:p.y+7,
@@ -205,7 +208,7 @@
     p.health-=amount*armourPenalty*(p.armourTime>0?.4:1);
     p.hitFlash=.17;
     p.damageCause=cause;p.damageNotice=1.15;
-    emit(x,y,p.type==='heavy'?11:7,'#ffe0a0',p.type==='heavy'?38:27);sound('hit');
+    emit(x,y,p.role==='heavy'?11:7,'#ffe0a0',p.role==='heavy'?38:27);sound('hit');
     if(p.health<=0){
       p.health=0;p.alive=false;
       emit(p.x,p.y,28,'#ffc47e',75);
@@ -215,8 +218,8 @@
   }
   function triggerRoll(p){
     if(!p||!p.alive||state.phase!=='playing'||state.paused||p.rollTime>0||p.rollRecovery>0)return;
-    p.rollTime=p.type==='fighter'?.5:p.type==='heavy'?.48:.45;
-    p.rollRecovery=1.35+(p.type==='bomber'?.35:0);
+    p.rollTime=p.role==='fighter'?.5:p.role==='heavy'?.48:.45;
+    p.rollRecovery=1.35+(p.role==='bomber'?.35:0);
     sound('special');
   }
   function steerPlane(p,steer,dt){
@@ -264,7 +267,7 @@
     // Low energy lowers turn authority and speed, but never disables steering.
     const speedTarget=p.stallTime>0?wanted*.68:wanted;
     p.speed+=(speedTarget-p.speed)*Math.min(1,dt*4.6);
-    const follow=Math.min(1,dt*(p.type==='bomber'?8.5:p.type==='heavy'?9.5:10.5));
+    const follow=Math.min(1,dt*(p.role==='bomber'?8.5:p.role==='heavy'?9.5:10.5));
     p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
     p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
     p.x+=p.vx*dt;p.y+=p.vy*dt;
@@ -310,7 +313,7 @@
       if(p.energy<38)ty=Math.max(70,ty);
     }
     // Bombers seek the high ground and track crossing opportunities.
-    if(p.type==='bomber'&&p.aiMode!=='recover'){
+    if(p.role==='bomber'&&p.aiMode!=='recover'){
       tx=target.x+target.vx*.3;
       ty=p.y>target.y-25?Math.max(43,target.y-48):Math.max(45,target.y-22);
       if(p.y>target.y-16&&p.specialCooldown<=0&&p.climbAssist<=0)
@@ -319,15 +322,15 @@
         triggerBomb(p);
     }
     tx=clamp(tx,32,W-32);ty=clamp(ty,48,H-27);
-    if(p.type==='fighter'&&p.aiMode==='attack'&&range<65&&facing>1){tx=p.x+p.vx*.65;ty=clamp(p.y-35,45,H-30);}
+    if(p.role==='fighter'&&p.aiMode==='attack'&&range<65&&facing>1){tx=p.x+p.vx*.65;ty=clamp(p.y-35,45,H-30);}
     const goal=Math.atan2(ty-p.y,tx-p.x);
     const error=angleDiff(goal,p.angle);
     const turn=Math.abs(error)<.085?0:Math.sign(error);
     if(p.aiMode==='attack'&&range<165&&facing<.18&&p.gunCooldown<=0&&p.burstLeft===0&&
-      (p.type!=='bomber'||range<65&&Math.random()<.12))triggerBurst(p);
+      (p.role!=='bomber'||range<65&&Math.random()<.12))triggerBurst(p);
     if(p.specialCooldown<=0){
-      if(p.type==='heavy'&&range<100&&(p.health<p.d.hull*.7||target.burstLeft>0))triggerSpecial(p);
-      if(p.type==='fighter'&&p.aiMode==='break'&&range<70)triggerSpecial(p);
+      if(p.role==='heavy'&&range<100&&(p.health<p.d.hull*.7||target.burstLeft>0))triggerSpecial(p);
+      if(p.role==='fighter'&&p.aiMode==='break'&&range<70)triggerSpecial(p);
     }
     return turn;
   }
@@ -385,7 +388,7 @@
         const t=denom>0?clamp(((target.x-px)*vx+(target.y-py)*vy)/denom,0,1):0;
         const nx=px+t*vx,ny=py+t*vy;
         if(Math.hypot(target.x-nx,target.y-ny)<target.d.radius+
-          (shooter.type==='fighter'?2.7:1.4)){
+          (shooter.role==='fighter'?2.7:1.4)){
           hit(target,b.damage,b.x,b.y,undefined,'GUN');
           state.bullets.splice(i,1);continue;
         }
@@ -649,7 +652,7 @@
       bar(123,27,48,p.energy,100,p.energy<20?'#db8369':'#9bbfd0');
       g.fillStyle=p.rollTime>0?'#f8e4a2':'#c0d9df';
       g.fillText(p.rollTime>0?'ROLLING':p.rollRecovery>0?'ROLL '+p.rollRecovery.toFixed(1):'ROLL READY',181,19);
-      if(p.type==='bomber'){
+      if(p.role==='bomber'){
         g.fillStyle='#ffd9a2';g.fillText(p.bombCooldown>0?'BOMB '+p.bombCooldown.toFixed(1):'BOMB READY',W*.50,27);
       }
       g.fillStyle='#dce8e1';g.fillText('DAMAGE',W-106,19);
@@ -678,7 +681,7 @@
       g.fillStyle='#e8ba80';g.fillRect(Math.round(b.x)+1,Math.round(b.y),1,1);
     }
     for(const b of state.bullets){
-      const heavy=state.fliers[b.owner]?.type==='heavy';
+      const heavy=state.fliers[b.owner]?.role==='heavy';
       g.strokeStyle=heavy?'#ffd093':'#fff1b0';g.lineWidth=heavy?2:1;
       g.beginPath();g.moveTo(b.x,b.y);g.lineTo(b.x-b.vx*.024,b.y-b.vy*.024);g.stroke();
       g.fillStyle=heavy?'#653e33':'#574c43';g.fillRect(Math.round(b.x)-1,Math.round(b.y)-1,heavy?5:3,heavy?3:2);

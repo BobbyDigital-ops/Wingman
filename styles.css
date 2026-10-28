@@ -90,3 +90,7 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
 }
 
 .mode-row{display:flex;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap}.mode-row label{display:flex;flex-direction:column;gap:4px;color:#d8decf;font-size:10px}.mode-row select{background:#244053;color:#fff0ce;border:1px solid #b8a480;padding:5px;max-width:160px}
+
+/* Six selectable RAF/Luftwaffe aircraft without shrinking the control buttons. */
+.plane-picker{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.plane-choice{min-width:0}.plane-choice b{font-size:clamp(8px,1vw,12px);overflow-wrap:anywhere}.plane-choice small{font-size:9px}
+@media(max-height:500px){.plane-choice{padding:3px 2px}.plane-choice small{font-size:8px}.mode-row{margin-top:5px}}

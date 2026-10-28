@@ -119,11 +119,25 @@ function bomber(g,p){
  ellipse(g,14.5,0,1,.85,p.glass,p.outline,.3);
 }
 function draw(g,type,variant){
- const p=paints[type];if(!p)return;
+ const map={bf109:'fighter',bf110:'heavy',he111:'bomber'};
+ const german=Object.prototype.hasOwnProperty.call(map,type);
+ const role=map[type]||type;
+ const p=german?{
+  ...paints[role],base:'#899c8f',shade:'#566e6c',highlight:'#c1cabe',
+  panel:'#e0e3d0',outline:'#303e46',red:'#353c40',glass:'#75b0c0'
+ }:paints[role];if(!p)return;
  g.save();g.lineJoin='round';g.lineCap='round';
- if(type==='fighter')fighter(g,p);
- else if(type==='heavy')heavy(g,p);
+ if(role==='fighter')fighter(g,p);
+ else if(role==='heavy')heavy(g,p);
  else bomber(g,p);
+ if(german){
+  // Dark Luftwaffe-style wing crosses and pale theatre marking.
+  for(const y of [-7,7]){
+   g.fillStyle='#e7e7d7';g.fillRect(1,y-.45,3,.9);
+   g.fillStyle='#2d3436';g.fillRect(2,y-1.5,1,3);
+  }
+  g.fillStyle='#ded6a0';g.fillRect(9,-1.5,.7,3);
+ }
  if(variant==='damaged'){
    ellipse(g,-3,-1.2,1.5,.9,p.outline);
    line(g,[-5,-2],[-2,-1.4],p.shade,.8);
