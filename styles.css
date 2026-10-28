@@ -150,3 +150,6 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
  .app{height:var(--wingman-visible-height,100svh)!important;max-height:var(--wingman-visible-height,100svh)!important}
  .game-frame:not(:fullscreen){height:var(--wingman-visible-height,100svh)!important;max-height:var(--wingman-visible-height,100svh)!important}
 }
+
+/* career.css loads after styles.css: override its display:flex on phones. */
+@media(pointer:coarse){.career-nav{display:none!important}}
