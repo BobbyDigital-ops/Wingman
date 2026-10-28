@@ -21,7 +21,7 @@
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
     scores:[0,0],round:1,time:90,intermission:0,banner:'',bannerTime:0,paused:false,
-    impactLock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2,teams:false
+    impactLock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2,teams:false,difficulty:'standard'
   };
   const controls={left:false,right:false};
   const ui={
@@ -94,6 +94,7 @@
     state.mode=document.getElementById('mode-select')?.value||'duel';
     state.participants=Number(document.getElementById('pilots-select')?.value||2);
     state.teams=state.participants===4&&document.getElementById('team-select')?.value==='teams';
+    state.difficulty=document.getElementById('difficulty-select')?.value||'standard';
     state.arena=Number(document.getElementById('arena-select')?.value||0);
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
     document.getElementById('bomb').hidden=!['bomber','he111'].includes(state.selected);
@@ -313,7 +314,7 @@
       else if(p.gunCooldown>0&&range<110) p.aiMode='extend';
       else if(range>150) p.aiMode='intercept';
       else p.aiMode='attack';
-      p.aiThink=.35+Math.random()*.22;
+      p.aiThink=(state.difficulty==='rookie'?.68:state.difficulty==='ace'?.23:.35)+Math.random()*.22;
     }
     let tx=target.x+target.vx*.36,ty=target.y+target.vy*.36;
     if(p.aiMode==='recover'){tx=W*.5;ty=H*.48;}
@@ -327,7 +328,8 @@
       if(p.rollRecovery<=0&&range<75)triggerRoll(p);
     }
     if(p.aiMode==='intercept'){
-      tx=target.x+target.vx*.55;ty=target.y+target.vy*.55;
+      const lead=state.difficulty==='ace'?.69:state.difficulty==='rookie'?.24:.55;
+      tx=target.x+target.vx*lead;ty=target.y+target.vy*lead;
       if(p.energy<38)ty=Math.max(70,ty);
     }
     // Bombers seek the high ground and track crossing opportunities.
@@ -345,7 +347,7 @@
     const goal=Math.atan2(ty-p.y,wrapDx);
     const error=angleDiff(goal,p.angle);
     const turn=Math.abs(error)<.085?0:Math.sign(error);
-    if(p.aiMode==='attack'&&range<165&&facing<.18&&p.gunCooldown<=0&&p.burstLeft===0&&
+    if(p.aiMode==='attack'&&range<165&&facing<(state.difficulty==='rookie'?.13:state.difficulty==='ace'?.22:.18)&&p.gunCooldown<=0&&p.burstLeft===0&&
       (p.role!=='bomber'||range<65&&Math.random()<.12))triggerBurst(p);
     if(p.specialCooldown<=0){
       if(p.role==='heavy'&&range<100&&(p.health<p.d.hull*.7||target.burstLeft>0))triggerSpecial(p);
@@ -720,6 +722,15 @@
     g.globalAlpha=1;
     drawHud();
     const pilot=state.fliers[0];
+    if(pilot&&pilot.alive&&pilot.y>H-42){
+      const danger=clamp((pilot.y-(H-42))/29,0,1);
+      g.globalAlpha=.45+danger*.55;
+      g.fillStyle='#9a2621';g.fillRect(W/2-55,H-28,110,12);
+      g.strokeStyle='#f6ca8b';g.strokeRect(W/2-55,H-28,110,12);
+      g.fillStyle='#fff0cc';g.textAlign='center';g.font='bold 7px monospace';
+      g.fillText('PULL UP · GROUND',W/2,H-25);
+      g.textAlign='left';g.globalAlpha=1;
+    }
     if(pilot&&pilot.damageNotice>0){
       g.font='bold 7px monospace';g.textAlign='center';
       g.fillStyle='#ffd39c';g.fillText('HIT BY '+pilot.damageCause,W*.5,36);

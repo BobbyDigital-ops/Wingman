@@ -44,20 +44,20 @@ function draw(g,type,variant){
  poly(g,[[tail-2,1],[tail,-p.fin],[tail+1,-p.fin+1],[tail+2,1]],p.dark,null);
  poly(g,[[tail-1,2],[tail+7,2],[tail+10,3],[tail+1,4]],p.dark);
  // Fuselage with subtly shaded underside; long RAF bomber and slab-sided He 111.
- const top=wide?-3:-2.4,bottom=wide?4:3;
+ const top=wide?-2.55:-2.05,bottom=wide?3.35:2.5;
  poly(g,[[tail,0],[tail+4,top],[nose-6,top-.2],[nose-1,top+1],
          [nose,0],[nose-1,bottom-1],[nose-5,bottom],[tail+3,bottom-.4]],p.c);
  poly(g,[[tail+4,top+.2],[nose-7,top-.3],[nose-3,top+.7],[tail+5,top+1]],p.light,null);
  poly(g,[[tail+3,bottom-1],[nose-3,bottom-1],[nose-5,bottom],[tail+4,bottom-.2]],p.dark,null);
  // Leading wing appears angled down and toward viewer — not overhead.
  const span=p.wing;
- poly(g,[[-4,1],[4,1],[span*.64,4],[span*.37,6.4],[-2,5.3]],p.dark);
- poly(g,[[-3,1.6],[3,1.6],[span*.57,3.7],[span*.36,5.6],[-1.6,4.6]],p.light,null);
+ poly(g,[[-4,1],[4,1],[span*.64,3.3],[span*.37,5.3],[-2,4.5]],p.dark);
+ poly(g,[[-3,1.6],[3,1.6],[span*.57,3.2],[span*.36,4.75],[-1.6,4.1]],p.light,null);
  mark(g,span*.23,4.05,p.mark);
  mark(g,tail+7,.5,p.mark);
  // Individual glasshouse and canopy profiles.
  const cx=type==='fighter'||type==='bf109'?-1:wide?-4:-2;
- const cw=p.canopy,ch=wide?4.3:3.9;
+ const cw=p.canopy,ch=wide?3.7:3.25;
  poly(g,[[cx-cw/2,-2.6],[cx-cw*.32,-ch-2],[cx+cw*.18,-ch-2.3],
           [cx+cw/2,-3.4],[cx+cw/2,-2.5]],p.glass);
  seg(g,[cx-.2,-ch-1.8],[cx,-2.6],p.dark,.52);
