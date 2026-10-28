@@ -1191,6 +1191,11 @@ function plane(type,id,x,y,angle){
   ui.change.addEventListener('click',showMenu);
   // Preserve pixel density rather than squashing a 16:9 picture on wide phones.
   function resizeArena(){
+    // CSS svh can exceed the actual visible rectangle on some Android
+    // landscape browsers. Size the game and thumb controls to actual pixels.
+    const visibleH=Math.floor(Math.min(window.innerHeight||Infinity,window.visualViewport?.height||Infinity));
+    if(Number.isFinite(visibleH)&&visibleH>100)
+      document.documentElement?.style?.setProperty?.('--wingman-visible-height',visibleH+'px');
     const frame=document.getElementById('frame');
     if(!frame)return;
     const rect=frame.getBoundingClientRect();

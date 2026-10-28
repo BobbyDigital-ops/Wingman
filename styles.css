@@ -144,3 +144,9 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
 
 .menu-card .career-entry{display:block;margin:10px auto 2px;padding:10px 16px;min-height:42px;border:1px solid #d6b784;background:#3b4f57;color:#ffe4b2;font-size:12px;font-weight:800;letter-spacing:.08em}
 @media(pointer:coarse){.menu-card .career-entry{min-height:50px;width:100%}}
+
+/* Android landscape URL bar: no cropped buttons when svh is taller than innerHeight. */
+@media(pointer:coarse){
+ .app{height:var(--wingman-visible-height,100svh)!important;max-height:var(--wingman-visible-height,100svh)!important}
+ .game-frame:not(:fullscreen){height:var(--wingman-visible-height,100svh)!important;max-height:var(--wingman-visible-height,100svh)!important}
+}
