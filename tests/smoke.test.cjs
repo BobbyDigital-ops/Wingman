@@ -621,3 +621,19 @@ test('AI bombers wait for an aligned, below-target bombing opportunity',()=>{
  game.internals.aiInput(bomber,target);
  assert.equal(bomber.bombQueue,3,'deliberate aligned pass releases the three-bomb salvo');
 });
+
+test('a fighter sitting directly behind a Lancaster takes sustained turret damage',()=>{
+ const game=launch();game.listeners.get('bomber:click')();game.listeners.get('start:click')();
+ const state=game.internals.state,[bomber,chaser]=state.fliers;
+ state.wind={active:false,base:0,current:0,elapsed:0};
+ bomber.x=220;bomber.y=125;bomber.angle=0;bomber.speed=0;bomber.vx=0;bomber.vy=0;
+ chaser.x=187;chaser.y=125;chaser.angle=0;chaser.vx=0;chaser.vy=0;
+ chaser.role='fighter';chaser.d=game.internals.PLANES.fighter;
+ chaser.armour=0;chaser.spawnSafe=0;bomber.spawnSafe=0;
+ const start=chaser.health;
+ for(let i=0;i<70;i++){
+   game.internals.updatePlane(bomber,1/60,0);
+   game.internals.projectiles(1/60);
+ }
+ assert.ok(chaser.health<start,'staying inside the rear firing lane should cost hull health');
+});
