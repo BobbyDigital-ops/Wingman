@@ -438,7 +438,7 @@ body:has(#career-screen:not([hidden])) #touch-controls{
 .app:fullscreen{width:100vw!important;height:100dvh!important;min-height:0!important;max-height:none!important;padding:0!important;gap:0!important}
 .app:fullscreen .site-header,.app:fullscreen .site-footer,.app:fullscreen .career-nav{display:none!important}
 .app:fullscreen .game-frame{width:100vw!important;height:100dvh!important;max-height:none!important;min-height:0!important;border:0!important;aspect-ratio:auto!important}
-.career-screen .career-fullscreen{
+#career-fullscreen{
  position:fixed;z-index:40;right:12px;top:6px;
  display:flex;align-items:center;gap:7px;justify-content:center;
  min-height:31px;padding:5px 10px;color:#f4e8cc;
@@ -446,3 +446,6 @@ body:has(#career-screen:not([hidden])) #touch-controls{
  box-shadow:0 3px 7px #0009;letter-spacing:.07em;font-size:10px;
  touch-action:manipulation;
 }
+
+#career-fullscreen{display:none!important}
+#career-screen:not([hidden]) + #career-fullscreen{display:flex!important}
