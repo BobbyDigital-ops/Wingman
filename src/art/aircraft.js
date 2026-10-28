@@ -1,92 +1,177 @@
-/* Wingman v0.8: six ORIGINAL side-on miniature aircraft.
- * Drawn in vector/pixel hybrid on the game's high-DPI overlay.
- * Based on the user's side-profile Spitfire reference, but less cartoonish.
- * All six have separate fuselage, wing, tail and cockpit geometries.
- */
+/* Wingman: compact, bespoke WWII side-profile silhouettes (320/520 logical canvas).
+   These models keep the Phase 1 proportions; no stretched/elongated sprites. */
 (function(){
 'use strict';
-const models={
- fighter:{n:15,tail:15,fin:5.5,wing:10,canopy:5,engines:1,c:'#52654e',light:'#a7aa91',dark:'#383f39',glass:'#9ad3e1',mark:'raf'},
- heavy:{n:17,tail:17,fin:5.1,wing:13,canopy:6,engines:2,c:'#565d4c',light:'#a2a28d',dark:'#353e3c',glass:'#a0d2da',mark:'raf'},
- bomber:{n:21,tail:22,fin:6.3,wing:17,canopy:10,engines:4,c:'#565e49',light:'#9da18a',dark:'#323b35',glass:'#98c7d4',mark:'raf'},
- bf109:{n:16,tail:15,fin:5,wing:10,canopy:5,engines:1,c:'#6d796e',light:'#b4b9ab',dark:'#44564e',glass:'#9ecdda',mark:'german'},
- bf110:{n:18,tail:18,fin:5.1,wing:13,canopy:8,engines:2,c:'#748274',light:'#b6bcae',dark:'#45574f',glass:'#9bc9d0',mark:'german'},
- he111:{n:22,tail:21,fin:5.6,wing:16,canopy:11,engines:2,c:'#788475',light:'#b6beb0',dark:'#455b50',glass:'#a5d3dd',mark:'german'}
+const types=['fighter','heavy','bomber','bf109','bf110','he111'];
+const palettes={
+ fighter:{base:'#627057',light:'#a5a995',dark:'#38453f',glass:'#98c4ce',nation:'raf'},
+ heavy:{base:'#5b6955',light:'#a3aa95',dark:'#394640',glass:'#9fc8ce',nation:'raf'},
+ bomber:{base:'#535f50',light:'#a0a795',dark:'#343f39',glass:'#a6c7cc',nation:'raf'},
+ bf109:{base:'#7d897e',light:'#c1c7b8',dark:'#4a5a54',glass:'#a4c8d0',nation:'german'},
+ bf110:{base:'#78877a',light:'#b3c0b2',dark:'#46584f',glass:'#a4c9d0',nation:'german'},
+ he111:{base:'#738174',light:'#b9c1b2',dark:'#42564e',glass:'#9dcad0',nation:'german'}
 };
-function poly(g,pts,col,line='#26383d'){
- g.beginPath();g.moveTo(pts[0][0],pts[0][1]);
- for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);
- g.closePath();g.fillStyle=col;g.fill();
- if(line){g.strokeStyle=line;g.lineWidth=.58;g.stroke();}
+function path(g,paint,trace,draw){
+ g.beginPath();draw(g);g.closePath();g.fillStyle=paint;g.fill();
+ if(trace){g.lineWidth=.55;g.strokeStyle=trace;g.stroke();}
 }
-function seg(g,a,b,color,w=.5){
- g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);
- g.strokeStyle=color;g.lineWidth=w;g.stroke();
+function line(g,x1,y1,x2,y2,col,w=.48){
+ g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.lineWidth=w;g.strokeStyle=col;g.stroke();
 }
-function mark(g,x,y,nation){
+function roundel(g,x,y,nation,scale=1){
+ g.save();g.translate(x,y);g.scale(scale,scale);
  if(nation==='raf'){
-  g.fillStyle='#315da3';g.beginPath();g.arc(x,y,1.65,0,7);g.fill();
-  g.fillStyle='#f4eee3';g.beginPath();g.arc(x,y,1.1,0,7);g.fill();
-  g.fillStyle='#c64c42';g.fillRect(x-.45,y-.45,.9,.9);
- }else{
-  g.fillStyle='#f0eddf';g.fillRect(x-1.5,y-.4,3,.8);
-  g.fillRect(x-.4,y-1.5,.8,3);
-  g.fillStyle='#333b3b';g.fillRect(x-1,y-.25,2,.5);
-  g.fillRect(x-.25,y-1,.5,2);
- }
-}
-function draw(g,type,variant,detached={}){
- const p=models[type];if(!p)return;
- const tail=-p.tail,nose=p.n,wide=p.engines>1;
- g.save();g.lineCap='round';g.lineJoin='round';
- // Vertical stabiliser and horizontal tail, seen SIDE-ON.
- poly(g,[[tail-2,1],[tail,-p.fin],[tail+2,-p.fin+.7],[tail+6,-1],[tail+8,2]],p.c);
- poly(g,[[tail-2,1],[tail,-p.fin],[tail+1,-p.fin+1],[tail+2,1]],p.dark,null);
- poly(g,[[tail-1,2],[tail+7,2],[tail+10,3],[tail+1,4]],p.dark);
- // Fuselage with subtly shaded underside; long RAF bomber and slab-sided He 111.
- const top=wide?-2.30:-1.85,bottom=wide?3.05:2.30;
- poly(g,[[tail,0],[tail+6,top],[nose-7,top-.2],[nose-1,top+1],
-         [nose,0],[nose-1,bottom-1],[nose-6,bottom],[tail+5,bottom-.4]],p.c);
- poly(g,[[tail+4,top+.2],[nose-7,top-.3],[nose-3,top+.7],[tail+5,top+1]],p.light,null);
- poly(g,[[tail+3,bottom-1],[nose-3,bottom-1],[nose-5,bottom],[tail+4,bottom-.2]],p.dark,null);
- // Leading wing appears angled down and toward viewer — not overhead.
- const span=p.wing;
- poly(g,[[-4,1],[4,1],[span*.64,3.3],[span*.37,5.3],[-2,4.5]],p.dark);
- poly(g,[[-3,1.6],[3,1.6],[span*.57,3.2],[span*.36,4.75],[-1.6,4.1]],p.light,null);
- mark(g,span*.23,4.05,p.mark);
- mark(g,tail+7,.5,p.mark);
- // Individual glasshouse and canopy profiles.
- const cx=type==='fighter'||type==='bf109'?-1:wide?-4:-2;
- const cw=p.canopy,ch=wide?3.7:3.25;
- poly(g,[[cx-cw/2,-2.6],[cx-cw*.32,-ch-2],[cx+cw*.18,-ch-2.3],
-          [cx+cw/2,-3.4],[cx+cw/2,-2.5]],p.glass);
- seg(g,[cx-.2,-ch-1.8],[cx,-2.6],p.dark,.52);
- if(cw>7)seg(g,[cx+2.3,-ch-1.6],[cx+2.4,-2.6],p.dark,.47);
- seg(g,[cx-cw*.2,-ch-1.7],[cx+cw*.18,-ch-1.9],'#e8f6f3',.45);
- // Distinct engine positions and propeller disc.
- if(p.engines===1){
-  poly(g,[[nose-6,-2.5],[nose-2,-2],[nose,0],[nose-1,2],[nose-5,2.7]],p.dark);
-  poly(g,[[nose-5,-2.2],[nose-2,-1.8],[nose-.5,-.4],[nose-4,-.2]],p.light,null);
-  seg(g,[nose+.5,-4],[nose+.5,4],'#637276',.85);
-  seg(g,[nose+1,-3.3],[nose+1,3.3],'#c6d3d0',.35);
- }else{
-  const pods=p.engines===4?[0,9]:[2];
-  for(const x of pods){
-   poly(g,[[x-4,1],[x+2,1],[x+4,2.5],[x+3,4.2],[x-4,4.2]],p.dark);
-   poly(g,[[x-3,1.2],[x+1,1.2],[x+3,2.6],[x-3,2.6]],p.light,null);
-   seg(g,[x+4,-1.1],[x+4,6.3],'#758386',.75);
+  for(const [rad,col] of [[2.1,'#31577c'],[1.42,'#e8eadc'],[.7,'#b75046']]){
+   g.beginPath();g.arc(0,0,rad,0,Math.PI*2);g.fillStyle=col;g.fill();
   }
-  if(type==='heavy'||type==='bf110'){
-   seg(g,[nose-4,1],[nose+2,1],'#2c393b',.85);
-   seg(g,[nose-4,2.4],[nose+2,2.4],'#3b4142',.65);
-  }else{
-   poly(g,[[nose-5,-2.6],[nose,-1.9],[nose+2,0],[nose+1,3],[nose-5,3]],p.glass);
-   seg(g,[nose-2,-2],[nose-2,2.6],p.dark,.4);
-  }
+ }else{
+  g.fillStyle='#e9e8dc';g.fillRect(-1.45,-.43,2.9,.86);g.fillRect(-.43,-1.45,.86,2.9);
+  g.fillStyle='#353e3c';g.fillRect(-1.1,-.24,2.2,.48);g.fillRect(-.24,-1.1,.48,2.2);
  }
- // Flashes and airframe damage do not require a separate asset pack.
- if(variant==='damaged'){g.fillStyle='#343936';g.fillRect(-4,-1.8,2.6,1.5);}
  g.restore();
 }
-window.WingmanSprites={draw,types:Object.keys(models)};
+function prop(g,x,top,bottom){
+ line(g,x,top,x,bottom,'#7d8d8c',.95);
+ line(g,x+.4,top+.7,x+.4,bottom-.7,'#dbe3dd',.32);
+}
+function tail(g,x,fin,p,angular){
+ path(g,p.base,p.dark,c=>{
+  c.moveTo(x-1.4,1.5);c.lineTo(x-.9,-1.2);
+  if(angular){c.lineTo(x-1,-5.7);c.lineTo(x+1,-5.6);c.lineTo(x+3,-1.35);}
+  else {c.quadraticCurveTo(x-1.7,-5.8,x+.3,-5.65);c.quadraticCurveTo(x+1.5,-5.2,x+3,-1.4);}
+  c.lineTo(x+5,1.5);
+ });
+ path(g,p.dark,null,c=>{c.moveTo(x-1.2,1);c.lineTo(x+5.2,1.3);c.lineTo(x+7,2.3);c.lineTo(x-1,2.4);});
+ line(g,x+1,-4,x+1,-1.3,p.light,.45);
+}
+function fighter(g,p,is109){
+ const tailX=is109?-11.7:-12.2,noseX=is109?13.3:12.5;
+ tail(g,tailX,5,p,is109);
+ // Far-side wing, viewed edge-on.
+ path(g,p.dark,null,c=>{c.moveTo(-4,-.5);c.lineTo(5,-1.2);c.lineTo(8,-2);c.lineTo(1,-1.2);});
+ // Single clean, tapered fuselage: curved rather than a stretched box.
+ path(g,p.base,'#273d3c',c=>{
+  c.moveTo(tailX-1,0);c.quadraticCurveTo(-8,-1.6,-4.1,-1.6);
+  c.lineTo(5,-2);c.quadraticCurveTo(9.2,-2.3,noseX-1.8,-1.4);
+  c.quadraticCurveTo(noseX+.3,-.9,noseX,.15);
+  c.quadraticCurveTo(noseX-.3,1.4,noseX-2.8,2);
+  c.lineTo(-2.3,2.2);c.quadraticCurveTo(-9,2.1,tailX-1,0);
+ });
+ path(g,p.light,null,c=>{c.moveTo(-8,-1.4);c.lineTo(4,-1.8);c.quadraticCurveTo(9,-2,11,-1.1);c.lineTo(3,-.95);c.lineTo(-8,-.45);});
+ path(g,p.dark,null,c=>{c.moveTo(-5,1.75);c.lineTo(9,1.45);c.lineTo(7.6,2.05);c.lineTo(-3.5,2.2);});
+ // Wing root is a strong shoulder, not a floating rectangle.
+ path(g,p.dark,'#33423c',c=>{
+  c.moveTo(-4,1.15);c.lineTo(2.2,.6);c.lineTo(9.4,4.3);
+  c.quadraticCurveTo(9.5,5.15,8.2,5.2);c.lineTo(-2.7,3.4);
+ });
+ path(g,p.light,null,c=>{c.moveTo(-2.7,1.45);c.lineTo(2,1.15);c.lineTo(8.8,4.45);c.lineTo(-1.7,3);});
+ roundel(g,3.8,3.3,p.nation,.75);
+ // Different cockpit lines make the Spitfire and Bf 109 recognisable.
+ if(is109){
+  path(g,p.glass,p.dark,c=>{c.moveTo(-3.5,-1.7);c.lineTo(-2.1,-4.25);c.lineTo(1,-4.6);c.lineTo(2.7,-1.7);});
+  line(g,-.7,-4.3,-.3,-1.75,p.dark,.5);
+  path(g,p.dark,null,c=>{c.moveTo(6.1,1.8);c.lineTo(9.1,1.75);c.lineTo(8.8,3.1);c.lineTo(6.5,2.8);});
+ }else{
+  path(g,p.glass,p.dark,c=>{
+   c.moveTo(-4.7,-1.6);c.quadraticCurveTo(-2.9,-5.1,0,-5.1);
+   c.quadraticCurveTo(2,-4.8,3,-1.8);
+  });
+  line(g,-.5,-4.8,-.1,-1.7,p.dark,.52);
+ }
+ for(let i=0;i<3;i++)line(g,5+i*1.2,-1.3,5.4+i*1.2,-.25,p.dark,.52);
+ // Nose spinner and restrained blurred propeller.
+ path(g,p.dark,null,c=>{c.moveTo(noseX-2,-1.15);c.lineTo(noseX+.6,-.4);c.lineTo(noseX+.6,.5);c.lineTo(noseX-2,1.2);});
+ prop(g,noseX+1.1,-4.6,4.7);
+ roundel(g,tailX+5.2,.15,p.nation,.55);
+}
+function twin(g,p,is110){
+ const tx=is110?-13.2:-13.8,nx=is110?14.3:13.8;
+ tail(g,tx,5,p,is110);
+ path(g,p.dark,null,c=>{c.moveTo(-5,-.8);c.lineTo(5,-1.2);c.lineTo(9,-2);c.lineTo(1,-1.3);});
+ path(g,p.base,'#2e3e3b',c=>{
+  c.moveTo(tx-1,0);c.quadraticCurveTo(-9,-1.7,-3,-2.05);
+  c.lineTo(6,-2.25);c.quadraticCurveTo(11,-2,nx,-1.45);
+  c.quadraticCurveTo(nx+1,.1,nx,1.15);
+  c.quadraticCurveTo(11.2,2.65,6,2.9);c.lineTo(-5,2.4);
+  c.quadraticCurveTo(-11,1.9,tx-1,0);
+ });
+ path(g,p.light,null,c=>{c.moveTo(-8.3,-1.45);c.lineTo(6.5,-2);c.lineTo(11.2,-1);c.lineTo(-7.8,-.3);});
+ path(g,p.dark,'#32413c',c=>{c.moveTo(-5,1.4);c.lineTo(3,.8);c.lineTo(10.2,4.6);c.quadraticCurveTo(9.8,5.45,8.2,5.25);c.lineTo(-3.5,3.7);});
+ path(g,p.light,null,c=>{c.moveTo(-3.8,1.65);c.lineTo(2.9,1.3);c.lineTo(9.5,4.75);c.lineTo(-3.1,3.2);});
+ // Visible nacelles belong to the wing, with the far engine offset.
+ for(const [xx,yy,far] of [[-1,1.35,true],[5.2,2.9,false]]){
+  path(g,far?p.dark:p.base,'#33443e',c=>{
+   c.moveTo(xx-4,yy-.85);c.quadraticCurveTo(xx-2,yy-1.4,xx+.4,yy-1.25);
+   c.lineTo(xx+3.9,yy-.6);c.lineTo(xx+3.9,yy+.85);
+   c.quadraticCurveTo(xx,yy+1.65,xx-3.6,yy+.8);
+  });
+  prop(g,xx+4.4,yy-3.3,yy+3.6);
+ }
+ roundel(g,2.1,3.25,p.nation,.85);
+ if(is110){
+  path(g,p.glass,p.dark,c=>{c.moveTo(-6,-2);c.lineTo(-3.6,-5.1);c.lineTo(1.6,-5.05);c.lineTo(4.4,-2.1);});
+  line(g,-1.4,-5,-1.4,-2.05,p.dark,.55);line(g,1.2,-5,1.2,-2.05,p.dark,.55);
+ }else{
+  path(g,p.glass,p.dark,c=>{c.moveTo(-4.8,-2);c.quadraticCurveTo(-2,-5.25,1,-5.1);c.quadraticCurveTo(3,-4.85,4,-2.15);});
+  line(g,-.25,-5,-.2,-2.1,p.dark,.55);
+ }
+ line(g,nx-1,.55,nx+1,.55,p.dark,.8);
+ roundel(g,tx+5,.35,p.nation,.55);
+}
+function bomber(g,p,is111){
+ const tx=-17.4,nx=is111?17.7:17.1;
+ tail(g,tx,6,p,is111);
+ path(g,p.dark,null,c=>{c.moveTo(-5,-1.5);c.lineTo(8,-1.7);c.lineTo(11,-2.4);c.lineTo(-2,-1.7);});
+ path(g,p.base,'#2b3c38',c=>{
+  c.moveTo(tx-1,0);c.quadraticCurveTo(-11,-2.4,-3,-2.65);
+  c.lineTo(8,-2.65);c.quadraticCurveTo(14,-2.4,nx,-1.7);
+  c.quadraticCurveTo(nx+1.4,-.2,nx,.9);
+  c.quadraticCurveTo(14,3.25,8,3.2);c.lineTo(-3,3);
+  c.quadraticCurveTo(-13,2.25,tx-1,0);
+ });
+ path(g,p.light,null,c=>{c.moveTo(-12,-1.9);c.lineTo(8.5,-2.35);c.lineTo(14,-1.7);c.lineTo(12,-.65);c.lineTo(-12,-.55);});
+ path(g,p.dark,null,c=>{c.moveTo(-12,2.1);c.lineTo(12,2.3);c.lineTo(8,3.2);c.lineTo(-7,2.85);});
+ // Deep wing root, tapered tip, visually connected to the fuselage.
+ path(g,p.dark,'#364540',c=>{c.moveTo(-7,1.3);c.lineTo(5,.85);c.lineTo(14,5.5);c.quadraticCurveTo(13.7,6.45,11.7,6.2);c.lineTo(-5,3.75);});
+ path(g,p.light,null,c=>{c.moveTo(-5,1.6);c.lineTo(4,1.4);c.lineTo(13,5.6);c.lineTo(-4.8,3.2);});
+ for(const [xx,yy,far] of [[-2.8,1.25,true],[4.5,3.15,false]]){
+  path(g,far?p.dark:p.base,'#344640',c=>{
+   c.moveTo(xx-3.2,yy-.7);c.lineTo(xx+2.7,yy-1);
+   c.quadraticCurveTo(xx+4.1,yy,xx+2.8,yy+1.4);c.lineTo(xx-3,yy+1.2);
+  });
+  prop(g,xx+3.2,yy-3.7,yy+3.8);
+ }
+ roundel(g,2.2,3.65,p.nation,.9);
+ if(is111){
+  // The He 111's unmistakable continuous glazed nose.
+  path(g,p.glass,p.dark,c=>{
+   c.moveTo(7.5,-2.5);c.lineTo(12,-2.7);c.lineTo(nx,-1.55);
+   c.quadraticCurveTo(nx+1,.1,nx,1.15);c.lineTo(12.5,2.4);c.lineTo(7.7,-1.8);
+  });
+  for(let i=0;i<3;i++)line(g,10+i*2,-2.4,11.7+i*1.6,1.3,p.dark,.4);
+ }else{
+  // Lancaster raised cockpit, glazing and discrete nose turret.
+  path(g,p.glass,p.dark,c=>{
+   c.moveTo(1,-2.65);c.quadraticCurveTo(3,-6.35,6.6,-6);
+   c.quadraticCurveTo(8,-5.35,9,-2.7);
+  });
+  line(g,5,-6,5,-2.6,p.dark,.53);
+  path(g,p.dark,null,c=>{c.moveTo(nx-1.8,-1.1);c.quadraticCurveTo(nx+1,-1.6,nx+1.4,0);c.lineTo(nx-.3,.75);});
+  line(g,nx+.7,-.2,nx+2.2,-.5,'#3b4341',.65);
+ }
+ roundel(g,tx+6,.4,p.nation,.5);
+}
+function draw(g,type,variant){
+ const p=palettes[type];if(!p)return;
+ g.save();g.lineCap='round';g.lineJoin='round';
+ if(type==='fighter'||type==='bf109')fighter(g,p,type==='bf109');
+ else if(type==='heavy'||type==='bf110')twin(g,p,type==='bf110');
+ else bomber(g,p,type==='he111');
+ if(variant==='damaged'){
+  // Small airframe soot, not an arbitrary black rectangle.
+  g.fillStyle='#3d423c9c';g.beginPath();g.ellipse(-3.5,-1.55,2.8,.55,-.1,0,Math.PI*2);g.fill();
+ }
+ g.restore();
+}
+window.WingmanSprites={draw,types};
 })();
