@@ -420,6 +420,8 @@ test('all six aircraft use distinct tactical class statistics',()=>{
 test('bullet lifetime extends effective range and keeps deliberate class differences',()=>{
  const game=launch();game.listeners.get('start:click')();
  const [fighter,heavy]=game.internals.state.fliers;
+ // The default AI plane is chosen by matchmaking, so explicitly set class.
+ heavy.d=game.internals.PLANES.heavy;
  game.internals.shoot(fighter);game.internals.shoot(heavy);
  const [f,h]=game.internals.state.bullets;
  assert.equal(f.life,1.28);assert.equal(h.life,1.25);
