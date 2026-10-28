@@ -161,3 +161,110 @@
 #bomb,.control-layer .control-cluster.attack #bomb{display:none!important}
 
 #fullscreen-toggle[hidden]{display:none!important}
+
+/* OPERATION NIGHTFALL — Wingman complete visual identity.
+   Editorial war-poster typography, photo-like cinematic staging,
+   brass aviation details, not rectangular office controls. */
+:root{--wm-paper:#e8d9b7;--wm-brass:#c9a16a;--wm-ink:#101b21;--wm-olive:#39453b}
+.wingman-front{
+ background:
+ radial-gradient(ellipse at 75% 16%,#deb27d3b 0,transparent 36%),
+ linear-gradient(180deg,#13242a25 0%,#0a121bdc 95%);
+ backdrop-filter:blur(2px);padding:clamp(5px,1.5svh,14px);
+}
+.front-panel{
+ width:min(96%,1100px);max-height:98%;padding:clamp(10px,2.5svh,26px);
+ border:0;box-shadow:none;scrollbar-width:thin;
+ background:linear-gradient(130deg,#182932fa,#0b1821f4);
+}
+.front-panel:before,.front-panel:after{display:none}
+.splash-panel{
+ width:100%;max-width:none;height:100%;min-height:0;
+ overflow:hidden;justify-content:center;
+ background:
+ radial-gradient(ellipse at 69% 45%,#cc9e6680 0%,#4b5d5b30 35%,transparent 65%),
+ linear-gradient(145deg,#253a40d9,#0c1b25ed 75%);
+ border:clamp(5px,1svh,12px) solid #1b2a2ce9;
+ box-shadow:inset 0 0 0 1px #eacb8f5c,inset 0 0 90px #010b13bf;
+ isolation:isolate;
+}
+.splash-panel:before{display:block;content:"";position:absolute;inset:0;z-index:-1;
+ background:repeating-linear-gradient(0deg,transparent 0 3px,#e7cda006 4px 5px),
+ radial-gradient(circle at 50% 50%,transparent 35%,#030b16bf 100%);
+ pointer-events:none}
+.splash-panel:after{display:block;content:"";position:absolute;inset:18px;border:1px solid #d5b78344;pointer-events:none}
+.splash-topline,.flow-step,.setup-label{font-family:Georgia,serif;letter-spacing:.18em;color:#d6b989}
+.splash-topline{font-size:clamp(9px,1.8svh,15px);border-bottom:1px solid #bd9b6780;padding-bottom:clamp(4px,1svh,8px)}
+.splash-mark{margin:clamp(3px,1svh,10px) 0;gap:13px}
+.wing-rule{width:clamp(45px,12vw,140px);height:1px;background:linear-gradient(90deg,transparent,#e9d8b1,transparent)}
+.wing-emblem{font-size:clamp(15px,4svh,24px);color:#dbc08b;text-shadow:0 0 16px #e8ca88}
+.splash-title{
+ font-family:Impact,"Arial Narrow",sans-serif;
+ font-weight:900;font-size:clamp(56px,17svh,158px);line-height:.85;letter-spacing:.11em;
+ color:#f2e7ce;text-shadow:0 3px 1px #896f50,0 7px 0 #182329,0 13px 30px #061016;
+ transform:scaleX(.88);width:120%;
+}
+.splash-subtitle{font-family:Georgia,serif;font-style:italic;letter-spacing:.32em;color:#ddc496;font-size:clamp(10px,2.6svh,20px);margin:clamp(4px,1svh,9px) 0}
+#splash-aircraft{width:min(100%,900px);height:clamp(50px,24svh,190px);object-fit:contain;filter:drop-shadow(0 14px 13px #030b16aa)}
+.splash-tagline{font-family:Georgia,serif;font-style:italic;color:#e1dbc7;font-size:clamp(10px,2svh,17px);letter-spacing:.1em}
+.splash-foot{font-family:Georgia,serif;letter-spacing:.16em;color:#c5b38f;font-size:clamp(8px,1.6svh,12px)}
+.front-action,.front-secondary,.start-button{
+ border:1px solid #e8cd96;clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
+ font-family:Georgia,serif;font-size:clamp(11px,2.2svh,16px);letter-spacing:.14em;
+ background:linear-gradient(180deg,#d9bc86,#aa8150);color:#172129;
+ box-shadow:inset 0 1px #fff4c0;transition:filter .16s,transform .16s;
+}
+.front-action:hover,.front-secondary:hover{filter:brightness(1.16);transform:translateY(-1px)}
+.front-secondary{background:linear-gradient(#384943,#202f32);color:#e9d9b7;border-color:#b59b71}
+.splash-panel .front-secondary{font-family:Georgia,serif}
+.flow-panel,.setup-panel{
+ width:min(95%,940px);max-width:940px;
+ background:
+ linear-gradient(100deg,#d7c3940b,#192b30cb),
+ radial-gradient(ellipse at 90% 0,#a57d4b46,transparent 55%),
+ linear-gradient(140deg,#1d3035,#09171d);
+ border:1px solid #ad9467;box-shadow:inset 0 0 0 6px #121e21,inset 0 0 0 7px #997b513c,0 15px 70px #02090b9c;
+}
+.flow-panel h2,.setup-panel h2{font-family:Impact,'Arial Narrow',sans-serif;font-size:clamp(26px,7svh,59px);letter-spacing:.095em;text-shadow:0 3px #10171d;color:#efe0bc}
+.flow-copy{font-family:Georgia,serif;font-style:italic;font-size:clamp(11px,2svh,16px);color:#d0c5ad}
+.mode-cards{gap:clamp(6px,1.4svh,13px)}
+.mode-choice{
+ min-height:clamp(66px,15svh,133px);padding:clamp(8px,2svh,18px);
+ background:linear-gradient(130deg,#344640b0,#15262baa);
+ border:1px solid #8b8e775c;border-left:4px solid #aa9368;
+ clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%);
+ transition:background .16s,filter .16s;
+}
+.mode-choice:before{display:none}
+.mode-choice:hover{filter:brightness(1.18)}
+.mode-choice strong{font-family:Impact,'Arial Narrow',sans-serif;font-size:clamp(18px,4svh,33px);letter-spacing:.09em;color:#f2dcad}
+.mode-choice span{font:italic clamp(11px,2svh,17px) Georgia,serif;color:#e2ddcb}
+.mode-choice small{font-size:clamp(9px,1.5svh,12px);letter-spacing:.13em;color:#bcae8d}
+.mode-choice.selected{background:linear-gradient(135deg,#706548b8,#30453eae);border-color:#eac88b}
+.setup-panel .plane-picker{gap:clamp(5px,1.4svh,12px)}
+.setup-panel .plane-choice{
+ background:linear-gradient(140deg,#2d433f,#16282a);border:1px solid #8a917d70;
+ border-top:2px solid #9b8459;min-height:clamp(50px,10svh,80px);
+ transition:filter .16s,background .16s;position:relative
+}
+.setup-panel .plane-choice:hover{filter:brightness(1.2)}
+.setup-panel .plane-choice.selected{border-color:#eed19b;background:linear-gradient(130deg,#75694d,#2a4540);outline:1px solid #d7b574}
+.setup-panel .plane-choice b{font-family:Georgia,serif;font-size:clamp(11px,2.1svh,16px);color:#f1e0bc}
+.setup-panel .plane-choice small{font:italic clamp(9px,1.5svh,12px) Georgia,serif;color:#d1c4a6}
+.setup-panel .mode-row label{font-family:Georgia,serif;color:#e2c48d;letter-spacing:.1em}
+.setup-panel .mode-row select{background:#0c1b20;color:#ebdec4;border:1px solid #a09269;font-family:Georgia,serif}
+.setup-controls{border-left-color:#b29a6d6b}
+.setup-hint{color:#d1c3a2;font-family:Georgia,serif}
+.result-card{background:linear-gradient(140deg,#243a3a,#121e23);border:2px solid #d0af75;padding:clamp(18px,4svh,36px);box-shadow:0 16px 65px #000c}
+.result-card #result-title{font-family:Impact,sans-serif;font-size:clamp(35px,8svh,70px);color:#eed8ab;letter-spacing:.12em}
+.result-card p{font-family:Georgia,serif;color:#ddcfb2}
+#menu-return,#fullscreen-toggle{background:linear-gradient(#3c4d43,#16272a)!important;color:#efdeb8;border:1px solid #c9a574;border-radius:0;box-shadow:inset 0 0 0 2px #15242a}
+@media(max-height:500px){
+ .splash-title{font-size:clamp(43px,16svh,84px)}#splash-aircraft{height:clamp(36px,20svh,90px)}
+ .splash-panel{padding:6px 20px}.splash-foot{margin-top:3px}
+ .front-panel{padding:8px 16px}
+ .flow-panel h2,.setup-panel h2{font-size:clamp(21px,6svh,35px)}
+ .mode-choice{min-height:62px}.mode-choice strong{font-size:clamp(16px,3.5svh,23px)}
+ .setup-panel .plane-choice{min-height:48px;padding:5px}
+}
+@media(prefers-reduced-motion:reduce){.front-action,.front-secondary,.mode-choice,.plane-choice{transition:none!important}}
