@@ -57,9 +57,22 @@
       osc.connect(gain);gain.connect(audio.destination);osc.start(t);osc.stop(t+.115);
     }catch(_){}
   }
-  function plane(type,id,x,y,angle){
+  function pilotAttributes(values){
+ const n=k=>clamp(Number(values?.[k])||65,35,95);
+ return {manoeuvrability:n('manoeuvrability'),gunnery:n('gunnery'),engine:n('engine')};
+}
+function readPilotAttributes(){
+ try{return JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')||'null')?.profile?.attributes;}catch{return null;}
+}
+function pilotFactors(p){
+ const a=p.attributes||pilotAttributes();
+ return {turn:1+(a.manoeuvrability-65)*.0017,gun:1+(a.gunnery-65)*.0028,
+ engine:1+(a.engine-65)*.0012,accel:1+(a.engine-65)*.0035,
+ momentum:1+(a.manoeuvrability-65)*.002};
+}
+function plane(type,id,x,y,angle){
     const d=PLANES[type];
-    return {id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
+    return {attributes:pilotAttributes(),id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
       vy:Math.sin(angle)*d.speed*.8,health:d.hull,armour:d.armour,rearCooldown:0,rearShots:0,rearShotTime:0,
       critical:false,criticalCause:'',flightRisk:0,climbLoad:0,aiRecoveryTime:0,tailAssist:0,
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boostCharge:100,boosting:false,aiBoost:false,
@@ -90,6 +103,9 @@
         state.fliers.push(p);
       }
     }
+    state.fliers[0].attributes=pilotAttributes(readPilotAttributes());
+    if(state.mode==='campaign'&&state.campaignEncounter?.attributes)
+      for(const foe of state.fliers.slice(1))foe.attributes=pilotAttributes(state.campaignEncounter.attributes);
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.time=state.mode==='survival'?70:state.mode==='campaign'?120:90;state.impactLock=0;state.phase='playing';state.paused=false;
     state.banner='ROUND '+state.round;state.bannerTime=1.5;
@@ -206,9 +222,9 @@
   }
   function shoot(p){
     // Straight, readable cannon and machine-gun bursts; no component targeting.
-    const dx=Math.cos(p.angle),dy=Math.sin(p.angle);
+    const skill=pilotFactors(p),dx=Math.cos(p.angle),dy=Math.sin(p.angle);
     state.bullets.push({x:p.x+dx*(p.d.radius+2),y:p.y+dy*(p.d.radius+2),
-      vx:dx*p.d.bulletSpeed+p.vx*.35,vy:dy*p.d.bulletSpeed+p.vy*.35,
+      vx:dx*p.d.bulletSpeed*skill.gun+p.vx*.35,vy:dy*p.d.bulletSpeed*skill.gun+p.vy*.35,
       owner:p.id,damage:p.d.damage,life:p.d.gunLife,age:0});
     emit(p.x+dx*(p.d.radius+3),p.y+dy*(p.d.radius+3),2,'#fff0a3',7);
     p.muzzleFlash=.12;
@@ -291,7 +307,7 @@
       }
       return;
     }
-    const engine=1,tail=1;
+    const skill=pilotFactors(p),engine=skill.engine,tail=1;
     const climb=Math.max(0,-Math.sin(p.angle));
     const dive=Math.max(0,Math.sin(p.angle));
     // Airspeed and altitude trade off naturally; diving stores useful speed.
@@ -312,19 +328,19 @@
     const magneticTurn=tailMagnet(p,steer);
     const desired=p.climbAssist>0
       ?clamp(angleDiff(Math.atan2(-43,Math.cos(p.angle)<0?-20:20),p.angle)*2,-p.d.turn,p.d.turn)
-      :steer*p.d.turn*authority*(1-p.flightRisk*.34)+noseDrop+magneticTurn;
+      :steer*p.d.turn*skill.turn*authority*(1-p.flightRisk*.34)+noseDrop+magneticTurn;
     p.turnVelocity+=(desired-p.turnVelocity)*Math.min(1,dt*(p.role==='bomber'?6:7.5));
     p.angle+=p.turnVelocity*dt;
     if(p.angle>Math.PI)p.angle-=TAU;
     if(p.angle< -Math.PI)p.angle+=TAU;
     const power=1-.15*clamp((.6-p.health/p.d.hull)/.6,0,1);
-    const wanted=p.d.speed*power*(.87+.13*p.energy/100)*(p.boosting?1.27:1)*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
+    const wanted=p.d.speed*engine*power*(.87+.13*p.energy/100)*(p.boosting?1.27:1)*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
     // Fighters retain less momentum than big, heavier aircraft.
     const drag=p.role==='fighter'?1.55:p.role==='heavy'?1.2:.98;
     const accel=p.role==='fighter'?2.1:p.role==='heavy'?1.65:1.25;
-    p.speed+=(wanted-p.speed)*Math.min(1,dt*(p.speed>wanted?drag:accel));
+    p.speed+=(wanted-p.speed)*Math.min(1,dt*(p.speed>wanted?drag*skill.momentum:accel*skill.accel));
     p.speed+=dt*(15*dive-9*climb);
-    p.speed=clamp(p.speed,8,p.d.speed*(p.boosting?1.48:1.36));
+    p.speed=clamp(p.speed,8,p.d.speed*engine*(p.boosting?1.48:1.36));
     // The velocity vector gently follows the fuselage, rather than snapping.
     const follow=Math.min(1,dt*(p.role==='bomber'?3.2:p.role==='heavy'?4:5.1));
     p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
@@ -793,9 +809,9 @@
     g.fillStyle=hud.gold;g.fillText(p?p.d.name:'WINGMAN',7,3);
     const en=e?e.d.name+(state.participants>2?' + '+(state.participants-2):''):'SELECT PLANE';
     g.fillText(en,W-7-g.measureText(en).width,3);
-    g.font='bold 5px monospace';g.fillStyle=hud.minor;
-    if(p)g.fillText(p.role==='heavy'?'HEAVY FIGHTER':p.role==='bomber'?(p.type==='he111'?'MEDIUM BOMBER':'HEAVY BOMBER'):'FIGHTER',7,9);
-    if(e){const cls=e.role==='heavy'?'HEAVY FIGHTER':e.role==='bomber'?(e.type==='he111'?'MEDIUM BOMBER':'HEAVY BOMBER'):'FIGHTER';g.fillText(cls,W-7-g.measureText(cls).width,9);}
+    g.font='bold 7px monospace';g.fillStyle='#f5d48c';
+    if(p)g.fillText('YOU: '+(p.role==='heavy'?'HEAVY FIGHTER':p.role==='bomber'?(p.type==='he111'?'MEDIUM BOMBER':'HEAVY BOMBER'):'FIGHTER'),7,9);
+    if(e){const cls=e.role==='heavy'?'HEAVY FIGHTER':e.role==='bomber'?(e.type==='he111'?'MEDIUM BOMBER':'HEAVY BOMBER'):'FIGHTER';g.fillText('ENEMY: '+cls,W-7-g.measureText('ENEMY: '+cls).width,9);}
     if(state.participants>2){
       for(const pilot of state.fliers){
         const ix=W/2-40+pilot.id*27;

@@ -78,6 +78,7 @@ function makeChoices(run){
   types:(run.rank>=3&&run.rank<MAX_RANK&&i===2&&run.rank%2===1)?[p.plane,shuffled.find(x=>x.id!==p.id&&x.plane!==p.plane)?.plane||p.plane]:[p.plane],
   difficulty:run.rank<2?'rookie':run.rank<5?'standard':'ace',
   arena:(run.rank+i)%4,
+  attributes:p.attributes,
   label:p.name
  }));
 }
