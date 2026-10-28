@@ -615,3 +615,35 @@ body:has(#career-screen:not([hidden])) #touch-controls{
  .setup-panel .setup-columns{grid-template-columns:minmax(0,1fr)}
  .setup-panel .plane-picker{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+
+/* Road to Ace now shares the painted-world language without altering saves. */
+.career-screen{background:linear-gradient(95deg,#061726f6,#071e2ac9),url('../../assets/art/wingman-menu-scene.svg') center/cover!important}
+.career-panel{
+ border:1px solid #d7b987!important;border-radius:2px!important;
+ background:linear-gradient(100deg,#0b2636ed,#081725f4 88%),
+ url('../../assets/art/wingman-menu-scene.svg') center/cover!important;
+ box-shadow:inset 0 0 0 7px #071522bd,inset 0 0 0 8px #e5c98a50,0 22px 70px #000b!important;
+}
+.career-panel .career-head h2{font-family:Impact,'Arial Narrow',sans-serif!important;font-size:clamp(23px,4vw,40px)!important;letter-spacing:.13em!important;text-shadow:0 3px #0d1725}
+.career-panel .candidate-grid{gap:clamp(5px,1.5vw,16px)!important}
+.career-panel .candidate-card{
+ background:linear-gradient(180deg,#355c7199,#0b1d2fe8 70%)!important;
+ border:1px solid #bda879!important;
+ box-shadow:inset 0 0 0 3px #071525b0,0 8px 17px #0008!important;
+ padding:clamp(5px,1vw,12px)!important;
+}
+.career-panel .candidate-portrait{width:min(100%,180px)!important;border:2px solid #d8c297!important;box-shadow:0 8px 17px #010f1aab!important;filter:none!important}
+.career-panel .candidate-card strong{font-family:Georgia,serif;color:#ffe0a5!important;letter-spacing:.03em!important}
+.career-panel .career-primary{background:linear-gradient(#f5d9a2,#c9a071)!important;box-shadow:0 4px 0 #614a38!important}
+.career-panel .career-licence{background:linear-gradient(#17405bac,#0d2433bb)!important;border-color:#c7aa75!important}
+.career-panel .career-route-map{background:linear-gradient(145deg,#07182799,#0d2e3cdb),url('../../assets/art/wingman-menu-scene.svg') 55% 45%/cover!important;border-color:#a99e83!important}
+.career-route-map .route-node{background:linear-gradient(#1b3d4ed9,#0d1f2ee9)!important}
+.career-panel .route-photo{box-shadow:0 7px 13px #0009;border:2px solid #dbbf83}
+.career-panel .route-opponent{background:linear-gradient(145deg,#284a63,#0e2535)!important}
+@media(pointer:coarse) and (orientation:landscape){
+ .career-panel .career-head h2{font-size:clamp(18px,4.5svh,27px)!important}
+ .career-panel .candidate-portrait{width:min(100%,88px)!important}
+ .career-panel .candidate-card{padding:5px!important}
+ .career-panel .candidate-card strong{font-size:10px!important}
+ .career-panel .career-route-map{height:min(43svh,225px)!important}
+}
