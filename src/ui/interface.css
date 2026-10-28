@@ -423,3 +423,12 @@ body:has(#career-screen:not([hidden])) #touch-controls{
  .wingman-front .splash-tagline{margin-bottom:3px!important}
  .wingman-front .mode-choice{min-height:44px!important}
 }
+
+/* Definite-size grid track: percentage-height menu panels must not inflate
+   the grid row beyond the visible frame and push actions below the screen. */
+.wingman-front{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+.wingman-front .front-panel{min-width:0;min-height:0}
+@media (pointer:coarse) and (orientation:landscape), (max-height:540px){
+ .wingman-front .splash-panel{justify-content:safe center!important}
+ .wingman-front .flow-panel,.wingman-front .setup-panel{min-height:0!important}
+}
