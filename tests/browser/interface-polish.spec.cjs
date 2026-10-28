@@ -270,3 +270,48 @@ test('rank map has eight three-way branching tiers and an active challenge lane'
  await expect(map.locator('#active-rung [data-choice]')).toHaveCount(3);
  await expect(page.locator('[data-action="select"]')).toBeVisible();
 });
+
+test('Wingman 2.0 title and operation cards load illustrated artwork',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ const hero=page.locator('#splash-panel');
+ await expect(hero).toBeVisible();
+ await expect(hero.locator('.splash-copy')).toBeVisible();
+ const artwork=await hero.evaluate(el=>getComputedStyle(el).backgroundImage);
+ expect(artwork).toContain('wingman-menu-scene.svg');
+ const asset=await page.evaluate(async()=>{
+  const r=await fetch('./assets/art/wingman-menu-scene.svg');
+  return {status:r.status,type:r.headers.get('content-type'),text:(await r.text()).slice(0,110)};
+ });
+ expect(asset.status).toBe(200);
+ expect(asset.text).toContain('<svg');
+ await page.locator('#splash-continue').click();
+ await expect(page.locator('#mode-panel')).toBeVisible();
+ await expect(page.locator('.mode-choice')).toHaveCount(4);
+ for(const card of await page.locator('.mode-choice').all()){
+  expect(await card.evaluate(el=>getComputedStyle(el).backgroundImage)).toContain('wingman-menu-scene.svg');
+ }
+ expect(errors).toEqual([]);
+});
+
+test('Wingman 2.0 airframe gallery uses six genuine live aircraft previews',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ await page.locator('#splash-continue').click();
+ await page.locator('#mode-next').click();
+ await expect(page.locator('#options-panel')).toBeVisible();
+ await expect(page.locator('.wm-aircraft-card-canvas')).toHaveCount(6);
+ const painted=await page.locator('.wm-aircraft-card-canvas').evaluateAll(els=>els.map(c=>{
+  const ctx=c.getContext('2d'),rgba=ctx.getImageData(0,0,c.width,c.height).data;
+  let opaque=0;for(let i=3;i<rgba.length;i+=4)if(rgba[i]>0)opaque++;
+  return opaque;
+ }));
+ expect(painted.every(n=>n>250)).toBe(true);
+ await page.locator('[data-plane="bf110"]').click();
+ await expect(page.locator('#wm-featured-name')).toHaveText('BF 110');
+ await expect(page.locator('#wm-featured-description')).toContainText('LUFTWAFFE');
+ expect(await page.locator('#wm-stat-armour').evaluate(el=>el.style.getPropertyValue('--wm-stat'))).toBe('77%');
+ await page.locator('#options-back').click();
+ await expect(page.locator('#mode-panel')).toBeVisible();
+ expect(errors).toEqual([]);
+});
