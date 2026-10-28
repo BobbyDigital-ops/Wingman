@@ -1066,111 +1066,72 @@ function plane(type,id,x,y,angle){
     g.fillStyle=color;g.fillRect(x,y,Math.ceil(w*clamp(value/max,0,1)),4);
   }
   function drawHud(){
-    // Vintage aircraft instruments rather than desktop-style panels.
-    // All dimensions are in the 250px flight coordinates, then drawn at
-    // device resolution on the dedicated crisp overlay canvas.
-    const pilot=state.fliers[0],foe=state.fliers[1],cx=W/2;
-    const shortName=q=>({fighter:'SPITFIRE',heavy:'BEAUFIGHTER',
-      bomber:'LANCASTER',bf109:'BF 109',bf110:'BF 110',he111:'HE 111'})[q?.type]||'UNKNOWN';
-    const allied=pilot?.d.nation!=='Germany';
-    const cream='#f4e7cc',muted='#acb7ac',gold='#d6ae73';
-    const scale=clamp(W/520,.86,1.18);
-    const plateW=clamp(W*.29,112,164),plateH=35;
-    const enemyX=W-plateW,enemySide=true;
-    g.save();g.textBaseline='top';g.lineJoin='round';g.lineCap='round';
-    // Painted steel plates: tiny fasteners, low-gloss black enamel, brass trim.
-    function plate(x,right,q){
-      g.fillStyle='#17242bdc';
-      g.beginPath();
-      if(right){g.moveTo(x+6,1);g.lineTo(x+plateW-3,1);g.lineTo(x+plateW-3,plateH-4);
-        g.lineTo(x+3,plateH-4);g.lineTo(x,plateH-8);}
-      else{g.moveTo(x+3,1);g.lineTo(x+plateW-6,1);g.lineTo(x+plateW,plateH-8);
-        g.lineTo(x+plateW-3,plateH-4);g.lineTo(x+3,plateH-4);}
-      g.closePath();g.fill();
-      g.strokeStyle='#a8987666';g.lineWidth=.65;g.stroke();
-      g.fillStyle='#d2aa73';g.fillRect(right?x+plateW-5:x+3,2,2,plateH-8);
-      for(const fx of [right?x+plateW-9:x+9,right?x+8:x+plateW-12]){
-        g.fillStyle='#8d9187';g.beginPath();g.arc(fx,5,1.05,0,TAU);g.fill();
-        g.fillStyle='#18242a';g.fillRect(fx-.7,4.8,1.4,.3);
-      }
-      const nationality=q?.d.nation==='Germany';
-      const label=right?'HOSTILE / '+(nationality?'LUFTWAFFE':'RAF'):
-        'YOUR AIRCRAFT / '+(nationality?'LUFTWAFFE':'RAF');
-      g.textAlign=right?'right':'left';
-      const tx=right?x+plateW-10:x+10;
-      g.font='bold 5.4px monospace';g.fillStyle=right?'#db9d8a':'#9ebbb3';
-      g.fillText(label,tx,5,plateW-20);
-      g.fillStyle=cream;g.font='bold 10px Georgia,serif';
-      g.fillText(shortName(q),tx,12,plateW-20);
-      const x0=x+10,bw=plateW-20;
-      const hull=clamp((q?.health||0)/(q?.d.hull||1),0,1);
-      const armour=clamp((q?.armour||0)/(q?.d.armour||1),0,1);
-      g.fillStyle='#3b4542';g.fillRect(x0,26,bw,3);
-      g.fillStyle=right?'#bd806e':'#b2bd93';g.fillRect(x0,26,bw*hull,3);
-      g.fillStyle='#4e6669';g.fillRect(x0,30,bw,1.5);
-      g.fillStyle='#8ab4b6';g.fillRect(x0,30,bw*armour,1.5);
+    // Wingman combat flight strip: one restrained enamel instrument row,
+    // prominent theatre and score, airspeed as the only live needle gauge.
+    // The climb/stall simulation remains passive, never a HUD dial.
+    const p=state.fliers[0],enemy=state.fliers[1],mid=W/2;
+    const cream='#eee1c4',brass='#cbaa72',fog='#adc1bb';
+    const names={fighter:'SPITFIRE',heavy:'BEAUFIGHTER',bomber:'LANCASTER',
+      bf109:'BF 109',bf110:'BF 110',he111:'HE 111'};
+    const name=q=>names[q?.type]||'UNKNOWN';
+    const plateW=clamp(W*.28,111,160);
+    g.save();g.textBaseline='middle';
+    function faction(q){return q?.d.nation==='Germany'?'LUFTWAFFE':'ROYAL AIR FORCE';}
+    function craft(q,x,right){
+      const w=plateW,edge=right?-1:1;
+      g.fillStyle='#111b1de8';g.beginPath();
+      if(right){g.moveTo(x+9,0);g.lineTo(x+w,0);g.lineTo(x+w,35);g.lineTo(x+5,35);g.lineTo(x,29);}
+      else{g.moveTo(x,0);g.lineTo(x+w-9,0);g.lineTo(x+w,29);g.lineTo(x+w-5,35);g.lineTo(x,35);}
+      g.closePath();g.fill();g.strokeStyle='#a78e60';g.lineWidth=.8;g.stroke();
+      const tx=right?x+w-9:x+9;g.textAlign=right?'right':'left';
+      g.fillStyle=brass;g.font='bold 5px monospace';
+      g.fillText((right?'ENEMY • ':'PILOT • ')+faction(q),tx,7,w-15);
+      g.fillStyle=cream;g.font='bold 11px Georgia,serif';
+      g.fillText(name(q),tx,18,w-17);
+      const bx=x+9,bw=w-18;
+      g.fillStyle='#3b4540';g.fillRect(bx,27,bw,3.5);
+      g.fillStyle=right?'#c47862':'#aabe8f';
+      g.fillRect(bx,27,bw*clamp((q?.health||0)/(q?.d.hull||1),0,1),3.5);
+      g.fillStyle='#78acb1';g.fillRect(bx,32,bw*clamp((q?.armour||0)/(q?.d.armour||1),0,1),1.5);
       g.textAlign='left';
     }
-    plate(0,false,pilot);plate(enemyX,enemySide,foe);
-    // Circular elapsed-time instrument with engraved ticks.
-    function dial(x,y,r,t,caption,value,accent){
-      g.fillStyle='#111b21df';g.beginPath();g.arc(x,y,r+2,0,TAU);g.fill();
-      g.strokeStyle='#c5a474';g.lineWidth=1.15;g.beginPath();g.arc(x,y,r+.3,0,TAU);g.stroke();
-      g.strokeStyle='#82908b88';g.lineWidth=.55;g.beginPath();
-      g.arc(x,y,r-2,0,TAU);g.stroke();
-      for(let i=0;i<=10;i++){
-        const an=Math.PI*.75+i*Math.PI*1.5/10;
-        const rr=r-(i%2===0?4:3);
-        g.strokeStyle=i>=8?'#c58170':'#adae9a';
-        g.lineWidth=i%2===0?1:.55;g.beginPath();
-        g.moveTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr);
-        g.lineTo(x+Math.cos(an)*(r-1.3),y+Math.sin(an)*(r-1.3));g.stroke();
-      }
-      const an=Math.PI*.75+clamp(t,0,1)*Math.PI*1.5;
-      g.strokeStyle=accent;g.lineWidth=1.6;g.beginPath();g.moveTo(x-Math.cos(an)*3,y-Math.sin(an)*3);
-      g.lineTo(x+Math.cos(an)*(r-6),y+Math.sin(an)*(r-6));g.stroke();
-      g.fillStyle='#e8d7b6';g.beginPath();g.arc(x,y,1.55,0,TAU);g.fill();
-      g.font='bold 5px monospace';g.fillStyle=muted;g.textAlign='center';
-      g.fillText(caption,x,y+r+4);
-      g.font='bold 8px Georgia,serif';g.fillStyle=cream;g.fillText(String(value),x,y+4);
-    }
-    // Centre insignia plus watch dial, intentionally separated from nameplates.
-    const centerTop=2;
-    g.fillStyle='#15242bdc';g.beginPath();
-    g.moveTo(cx-34,centerTop);g.lineTo(cx+34,centerTop);
-    g.lineTo(cx+29,33);g.lineTo(cx-29,33);g.closePath();g.fill();
-    g.strokeStyle='#9e896a88';g.lineWidth=.65;g.stroke();
-    g.font='bold 5px monospace';g.textAlign='center';g.fillStyle=gold;
-    g.fillText(state.mode==='survival'?'SORTIE / WAVE':state.teams?'SQUADRON ENGAGEMENT':'DOGFIGHT',cx,5,63);
-    const score=state.mode==='survival'?'W'+state.round:
-      state.participants>2?(state.teams?'2 v 2':state.participants+' SHIPS'):
-      state.scores[0]+'  :  '+state.scores[1];
-    g.font='bold 12px Georgia,serif';g.fillStyle=cream;g.fillText(score,cx,13,62);
-    g.font='5px monospace';g.fillStyle='#9ea9a4';
-    g.fillText((ARENAS[state.arena]||'ALPINE')+' FRONT',cx,27,64);
-    // Instruments float below the header and have a natural gap between them.
-    // They do not occupy the lower thumb-control / manoeuvring area.
-    const gaugeR=15.5,gaugeY=55;
-    const speed=pilot?.speed||0,base=pilot?.d.speed||82;
-    const speedMax=base*(pilot?.type==='fighter'?1.9:1.6);
-    dial(cx-25,gaugeY,gaugeR,speed/speedMax,'AIRSPEED',Math.round(speed),'#e7b377');
-    const risk=clamp(pilot?.flightRisk||0,0,1);
-    dial(cx+25,gaugeY,gaugeR,risk,'CLIMB LOAD',Math.round(risk*100),'#c2c9ac');
+    craft(p,0,false);craft(enemy,W-plateW,true);
+    // Medal-like score plaque rather than UI panels.
+    const sw=clamp(W-plateW*2-14,70,125);
+    g.fillStyle='#19272be9';g.fillRect(mid-sw/2,0,sw,35);
+    g.strokeStyle='#b89963';g.lineWidth=.8;g.strokeRect(mid-sw/2+.5,.5,sw-1,34);
+    g.fillStyle=brass;g.fillRect(mid-sw/2+5,3,sw-10,1);
+    g.textAlign='center';g.fillStyle='#c5b48c';g.font='bold 5.5px monospace';
+    g.fillText(state.mode==='survival'?'SURVIVAL':state.teams?'SQUADRON':'DOGFIGHT',mid,9,sw-6);
+    const score=state.mode==='survival'?'WAVE '+state.round:
+      state.participants>2?(state.teams?'2 V 2':state.participants+' AIRCRAFT'):
+      state.scores[0]+'  —  '+state.scores[1];
+    g.fillStyle=cream;g.font='bold 13px Georgia,serif';g.fillText(score,mid,23,sw-7);
+    // Small clock-and-airspeed combination, leaving most of the sky clear.
+    const ty=42;
+    g.fillStyle='#101b20d9';g.beginPath();g.roundRect?.(mid-56,ty,112,16,5);
+    if(g.roundRect)g.fill();else g.fillRect(mid-56,ty,112,16);
+    g.strokeStyle='#ab946b';g.lineWidth=.65;g.strokeRect(mid-56,ty,112,16);
+    g.font='bold 7px monospace';g.textAlign='left';g.fillStyle='#e4d1aa';
+    g.fillText('SPD '+Math.round(p?.speed||0),mid-50,ty+8);
+    g.textAlign='right';g.fillText(Math.max(0,Math.ceil(state.time))+' SEC',mid+49,ty+8);
+    g.textAlign='center';g.font='bold 5.5px monospace';g.fillStyle='#b6b29a';
+    g.fillText(ARENAS[state.arena]||'ALPINE',mid,ty+8,32);
     if(state.wind?.active){
-      g.fillStyle='#17272cdb';g.fillRect(cx-32,83,64,9);
-      g.font='bold 6px monospace';g.fillStyle='#edcc9e';g.textAlign='center';
-      g.fillText((state.wind.current>=0?'WIND → ':'← WIND ')+Math.round(Math.abs(state.wind.current)),cx,85,61);
+      g.fillStyle='#122329d8';g.fillRect(mid-36,65,72,12);
+      g.strokeStyle='#baa271';g.strokeRect(mid-36,65,72,12);
+      g.fillStyle=cream;g.font='bold 6px monospace';
+      g.fillText((state.wind.current>0?'WIND → ':'← WIND ')+Math.round(Math.abs(state.wind.current)),mid,71,69);
     }
-    // Gunners warn you only when the actual target is within the rear arc.
-    if(pilot&&foe?.role==='bomber'&&foe.alive){
-      const dx=wrappedDelta(foe.x,pilot.x),dy=pilot.y-foe.y;
-      const along=dx*Math.cos(foe.angle)+dy*Math.sin(foe.angle);
-      const lateral=Math.abs(-dx*Math.sin(foe.angle)+dy*Math.cos(foe.angle));
+    if(p&&enemy?.role==='bomber'&&enemy.alive){
+      const dx=wrappedDelta(enemy.x,p.x),dy=p.y-enemy.y;
+      const along=dx*Math.cos(enemy.angle)+dy*Math.sin(enemy.angle);
+      const lateral=Math.abs(-dx*Math.sin(enemy.angle)+dy*Math.cos(enemy.angle));
       if(along< -11&&Math.hypot(dx,dy)<155&&lateral<65){
-        g.fillStyle='#612d2adf';g.fillRect(cx-34,97,68,12);
-        g.strokeStyle='#d7a28b';g.lineWidth=.7;g.strokeRect(cx-34,97,68,12);
-        g.font='bold 7px monospace';g.fillStyle='#ffe0bd';g.textAlign='center';
-        g.fillText('TAIL GUN FIRE',cx,100,65);
+        g.fillStyle='#642d28e8';g.fillRect(mid-38,83,76,14);
+        g.strokeStyle='#d9aa82';g.strokeRect(mid-38,83,76,14);
+        g.fillStyle='#f9dec1';g.font='bold 7px monospace';
+        g.fillText('TAIL GUNS!',mid,90,73);
       }
     }
     g.restore();
