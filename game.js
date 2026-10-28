@@ -408,8 +408,10 @@ function plane(type,id,x,y,angle){
     const skill=pilotFactors(p),engine=skill.engine,tail=1;
     const climb=Math.max(0,-Math.sin(p.angle));
     const dive=Math.max(0,Math.sin(p.angle));
-    // Airspeed and altitude trade off naturally; diving stores useful speed.
-    p.energy=clamp(p.energy+dt*(19*dive-16*climb+4*(1-climb)),0,100);
+    // A simple energy model: a sustained climb exchanges forward airspeed
+    // for altitude; a dive converts height into kinetic energy. The engine
+    // still slowly restores cruise speed when level. No separate boost key.
+    p.energy=clamp(p.energy+dt*(24*dive-15*climb+4*(1-climb)),0,100);
     // Stall risk is based on altitude GAINED RAPIDLY, not the current
     // height or an arbitrary low energy threshold. A rolling climb reserve
     // naturally recovers when levelling out or diving.
@@ -434,17 +436,24 @@ function plane(type,id,x,y,angle){
     const power=1-.15*clamp((.6-p.health/p.d.hull)/.6,0,1);
     const wanted=p.d.speed*engine*(p.engineCutTime>0?.42:1)*(p.diveTime>0?1.15:1)*power*(.87+.13*p.energy/100)*(p.boosting?1.27:1)*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
     // Fighters retain less momentum than big, heavier aircraft.
-    const drag=p.role==='fighter'?1.55:p.role==='heavy'?1.2:.98;
-    const accel=p.role==='fighter'?2.1:p.role==='heavy'?1.65:1.25;
-    p.speed+=(wanted-p.speed)*Math.min(1,dt*(p.speed>wanted?drag*skill.momentum:accel*skill.accel));
-    p.speed+=dt*(15*dive-9*climb)+(p.diveTime>0?dt*12:0);
-    if(p.diveTime>0)p.vy+=dt*36;
-    p.speed=clamp(p.speed,8,p.d.speed*engine*(p.boosting?1.48:1.36));
+    // Weak engine recovery while climbing/dive bombing lets pitch matter:
+    // a two-second steep climb now bleeds a noticeable amount of speed.
+    const drag=p.role==='fighter'?1.08:p.role==='heavy'?.93:.79;
+    const accel=p.role==='fighter'?1.10:p.role==='heavy'?.89:.72;
+    const recovery=(1-climb*.70-dive*.55);
+    p.speed+=(wanted-p.speed)*Math.min(1,dt*(p.speed>wanted?drag:accel)*skill.accel*recovery);
+    const exchange=p.role==='fighter'?1:p.role==='heavy'?.86:.76;
+    p.speed+=dt*exchange*(43*dive*dive-29*climb*climb);
+    if(p.diveTime>0){p.speed+=dt*11;p.vy+=dt*36;}
+    // A strong dive stores a temporary overspeed, which gradually dissipates
+    // after levelling off; no infinite acceleration or negative stall speed.
+    p.speed=clamp(p.speed,p.d.speed*.43,p.d.speed*engine*(p.boosting?1.52:1.43));
     // The velocity vector gently follows the fuselage, rather than snapping.
     const follow=Math.min(1,dt*(p.role==='bomber'?3.2:p.role==='heavy'?4:5.1));
     p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
     p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
-    // Phase 1 climb, dive, drag and steering physics are unchanged.
+    // Airspeed exchange works with existing climb-load/stall handling.
+    // The velocity vector still turns smoothly (no sudden arcade snap).
     if(p.flightRisk>0)p.vy+=dt*(5+15*p.flightRisk);
     const oldY=p.y;
     p.x+=(p.vx+state.wind.current)*dt;p.y+=p.vy*dt;
@@ -1093,6 +1102,11 @@ function plane(type,id,x,y,angle){
       g.fillStyle='#e5c16d';g.fillRect(meterX+13,meterY,13,4);
       g.fillStyle='#de806e';g.fillRect(meterX+26,meterY,14,4);
       g.fillStyle='#f6f5e6';g.fillRect(meterX+Math.min(38,Math.round(risk*38)),meterY-2,2,8);
+      // Readable airspeed makes the climb/dive tradeoff apparent during play.
+      const speedPercent=clamp(p.speed/(p.d.speed*1.43),0,1);
+      g.fillStyle='#cfe2e3';g.font='bold 6px monospace';
+      g.fillText('SPD '+Math.round(p.speed),W/2+34,44);
+      bar(W/2+34,54,38,speedPercent,1,p.speed<p.d.speed*.67?'#e2a068':'#81c9d1');
       g.fillStyle=p.rollTime>0?'#f8e4a2':'#c0d9df';
       g.fillText('SKILL '+(p.skillCooldown>0?Math.ceil(p.skillCooldown)+'s':'READY'),165,24);
       if(p.role==='bomber'&&p.bombQueue>0){
