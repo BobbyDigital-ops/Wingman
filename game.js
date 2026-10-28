@@ -814,22 +814,35 @@
   }
   function bindButton(id,key,action){
     const el=document.getElementById(id);
+    let activePointer=null;
+    const release=ev=>{
+      if(activePointer===null||(ev?.pointerId!==undefined&&ev.pointerId!==activePointer))return;
+      activePointer=null;
+      if(key)controls[key]=false;
+      el.classList.remove('pressed');
+    };
     el.addEventListener('pointerdown',ev=>{
+      if(activePointer!==null)return;
       ev.preventDefault();
-      el.setPointerCapture(ev.pointerId);
+      activePointer=ev.pointerId;
       el.classList.add('pressed');
       audioUnlock();
       if(key)controls[key]=true;
       if(action)action();
+      // Window listeners provide a fallback when mobile browsers lose capture.
+      try{el.setPointerCapture(ev.pointerId);}catch(_){}
     });
-    const release=ev=>{
-      if(key)controls[key]=false;
-      el.classList.remove('pressed');
-    };
     el.addEventListener('pointerup',release);
     el.addEventListener('pointercancel',release);
     el.addEventListener('lostpointercapture',release);
+    window.addEventListener('pointerup',release);
+    window.addEventListener('pointercancel',release);
+    // Stop iOS/Safari long-press text selection and native touch gestures.
+    el.addEventListener('touchstart',ev=>ev.preventDefault(),{passive:false});
     el.addEventListener('contextmenu',ev=>ev.preventDefault());
+    el.addEventListener('selectstart',ev=>ev.preventDefault());
+    window.addEventListener('blur',()=>release());
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)release();});
   }
   bindButton('left','left');
   bindButton('right','right');
