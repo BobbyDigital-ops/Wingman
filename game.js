@@ -7,7 +7,7 @@
   const aircraftArt=window.WingmanSprites;
   const modelCanvas=document.getElementById('aircraft-layer');
   const modelCtx=modelCanvas.getContext('2d',{alpha:true});
-  const g=canvas.getContext('2d',{alpha:false});
+  let g=canvas.getContext('2d',{alpha:false});
   g.imageSmoothingEnabled=false;
 
   const PLANES={
@@ -307,7 +307,7 @@
     const follow=Math.min(1,dt*(p.role==='bomber'?8.5:p.role==='heavy'?9.5:10.5));
     p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
     p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
-    if(p.critical){p.vy+=dt*(p.detached.left||p.detached.right?69:45);p.speed=Math.max(5,p.speed-dt*13);}
+    if(p.critical){p.vy+=dt*(p.detached.left||p.detached.right?145:115);p.speed=Math.max(5,p.speed-dt*13);}
     p.x+=p.vx*dt;p.y+=p.vy*dt;
     // A soft, continuous boundary recovery avoids frame-to-frame angle snaps.
     const margin=15;
@@ -763,6 +763,10 @@
     }
     g.globalAlpha=1;
     drawHud();
+    // Draw the entire HUD a second time on the high-DPI overlay, preserving
+    // sharp glyphs instead of stretching the logical 250px canvas.
+    const lowRes=g;g=modelCtx;
+    try{drawHud();}finally{g=lowRes;}
     damageDiagram();
     const pilot=state.fliers[0];
     if(pilot&&pilot.alive&&pilot.y>H-42){
