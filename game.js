@@ -61,9 +61,9 @@
     const d=PLANES[type];
     return {id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
       vy:Math.sin(angle)*d.speed*.8,health:d.hull,
-      parts:{engine:100,nose:100,body:100,left:100,right:100},
-      detached:{left:false,right:false},critical:false,criticalCause:'',wreckTimer:0,
-      gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boost:0,
+      parts:{engine:100,body:100,tail:100},
+      critical:false,criticalCause:'',flightRisk:0,
+      gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boostCharge:100,boosting:false,aiBoost:false,
       spawnSafe:1.0,smokeTimer:0,hitFlash:0,alive:true,aiThink:0,
       energy:85,rollTime:0,rollRecovery:0,stallTime:0,wallGrace:0,armourTime:0,bombCooldown:0,climbAssist:0,
       swoopTime:0,swoop:null,turnVelocity:0,damageCause:'',damageNotice:0,muzzleFlash:0};
@@ -187,8 +187,8 @@
     sound('special');
   }
   function shoot(p){
-    // Damaged nose/cowling makes precise bursts noticeably less accurate.
-    const spread=(1-p.parts.nose/100)*.12;
+    // Tail damage adds a small aiming wobble without disabling weapons.
+    const spread=(1-p.parts.tail/100)*.065;
     const a=p.angle+random(-spread,spread),dx=Math.cos(a),dy=Math.sin(a);
     state.bullets.push({x:p.x+dx*(p.d.radius+2),y:p.y+dy*(p.d.radius+2),
       vx:dx*p.d.bulletSpeed+p.vx*.35,vy:dy*p.d.bulletSpeed+p.vy*.35,
@@ -208,40 +208,31 @@
     if(!p.alive||p.spawnSafe>0)return;
     const ca=Math.cos(p.angle),sa=Math.sin(p.angle);
     const lx=(x-p.x)*ca+(y-p.y)*sa;
-    const ly=-(x-p.x)*sa+(y-p.y)*ca;
-    let zone=zoneOverride;
-    if(!zone){
-      // Wing projections are small in side-on view; target the upper/lower
-      // surfaces rather than requiring a huge hitbox at miniature scale.
-      if(ly<-1.65)zone='left';
-      else if(ly>1.65)zone='right';
-      else if(lx>p.d.radius*.47)zone='engine';
-      else if(lx>p.d.radius*.08)zone='nose';
-      else zone='body';
+    // Side-on guns can meaningfully target only nose, centre and tail.
+    const zone=['engine','body','tail'].includes(zoneOverride)?zoneOverride:
+      lx>p.d.radius*.34?'engine':
+      lx< -p.d.radius*.46?'tail':'body';
+    const armour=p.armourTime>0?.45:1;
+    if(zone==='body'||cause!=='GUN'){
+      p.health=Math.max(0,p.health-amount*(cause!=='GUN'?.72:.64)*armour);
+    }else{
+      // More than one complete fighter burst of focused hits is required
+      // to disable a component. Glancing rounds still chip the hull.
+      p.parts[zone]=Math.max(0,p.parts[zone]-amount*(zone==='engine'?.47:.43)*armour);
+      p.health=Math.max(0,p.health-amount*.22*armour);
     }
-    // Repeated accurate hits are intentionally effective. A component can fail
-    // while the main fuselage remains intact.
-    const multiplier=zone==='left'||zone==='right'?3.2:zone==='engine'?2.65:1.7;
-    p.parts[zone]=Math.max(0,p.parts[zone]-amount*multiplier*(p.armourTime>0?.4:1));
-    if((zone==='left'||zone==='right')&&p.parts[zone]<=0&&!p.detached[zone]){
-      p.detached[zone]=true;
-      p.critical=true;p.criticalCause='WING FAILURE';
-      emit(p.x,p.y,25,'#c6ad8b',38);
-      p.damageNotice=2;
+    p.parts.body=clamp(p.health/p.d.hull*100,0,100);
+    if(p.parts.engine<=0&&p.criticalCause!=='ENGINE FAILURE'){
+      p.criticalCause='ENGINE FAILURE';emit(p.x,p.y,12,'#77777b',22);
+    }else if(p.parts.tail<=0&&p.parts.engine>0&&p.criticalCause!=='TAIL FAILURE'){
+      p.criticalCause='TAIL FAILURE';emit(p.x,p.y,10,'#c6ad8b',18);
     }
-    if(zone==='engine'&&p.parts.engine<=0&&!p.critical){
-      p.critical=true;p.criticalCause='ENGINE FAILURE';
-      p.damageNotice=2;emit(p.x,p.y,18,'#77777b',24);
-    }
-    const armourPenalty=1+(100-p.parts.body)/100*.25;
-    p.health-=amount*armourPenalty*(p.armourTime>0?.4:1)*.46;
+    p.critical=p.parts.engine<=0||p.parts.tail<=0;
     p.hitFlash=.17;
-    p.damageCause=cause;p.damageNotice=1.15;
+    p.damageCause=zone.toUpperCase()+' '+cause;p.damageNotice=1.15;
     emit(x,y,p.role==='heavy'?11:7,'#ffe0a0',p.role==='heavy'?38:27);sound('hit');
     if(p.health<=0){
-      p.health=0;p.alive=false;
-      emit(p.x,p.y,28,'#ffc47e',75);
-      emit(p.x,p.y,16,'#625765',35);
+      p.alive=false;emit(p.x,p.y,28,'#ffc47e',75);emit(p.x,p.y,16,'#625765',35);
       if(state.participants===2||p.id===0||opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
     }
   }
@@ -635,7 +626,7 @@
       c.strokeStyle='#b1ecf5c9';c.lineWidth=.75;c.stroke();
     }
     c.scale(.54,.54);
-    aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':'level',p.detached);
+    aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':'level');
     if(p.muzzleFlash>0){c.fillStyle='#fff4ad';c.fillRect(13,-1,7,2);}
     if(p.hitFlash>0){
       c.beginPath();c.ellipse(0,0,8,5,0,0,TAU);
@@ -708,10 +699,10 @@
         g.fillStyle='#ffd9a2';g.fillText(p.bombCooldown>0?'BOMB '+p.bombCooldown.toFixed(1):'BOMB READY',W*.50,27);
       }
       g.fillStyle='#dce8e1';g.fillText('DAMAGE',W-106,19);
-      const zones=[['E','engine'],['N','nose'],['A','body'],['L','left'],['R','right']];
+      const zones=[['E','engine'],['B','body'],['T','tail']];
       for(let i=0;i<zones.length;i++){
         const health=p.parts[zones[i][1]];
-        const x=W-60+i*11;
+        const x=W-43+i*14;
         g.fillStyle=health>65?'#76b68a':health>30?'#e6b96c':'#e77267';
         g.fillRect(x,19,8,8);
         g.fillStyle='#192c35';g.font='bold 6px monospace';g.fillText(zones[i][0],x+1,20);
@@ -726,9 +717,9 @@
     c.save();c.fillStyle='#182b36d9';c.fillRect(cx-34,cy-5,67,35);
     c.strokeStyle='#7c9ba7';c.lineWidth=.45;c.strokeRect(cx-34,cy-5,67,35);
     c.font='bold 4.5px monospace';c.fillStyle='#f6e3ba';c.fillText('AIRFRAME',cx-30,cy-2);
-    const stages=[['E','engine',0],['L','left',1],['R','right',2],['T','body',3]];
+    const stages=[['E','engine'],['B','body'],['T','tail']];
     for(let i=0;i<stages.length;i++){
-      const [symbol,key]=stages[i],value=p.parts[key],x=cx-30+i*16;
+      const [symbol,key]=stages[i],value=p.parts[key],x=cx-25+i*20;
       c.fillStyle=value>65?'#8dd5a0':value>30?'#f0bd75':'#ee7469';
       c.fillRect(x,cy+7,13,11);
       c.fillStyle='#172a35';c.font='bold 6px monospace';c.fillText(symbol,x+4,cy+9);
@@ -781,7 +772,7 @@
     if(pilot&&pilot.critical&&pilot.alive){
       g.fillStyle='#6f2e2acb';g.fillRect(W*.5-60,38,120,14);
       g.fillStyle='#ffdb9b';g.textAlign='center';g.font='bold 8px monospace';
-      g.fillText(pilot.criticalCause+' · PULL UP',W*.5,42);g.textAlign='left';
+      g.fillText(pilot.criticalCause+' · GLIDE',W*.5,42);g.textAlign='left';
     }
     if(pilot&&pilot.damageNotice>0){
       g.font='bold 7px monospace';g.textAlign='center';
