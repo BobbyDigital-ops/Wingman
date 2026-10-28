@@ -237,6 +237,8 @@ function plane(type,id,x,y,angle){
     fullscreenButton.title=full?'Exit full screen':'Full screen';
   }});
   function showMenu(){
+    if(state.mode==='campaign')window.WingmanCareer?.cancelEncounter?.();
+    state.campaignEncounter=null;state.campaignAirframe=null;
     state.phase='menu';state.paused=false;controls.left=false;controls.right=false;controls.boost=false;
     if(menuReturn)menuReturn.hidden=true;
     if(fullscreenButton)fullscreenButton.hidden=true;
