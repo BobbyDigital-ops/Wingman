@@ -96,9 +96,10 @@ function pilotPortrait(faction,look=0){
  const hairParts=buildPortraitHair(hairStyle,hair);
  // Painted source artwork is independent of old procedural SVG features.
  // Legacy SVG stays as a no-network fallback and preserves saved appearances.
- const artIndex=Number.isInteger(opt.portraitIndex)?((opt.portraitIndex%5)+5)%5:
+ const artIndex=Number.isInteger(opt.rosterPortrait)?((opt.rosterPortrait%5)+5)%5:
+   Number.isInteger(opt.portraitIndex)?((opt.portraitIndex%5)+5)%5:
    ((Number(opt.face)||0)*3+(Number(opt.hair)||0))%5;
- const paintedArt=window.WingmanPaintedAtlas&&!Number.isInteger(opt.rosterPortrait)?
+ const paintedArt=window.WingmanPaintedAtlas?
   `<image class="painted-pilot-portrait" href="${window.WingmanPaintedAtlas}" x="${-artIndex*120}" y="0" width="774" height="247" preserveAspectRatio="none"/>`:'';
  return `<svg class="pilot-avatar" viewBox="0 0 120 144" role="img" aria-label="${faction} pilot wearing a customised uniform">
  <defs><linearGradient id="${bgId}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${bg[0]}"/><stop offset="1" stop-color="${bg[1]}"/></linearGradient><linearGradient id="${bgId}-skin" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="${skin}"/><stop offset=".73" stop-color="${skin}"/><stop offset="1" stop-color="#754545"/></linearGradient><linearGradient id="${bgId}-coat" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="${axis?'#8ca894':'#61a1bd'}"/><stop offset="1" stop-color="${axis?'#253e42':'#183c5b'}"/></linearGradient></defs>
