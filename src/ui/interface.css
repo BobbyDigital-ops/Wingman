@@ -432,3 +432,17 @@ body:has(#career-screen:not([hidden])) #touch-controls{
  .wingman-front .splash-panel{justify-content:safe center!important}
  .wingman-front .flow-panel,.wingman-front .setup-panel{min-height:0!important}
 }
+
+/* Fullscreen the entire app, not merely the arena: Road to Ace lives outside
+   the frame. Keeping the career in the fullscreen subtree prevents vanishing. */
+.app:fullscreen{width:100vw!important;height:100dvh!important;min-height:0!important;max-height:none!important;padding:0!important;gap:0!important}
+.app:fullscreen .site-header,.app:fullscreen .site-footer,.app:fullscreen .career-nav{display:none!important}
+.app:fullscreen .game-frame{width:100vw!important;height:100dvh!important;max-height:none!important;min-height:0!important;border:0!important;aspect-ratio:auto!important}
+.career-screen .career-fullscreen{
+ position:fixed;z-index:40;right:12px;top:6px;
+ display:flex;align-items:center;gap:7px;justify-content:center;
+ min-height:31px;padding:5px 10px;color:#f4e8cc;
+ border:1px solid #c7aa7e;background:linear-gradient(#455651,#1b343b);
+ box-shadow:0 3px 7px #0009;letter-spacing:.07em;font-size:10px;
+ touch-action:manipulation;
+}
