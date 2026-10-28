@@ -7,8 +7,17 @@ const PILOT_SKILLS=[['reverse','180° REVERSE'],['roll','BARREL ROLL'],['smoke',
 const AXIS=['bf109','bf110','he111'],ALLIES=['fighter','heavy','bomber'];
 const ROSTER=window.WingmanRoster||[];
 // Existing pilot-0…pilot-27 references remain valid for historical saves.
-const CATALOG=ROSTER.map((p,i)=>({id:p.legacyId||p.id,name:p.name,plane:p.plane,skill:i<6?'rookie':i<17?'standard':'ace',faction:p.faction,signature:p.signature,bio:p.bio,archetype:p.archetype,rosterId:p.id}));
-const byId=Object.fromEntries(CATALOG.map((p,i)=>[p.id,{...p,appearance:appearance(i*47+9),attributes:{...ROSTER[i].attributes}}]));
+const CATALOG=ROSTER.map((p,i)=>({id:p.id,name:p.name,plane:p.plane,skill:i<6?'rookie':i<17?'standard':'ace',faction:p.faction,signature:p.signature,bio:p.bio,archetype:p.archetype,rosterId:p.id}));
+const LEGACY_RIVALS=[["Arthur \"Sparrow\" Miles","fighter"],["James \"Lucky\" Mercer","fighter"],["Peter \"Pip\" Collins","heavy"],["Friedrich \"Finch\" Bauer","bf109"],["Emil \"Ghost\" Hartmann","bf109"],["Otto \"Tin Wing\" Kruger","bf110"],["Henry \"Rook\" Fletcher","fighter"],["William \"Red\" Foster","heavy"],["Douglas \"Compass\" Reed","bomber"],["Kurt \"Jackal\" Weber","bf109"],["Erich \"Knuckles\" Vogel","bf110"],["Hans \"High Noon\" Fischer","he111"],["Daniel \"Skipper\" Price","fighter"],["Thomas \"Bulldog\" Grady","heavy"],["Lukas \"Fox\" Richter","bf109"],["Karl \"Iron\" Neumann","bf110"],["Edward \"Hawk\" Bennett","fighter"],["George \"Mariner\" Walsh","heavy"],["Adler \"The Vulture\" Klaus","bf109"],["Walter \"Sting\" Engel","bf110"],["Michael \"Northwind\" Shaw","fighter"],["Oliver \"Anchor\" Blake","bomber"],["Dietrich \"Blackbird\" Falk","bf109"],["Rudolf \"Wraith\" Stein","bf110"],["Charles \"Last Light\" Morgan","fighter"],["Wilhelm \"The Baron\" Adler","bf109"],["Hugh \"Raven\" Doyle","fighter"],["Max \"Nightwatch\" Beck","bf109"]].map((x,i)=>({
+ id:'pilot-'+i,name:x[0],plane:x[1],
+ faction:AXIS.includes(x[1])?'Axis':'Allies',
+ skill:i<6?'rookie':i<16?'standard':'ace'
+}));
+const byId=Object.fromEntries([
+ ...CATALOG.map((p,i)=>[p.id,{...p,appearance:appearance(i*47+9),attributes:{...ROSTER[i].attributes}}]),
+ ...LEGACY_RIVALS.map((p,i)=>[p.id,{...p,appearance:appearance(i*47+9),attributes:{
+ manoeuvrability:50+(i*17)%37,gunnery:48+(i*23)%40,engine:52+(i*11)%34}}])
+]);
 const aircraft={fighter:'Spitfire',heavy:'Beaufighter',bomber:'Lancaster',bf109:'Emil (Bf 109)',bf110:'Zerstörer (Bf 110)',he111:'Heinkel He 111'};
 const screen=document.getElementById('career-screen'),menu=document.getElementById('menu'),result=document.getElementById('result');
 const nav=document.getElementById('career-open'),licenceBtn=document.getElementById('career-license');
