@@ -1066,98 +1066,111 @@ function plane(type,id,x,y,angle){
     g.fillStyle=color;g.fillRect(x,y,Math.ceil(w*clamp(value/max,0,1)),4);
   }
   function drawHud(){
-    // Flight instruments are etched, angular aluminium plates with thin
-    // progress scales. The sky remains visible; no full-width PowerPoint bar.
-    const pilot=state.fliers[0],foe=state.fliers[1];
-    const style=document.getElementById('hud-style')?.value||'arcade';
-    const brass=style==='competitive'?'#d2e9f4':'#d8c393';
-    const panel=style==='cockpit'?'#212d2bd9':'#102939d5';
-    const rim=style==='competitive'?'#79c1df99':'#b39a7399';
-    const shortName=q=>{
-      const names={fighter:'SPITFIRE',heavy:'BEAUFIGHTER',bomber:'LANCASTER',
-                   bf109:'BF 109',bf110:'BF 110',he111:'HE 111'};
-      return q?names[q.type]||q.d.name:'---';
-    };
-    const armourColor='#79b9cd',hullColor='#92c79b';
-    const pw=clamp(W*.296,108,157),cx=W/2;
-    g.save();g.textBaseline='top';g.textAlign='left';
-    // Opposing panels frame the centre reticle with clipped, angled corners.
-    function panelAt(x,isRight){
-      const edge=isRight?x-5:x+pw+5;
-      const pts=isRight
-        ?[[x-5,0],[x+pw,0],[x+pw,35],[x+3,35],[x-5,27]]
-        :[[x,0],[x+pw+5,0],[x+pw+5,27],[x+pw-3,35],[x,35]];
-      poly(g,pts,panel);
-      g.fillStyle=rim;g.fillRect(isRight?x+3:x,34,pw-3,1);
-      g.fillStyle=brass;
-      g.fillRect(isRight?x+pw-2:x,0,2,35);
+    // Vintage aircraft instruments rather than desktop-style panels.
+    // All dimensions are in the 250px flight coordinates, then drawn at
+    // device resolution on the dedicated crisp overlay canvas.
+    const pilot=state.fliers[0],foe=state.fliers[1],cx=W/2;
+    const shortName=q=>({fighter:'SPITFIRE',heavy:'BEAUFIGHTER',
+      bomber:'LANCASTER',bf109:'BF 109',bf110:'BF 110',he111:'HE 111'})[q?.type]||'UNKNOWN';
+    const allied=pilot?.d.nation!=='Germany';
+    const cream='#f4e7cc',muted='#acb7ac',gold='#d6ae73';
+    const scale=clamp(W/520,.86,1.18);
+    const plateW=clamp(W*.29,112,164),plateH=35;
+    const enemyX=W-plateW,enemySide=true;
+    g.save();g.textBaseline='top';g.lineJoin='round';g.lineCap='round';
+    // Painted steel plates: tiny fasteners, low-gloss black enamel, brass trim.
+    function plate(x,right,q){
+      g.fillStyle='#17242bdc';
+      g.beginPath();
+      if(right){g.moveTo(x+6,1);g.lineTo(x+plateW-3,1);g.lineTo(x+plateW-3,plateH-4);
+        g.lineTo(x+3,plateH-4);g.lineTo(x,plateH-8);}
+      else{g.moveTo(x+3,1);g.lineTo(x+plateW-6,1);g.lineTo(x+plateW,plateH-8);
+        g.lineTo(x+plateW-3,plateH-4);g.lineTo(x+3,plateH-4);}
+      g.closePath();g.fill();
+      g.strokeStyle='#a8987666';g.lineWidth=.65;g.stroke();
+      g.fillStyle='#d2aa73';g.fillRect(right?x+plateW-5:x+3,2,2,plateH-8);
+      for(const fx of [right?x+plateW-9:x+9,right?x+8:x+plateW-12]){
+        g.fillStyle='#8d9187';g.beginPath();g.arc(fx,5,1.05,0,TAU);g.fill();
+        g.fillStyle='#18242a';g.fillRect(fx-.7,4.8,1.4,.3);
+      }
+      const nationality=q?.d.nation==='Germany';
+      const label=right?'HOSTILE / '+(nationality?'LUFTWAFFE':'RAF'):
+        'YOUR AIRCRAFT / '+(nationality?'LUFTWAFFE':'RAF');
+      g.textAlign=right?'right':'left';
+      const tx=right?x+plateW-10:x+10;
+      g.font='bold 5.4px monospace';g.fillStyle=right?'#db9d8a':'#9ebbb3';
+      g.fillText(label,tx,5,plateW-20);
+      g.fillStyle=cream;g.font='bold 10px Georgia,serif';
+      g.fillText(shortName(q),tx,12,plateW-20);
+      const x0=x+10,bw=plateW-20;
+      const hull=clamp((q?.health||0)/(q?.d.hull||1),0,1);
+      const armour=clamp((q?.armour||0)/(q?.d.armour||1),0,1);
+      g.fillStyle='#3b4542';g.fillRect(x0,26,bw,3);
+      g.fillStyle=right?'#bd806e':'#b2bd93';g.fillRect(x0,26,bw*hull,3);
+      g.fillStyle='#4e6669';g.fillRect(x0,30,bw,1.5);
+      g.fillStyle='#8ab4b6';g.fillRect(x0,30,bw*armour,1.5);
+      g.textAlign='left';
     }
-    panelAt(0,false);panelAt(W-pw,true);
-    function craft(q,x,enemy){
-      const padding=7;
-      const title=shortName(q);
-      g.fillStyle=enemy?'#f1c2ac':'#ece1c8';
-      g.font='bold 8px monospace';
-      g.textAlign=enemy?'right':'left';
-      g.fillText(title,enemy?x+pw-padding:x+padding,4,pw-12);
-      g.font='6px monospace';g.fillStyle='#99b5be';
-      g.fillText(enemy?'HOSTILE  ·  '+(q?.role||'AIRCRAFT').toUpperCase()
-        :'YOU  ·  '+(q?.role||'PILOT').toUpperCase(),
-        enemy?x+pw-padding:x+padding,14,pw-12);
-      const start=x+padding,barW=pw-padding*2;
-      // Armour is the narrow cyan stripe; the hull has its own steel scale.
-      g.fillStyle='#334a57';g.fillRect(start,24,barW,2.7);
-      g.fillStyle=armourColor;
-      g.fillRect(start,24,barW*clamp((q?.armour||0)/Math.max(q?.d.armour||1,1),0,1),2.7);
-      g.fillStyle='#334a47';g.fillRect(start,29,barW,3);
-      g.fillStyle=enemy?'#e6a18c':hullColor;
-      g.fillRect(start,29,barW*clamp((q?.health||0)/Math.max(q?.d.hull||1,1),0,1),3);
+    plate(0,false,pilot);plate(enemyX,enemySide,foe);
+    // Circular elapsed-time instrument with engraved ticks.
+    function dial(x,y,r,t,caption,value,accent){
+      g.fillStyle='#111b21df';g.beginPath();g.arc(x,y,r+2,0,TAU);g.fill();
+      g.strokeStyle='#c5a474';g.lineWidth=1.15;g.beginPath();g.arc(x,y,r+.3,0,TAU);g.stroke();
+      g.strokeStyle='#82908b88';g.lineWidth=.55;g.beginPath();
+      g.arc(x,y,r-2,0,TAU);g.stroke();
+      for(let i=0;i<=10;i++){
+        const an=Math.PI*.75+i*Math.PI*1.5/10;
+        const rr=r-(i%2===0?4:3);
+        g.strokeStyle=i>=8?'#c58170':'#adae9a';
+        g.lineWidth=i%2===0?1:.55;g.beginPath();
+        g.moveTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr);
+        g.lineTo(x+Math.cos(an)*(r-1.3),y+Math.sin(an)*(r-1.3));g.stroke();
+      }
+      const an=Math.PI*.75+clamp(t,0,1)*Math.PI*1.5;
+      g.strokeStyle=accent;g.lineWidth=1.6;g.beginPath();g.moveTo(x-Math.cos(an)*3,y-Math.sin(an)*3);
+      g.lineTo(x+Math.cos(an)*(r-6),y+Math.sin(an)*(r-6));g.stroke();
+      g.fillStyle='#e8d7b6';g.beginPath();g.arc(x,y,1.55,0,TAU);g.fill();
+      g.font='bold 5px monospace';g.fillStyle=muted;g.textAlign='center';
+      g.fillText(caption,x,y+r+4);
+      g.font='bold 8px Georgia,serif';g.fillStyle=cream;g.fillText(String(value),x,y+4);
     }
-    craft(pilot,0,false);craft(foe,W-pw,true);
-    // Compact centre scoring instrument. A mechanical dial instead of the
-    // former enormous title/time bar.
-    g.fillStyle='#0e2533c4';g.fillRect(cx-37,0,74,34);
-    g.fillStyle=rim;g.fillRect(cx-28,0,56,1);
-    g.font='bold 14px monospace';g.textAlign='center';g.fillStyle='#f1ddac';
-    const score=state.mode==='survival'?'WAVE '+state.round:
-      state.participants>2?(state.teams?'2v2':state.participants+' PLANES'):
+    // Centre insignia plus watch dial, intentionally separated from nameplates.
+    const centerTop=2;
+    g.fillStyle='#15242bdc';g.beginPath();
+    g.moveTo(cx-34,centerTop);g.lineTo(cx+34,centerTop);
+    g.lineTo(cx+29,33);g.lineTo(cx-29,33);g.closePath();g.fill();
+    g.strokeStyle='#9e896a88';g.lineWidth=.65;g.stroke();
+    g.font='bold 5px monospace';g.textAlign='center';g.fillStyle=gold;
+    g.fillText(state.mode==='survival'?'SORTIE / WAVE':state.teams?'SQUADRON ENGAGEMENT':'DOGFIGHT',cx,5,63);
+    const score=state.mode==='survival'?'W'+state.round:
+      state.participants>2?(state.teams?'2 v 2':state.participants+' SHIPS'):
       state.scores[0]+'  :  '+state.scores[1];
-    g.fillText(score,cx,3,72);
-    g.font='bold 7px monospace';g.fillStyle='#b7cdd3';
-    g.fillText(Math.max(0,Math.ceil(state.time))+'s  ·  '+(ARENAS[state.arena]||'ALPINE'),cx,22,74);
-    // Thin speed and climb instruments positioned below the scoreboard.
-    // Each has an engraved label and needle with contextual colour.
-    const left=cx-71,right=cx+11,y=40;
-    const speed=pilot?.speed||0,normal=pilot?.d.speed||82;
+    g.font='bold 12px Georgia,serif';g.fillStyle=cream;g.fillText(score,cx,13,62);
+    g.font='5px monospace';g.fillStyle='#9ea9a4';
+    g.fillText((ARENAS[state.arena]||'ALPINE')+' FRONT',cx,27,64);
+    // Instruments float below the header and have a natural gap between them.
+    // They do not occupy the lower thumb-control / manoeuvring area.
+    const gaugeR=15.5,gaugeY=55;
+    const speed=pilot?.speed||0,base=pilot?.d.speed||82;
+    const speedMax=base*(pilot?.type==='fighter'?1.9:1.6);
+    dial(cx-25,gaugeY,gaugeR,speed/speedMax,'AIRSPEED',Math.round(speed),'#e7b377');
     const risk=clamp(pilot?.flightRisk||0,0,1);
-    g.fillStyle='#102939a8';g.fillRect(left-3,y-4,68,22);
-    g.fillRect(right-3,y-4,65,22);
-    g.fillStyle='#aabec3';g.textAlign='left';g.font='bold 7px monospace';
-    g.fillText('SPD '+Math.round(speed),left,y-1);
-    g.fillText('CLIMB',right,y-1);
-    const speedT=clamp(speed/(normal*(pilot?.type==='fighter'?1.90:DIVE_OVERSPEED_LIMIT)),0,1);
-    g.fillStyle='#405660';g.fillRect(left,y+10,59,3);
-    g.fillStyle=speed<normal*.68?'#e4a66b':'#8cc8d1';
-    g.fillRect(left,y+10,59*speedT,3);
-    g.fillStyle='#405660';g.fillRect(right,y+10,56,3);
-    g.fillStyle='#86c6a6';g.fillRect(right,y+10,24,3);
-    g.fillStyle='#cfb878';g.fillRect(right+24,y+10,18,3);
-    g.fillStyle='#d48372';g.fillRect(right+42,y+10,14,3);
-    g.fillStyle='#f8f1de';g.fillRect(right+clamp(risk,0,.97)*54,y+8,2,7);
+    dial(cx+25,gaugeY,gaugeR,risk,'CLIMB LOAD',Math.round(risk*100),'#c2c9ac');
     if(state.wind?.active){
-      g.fillStyle='#102939b8';g.fillRect(cx-34,67,68,12);
-      g.fillStyle='#c4d4d6';g.font='bold 7px monospace';g.textAlign='center';
-      g.fillText((state.wind.current>0?'WIND → ':'← WIND ')+
-        Math.round(Math.abs(state.wind.current)),cx,70);
+      g.fillStyle='#17272cdb';g.fillRect(cx-32,83,64,9);
+      g.font='bold 6px monospace';g.fillStyle='#edcc9e';g.textAlign='center';
+      g.fillText((state.wind.current>=0?'WIND → ':'← WIND ')+Math.round(Math.abs(state.wind.current)),cx,85,61);
     }
+    // Gunners warn you only when the actual target is within the rear arc.
     if(pilot&&foe?.role==='bomber'&&foe.alive){
       const dx=wrappedDelta(foe.x,pilot.x),dy=pilot.y-foe.y;
       const along=dx*Math.cos(foe.angle)+dy*Math.sin(foe.angle);
       const lateral=Math.abs(-dx*Math.sin(foe.angle)+dy*Math.cos(foe.angle));
       if(along< -11&&Math.hypot(dx,dy)<155&&lateral<65){
-        g.fillStyle='#73342acb';g.fillRect(cx-40,83,80,13);
-        g.fillStyle='#f6d2ac';g.font='bold 8px monospace';g.textAlign='center';
-        g.fillText('TAIL GUNS!',cx,86);
+        g.fillStyle='#612d2adf';g.fillRect(cx-34,97,68,12);
+        g.strokeStyle='#d7a28b';g.lineWidth=.7;g.strokeRect(cx-34,97,68,12);
+        g.font='bold 7px monospace';g.fillStyle='#ffe0bd';g.textAlign='center';
+        g.fillText('TAIL GUN FIRE',cx,100,65);
       }
     }
     g.restore();
