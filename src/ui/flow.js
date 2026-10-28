@@ -25,7 +25,7 @@ function setMode(kind){
  }
 }
 function requestImmersive(force=false){
- const frame=$('frame');
+ const frame=document.querySelector('.app'); // fullscreen the whole game workspace, including career
  const isPhone=window.matchMedia?.('(pointer: coarse)')?.matches;
  if(document.fullscreenElement)return;
  if(!force&&(!isPhone||window.innerHeight>window.innerWidth))return;
@@ -34,16 +34,18 @@ function requestImmersive(force=false){
    result?.catch?.(()=>{});
  }catch(_){}
 }
-$('menu-fullscreen')?.addEventListener('click',()=>{
+for(const buttonId of ['menu-fullscreen','career-fullscreen']) $(buttonId)?.addEventListener('click',()=>{
  if(document.fullscreenElement){
    document.exitFullscreen?.()?.catch?.(()=>{});
  }else requestImmersive(true);
 });
 document.addEventListener('fullscreenchange',()=>{
- const button=$('menu-fullscreen');if(!button)return;
  const full=!!document.fullscreenElement;
- button.innerHTML=full?'× <span>EXIT FULL SCREEN</span>':'⛶ <span>FULL SCREEN</span>';
- button.setAttribute('aria-label',full?'Exit full screen':'Enter full screen');
+ for(const buttonId of ['menu-fullscreen','career-fullscreen']){
+  const button=$(buttonId);if(!button)continue;
+  button.innerHTML=full?'× <span>EXIT FULL SCREEN</span>':'⛶ <span>FULL SCREEN</span>';
+  button.setAttribute('aria-label',full?'Exit full screen':'Enter full screen');
+ }
 });
 $('splash-continue')?.addEventListener('click',()=>{
  // Keep briefings free of the browser's fullscreen instructional toast.
