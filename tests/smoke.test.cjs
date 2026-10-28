@@ -15,6 +15,9 @@ function launch(){
   const modelCanvas={width:320,height:180,getContext:()=>ctx};
   let viewport={width:320,height:180};
   el.frame={getBoundingClientRect:()=>viewport};
+  el['pilots-select']={value:'2'};
+  el['mode-select']={value:'duel'};
+  el['arena-select']={value:'0'};
   for(const id of ['menu','result','result-title','result-detail','start',
     'rematch','change-plane','left','right','fire','special','roll','bomb']){
     el[id]={textContent:'',dataset:{},setPointerCapture:noop,setAttribute:noop,
@@ -44,6 +47,7 @@ function launch(){
   vm.runInNewContext(instrumented,sandbox,{timeout:3000,filename:'game.js'});
   return {
     listeners,canvas,modelCanvas,internals:sandbox.window.__wingmanTest,
+    setPilots:n=>{el['pilots-select'].value=String(n);},
     setViewport:(width,height)=>{
       viewport={width,height};
       listeners.get('window:resize')?.();
@@ -224,4 +228,38 @@ test('all six unique side-on aircraft are available in art renderer',()=>{
  assert.deepEqual(Array.from(window.WingmanSprites.types).sort(),
   ['fighter','heavy','bomber','bf109','bf110','he111'].sort());
  assert.equal(typeof window.WingmanSprites.draw,'function');
+});
+
+test('four-aircraft mode spawns distinct pilots with targetable AI',()=>{
+ const game=launch();
+ game.setPilots(4);game.listeners.get('start:click')();
+ const state=game.internals.state;
+ assert.equal(state.participants,4);
+ assert.equal(state.fliers.length,4);
+ assert.equal(new Set(state.fliers.map(p=>p.id)).size,4);
+ game.advance(150,1500);
+});
+test('horizontal boundaries wrap aircraft without changing heading or health',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0];
+ p.spawnSafe=0;p.x=-p.d.radius-3;p.y=120;p.angle=Math.PI;
+ const health=p.health;
+ game.advance(2,1000);
+ assert.ok(p.x>200,'plane should appear on the right');
+ assert.equal(p.health,health);
+});
+test('floor collision crashes the plane and finishes the duel',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0];
+ p.spawnSafe=0;p.y=245;p.angle=Math.PI/2;
+ game.advance(2,1000);
+ assert.equal(p.alive,false);
+ assert.equal(p.damageCause,'GROUND');
+});
+test('top boundary is recoverable and does not deal health damage',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0];
+ p.spawnSafe=0;p.y=32;p.angle=-Math.PI/2;
+ const hp=p.health;game.advance(2,1000);
+ assert.ok(p.alive);assert.equal(p.health,hp);assert.ok(p.y>=37);
 });
