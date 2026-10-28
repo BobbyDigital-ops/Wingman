@@ -529,6 +529,8 @@ test('AI sees a nearby opponent across the horizontally wrapped boundary',()=>{
   const game=launch();game.listeners.get('start:click')();
   const [target,p]=game.internals.state.fliers,W=game.canvas.width;
   p.x=W-11;p.y=115;p.angle=0;p.vx=0;p.vy=0;
+  // Opponent aircraft type is random: isolate steering from bomber high-ground tactics.
+  p.role='fighter';p.d=game.internals.PLANES.fighter;
   p.aiMode='attack';p.aiThink=5;p.aiRecoveryTime=0;p.gunCooldown=4;
   target.x=13;target.y=115;target.vx=0;target.vy=0;
   assert.ok(game.internals.combatDistance(p,target)<30);
