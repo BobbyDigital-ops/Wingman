@@ -205,6 +205,24 @@
     p.rollRecovery=1.35+(p.role==='bomber'?.35:0);
     sound('special');
   }
+  function crossTopEdge(p){
+    // Fly fully out above the playfield, then return on the opposite heading.
+    // Reflect horizontal direction and descend into the playable area.
+    if(p.y>=-p.d.radius)return false;
+    p.y=31+p.d.radius;
+    p.angle=Math.atan2(Math.sin(Math.PI-p.angle),Math.cos(Math.PI-p.angle));
+    const incoming=Math.max(p.speed,Math.hypot(p.vx,p.vy),p.d.speed*.65);
+    p.vx=Math.cos(p.angle)*incoming;
+    p.vy=Math.abs(Math.sin(p.angle)*incoming);
+    // Avoid a near-horizontal re-entry that could retrigger ceiling contact.
+    if(p.vy<incoming*.3){
+      p.vy=incoming*.3;
+      p.angle=Math.atan2(p.vy,p.vx);
+    }
+    p.turnVelocity=0;
+    p.climbLoad=0;p.flightRisk=0;p.stallTime=0;
+    return true;
+  }
   function steerPlane(p,steer,dt){
     if(p.swoop){
       const a=p.swoop;
@@ -219,7 +237,7 @@
       p.x+=p.vx*dt;p.y+=p.vy*dt;
       if(p.x<-p.d.radius)p.x+=W+2*p.d.radius;
       if(p.x>W+p.d.radius)p.x-=W+2*p.d.radius;
-      if(p.y<37){p.y=37;p.vy=Math.max(0,p.vy);}
+      crossTopEdge(p);
       // The manoeuvre should not bypass the normal ground hazard.
       if(p.y>=H-13){
         p.y=H-13;p.health=0;p.alive=false;
@@ -286,7 +304,7 @@
     p.climbLoad=clamp(Math.max(0,(p.climbLoad||0)-dt*decay)+altitudeGain,0,180);
     if(p.x<-p.d.radius)p.x+=W+2*p.d.radius;
     else if(p.x>W+p.d.radius)p.x-=W+2*p.d.radius;
-    if(p.y<37){p.y=37;p.vy=Math.max(3,p.vy);p.angle+=clamp(angleDiff(.3,p.angle),-dt*2,dt*2);}
+    crossTopEdge(p);
     if(p.y>=H-13){
       p.y=H-13;p.health=0;p.alive=false;
       p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
