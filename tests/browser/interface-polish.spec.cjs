@@ -245,7 +245,7 @@ test('saved pilot can reopen selection safely and keep their career on cancel',a
  else await page.locator('#career-open-mobile').click();
  await page.locator('[data-candidate="0"]').click();
  const original=await page.evaluate(()=>localStorage.getItem('wingman-road-to-ace-v1'));
- await page.getByRole('button',{name:'CHOOSE A DIFFERENT PILOT'}).click();
+ await page.getByRole('button',{name:'START A NEW PILOT'}).click();
  await expect(page.locator('[data-candidate]')).toHaveCount(3);
  page.once('dialog',dialog=>dialog.dismiss());
  await page.locator('[data-candidate="1"]').click();
@@ -268,7 +268,7 @@ test('rank map has eight three-way branching tiers and an active challenge lane'
  await expect(map.locator('.route-fork')).toHaveCount(8);
  await expect(map.locator('.route-join')).toHaveCount(8);
  await expect(map.locator('#active-rung [data-choice]')).toHaveCount(3);
- await expect(page.locator('[data-action="select"]')).toBeVisible();
+ await expect(page.locator('[data-action="character"]')).toBeVisible();
 });
 
 test('Wingman 2.0 title and operation cards load illustrated artwork',async({page})=>{
@@ -398,25 +398,6 @@ test('three active rivals have distinct painted portraits',async({page})=>{
  expect(new Set(positions).size).toBe(3);
 });
 
-test('licence portrait can be changed without changing pilot name or victories',async({page})=>{
- await page.goto('/');
- if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
- else await page.locator('#career-open-mobile').click();
- if(await page.locator('[data-candidate="0"]').isVisible())await page.locator('[data-candidate="0"]').click();
- if(!await page.locator('[data-action="portrait"]').isVisible())await page.locator('[data-action="licence"]').first().click();
- await expect(page.locator('[data-action="portrait"]')).toBeVisible();
- const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
- const artBefore=await page.locator('.career-photo .painted-pilot-portrait').getAttribute('x');
- await page.locator('[data-action="portrait"]').click();
- const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
- const artAfter=await page.locator('.career-photo .painted-pilot-portrait').getAttribute('x');
- expect(artAfter).not.toBe(artBefore);
- expect(after.profile.name).toBe(before.profile.name);
- expect(after.wins).toBe(before.wins);
- expect(after.losses).toBe(before.losses);
- expect(after.kills).toBe(before.kills);
-});
-
 test('aircraft preview remains crisp transparent original geometry instead of enlarged 86px paintings',async({page})=>{
  await page.goto('/');
  await page.locator('#splash-continue').click();
@@ -428,4 +409,27 @@ test('aircraft preview remains crisp transparent original geometry instead of en
   return [d[3],d[(c.width-1)*4+3],d[(c.width*(c.height-1))*4+3]];
  });
  expect(corners).toEqual([0,0,0]);
+});
+
+test('existing pilot has explicit 5-character selection with editable name and preserved career',async({page})=>{
+ await page.goto('/');
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ if(await page.locator('[data-candidate="0"]').isVisible())await page.locator('[data-candidate="0"]').click();
+ await page.locator('[data-action="character"]').first().click();
+ await expect(page.getByRole('heading',{name:'CHOOSE YOUR CHARACTER'})).toBeVisible();
+ await expect(page.locator('[data-portrait]')).toHaveCount(5);
+ const original=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
+ const selection=(Number(original.profile.style?.portraitIndex)||0)+1;
+ await page.locator('[data-portrait="'+selection%5+'"]').click();
+ await page.locator('#character-name').fill('Squadron Leader Test');
+ await page.locator('[data-action="save-character"]').click();
+ const updated=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
+ expect(updated.profile.name).toBe('Squadron Leader Test');
+ expect(updated.profile.style.portraitIndex).toBe(selection%5);
+ for(const field of ['wins','losses','kills','best','completed','run']){
+  expect(updated[field]).toEqual(original[field]);
+ }
+ await expect(page.locator('.career-photo')).toContainText('');
+ await expect(page.getByText('Squadron Leader Test')).toBeVisible();
 });

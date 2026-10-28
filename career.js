@@ -273,7 +273,23 @@ function ladder(run){
  }
  return '<div class="ladder-scroll campaign-tree career-route-map" role="region" aria-label="Eight rank branching career map with three routes per rank" tabindex="0"><div class="tree-spine route-spine">'+rows.join('')+'</div></div>';
 }
+function characterPicker(){
+ if(!data?.profile)return '';
+ const p=data.profile;
+ const current=Number.isInteger(p.style?.portraitIndex)?p.style.portraitIndex:
+  (((Number(p.style?.face)||0)*3+(Number(p.style?.hair)||0))%5);
+ const names=['THE VETERAN','THE AVIATOR','THE FLYBOY','THE ACE','THE COMMANDER'];
+ return '<p class="career-muted">Choose your actual character and pilot name. Your rank, victories, aircraft and upgrades will not change.</p>'+
+  '<div class="character-portrait-grid" role="group" aria-label="Choose your character">'+
+  names.map((label,i)=>'<button type="button" class="character-portrait-choice '+(i===current?'selected':'')+'" data-portrait="'+i+'" aria-label="Choose '+label+'" aria-pressed="'+(i===current)+'">'+
+   '<span class="character-portrait-image">'+pilotPortrait(p.faction,{...p.style,portraitIndex:i})+'</span><strong>'+label+'</strong><small>'+(i===current?'CURRENT PILOT':'SELECT CHARACTER')+'</small></button>').join('')+'</div>'+
+  '<div class="character-name-row"><label for="character-name">PILOT NAME</label><input id="character-name" type="text" maxlength="30" value="'+escape(p.name)+'" aria-label="Pilot name" autocomplete="off"/>'+
+  '<button type="button" class="career-primary" data-action="save-character">SAVE CHARACTER</button></div>'+
+  '<p class="career-muted">Your character and name will be saved to the existing pilot licence.</p>'+
+  '<button type="button" data-action="licence">BACK TO LICENCE</button>';
+}
 function render(){
+ if(data&&view==='character'){panel('CHOOSE YOUR CHARACTER',characterPicker());return;}
  if(!data||view==='select'){
   if(!candidates.length)candidates=generateCandidates();
   panel('CHOOSE YOUR PILOT',`<p class="career-muted">Choose a pilot for your career. Your existing progress is kept unless you confirm a replacement.</p>
@@ -293,7 +309,7 @@ function render(){
    <p>WIN / LOSS <b>${ratio}</b></p><p>HIGHEST RANK <b>${Math.min(MAX_RANK,data.best||1)}</b></p>
    <p>NEMESIS <b>${nemesis?escape(byId[nemesis[0]]?.name||'Unknown'):'None yet'}</b></p>
    <p>ACE RUNS COMPLETED <b>${data.completed}</b></p></div></div>
-   <button class="career-primary" data-action="ladder">ROAD TO ACE</button><button data-action="portrait">CHANGE PORTRAIT ◀ ▶</button><button data-action="select">CHOOSE A DIFFERENT PILOT</button>`);
+   <button class="career-primary" data-action="ladder">ROAD TO ACE</button><button data-action="character">CHOOSE CHARACTER & NAME</button><button data-action="select">START A NEW PILOT</button>`);
   return;
  }
  if(!run){
@@ -306,7 +322,7 @@ function render(){
  }
  panel('ROAD TO ACE',`<div class="career-stats"><span>${escape(p.name)} · ${aircraft[run.aircraft]}</span><span>RANK ${run.rank}/${MAX_RANK}</span><span>${'♥'.repeat(run.lives)}${'♡'.repeat(3-run.lives)}</span></div>
  <p class="career-muted">Choose one of three rival branches to ascend. Cleared ranks remain below; future ranks are locked above.</p>
- ${ladder(run)}<div class="career-bottom-actions"><button data-action="licence">VIEW PILOT LICENCE</button><button data-action="select">CHOOSE PILOT</button></div>`);
+ ${ladder(run)}<div class="career-bottom-actions"><button data-action="licence">VIEW PILOT LICENCE</button><button data-action="character">CHOOSE CHARACTER</button></div>`);
  const marker=screen.querySelector('#active-rung'),list=screen.querySelector('.ladder-scroll');
   // Only centre the active rank inside the ladder itself. scrollIntoView()
   // also scrolled the outer career panel and hid the title/navigation on phones.
@@ -322,6 +338,22 @@ screen.addEventListener('click',e=>{
  if(action==='close')close();
  if(action==='select'){view='select';if(!candidates.length)candidates=generateCandidates();render();}
  if(action==='reroll'){candidates=generateCandidates();render();}
+ if(action==='character'&&data){view='character';render();}
+ if(el.dataset.portrait!==undefined&&data?.profile){
+  const name=document.getElementById('character-name')?.value;
+  const choice=Number(el.dataset.portrait);
+  if(Number.isInteger(choice)&&choice>=0&&choice<5){
+   const style=data.profile.style||(data.profile.style=appearance(0));
+   style.portraitIndex=choice;
+   if(name?.trim())data.profile.name=name.trim().slice(0,30);
+   save();view='character';render();
+  }
+ }
+ if(action==='save-character'&&data?.profile){
+  const name=document.getElementById('character-name')?.value.trim();
+  if(name)data.profile.name=name.slice(0,30);
+  save();view='licence';render();
+ }
  if(el.dataset.candidate!==undefined)createProfile(Number(el.dataset.candidate));
  if(action==='ladder'){view=data?.run?'ladder':'licence';if(data&&!data.run)view='ladder';render();}
  if(action==='licence'){view='licence';render();}
