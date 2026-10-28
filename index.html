@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#172939">
   <meta name="description" content="Wingman — a tiny, tactical, single-screen aerial dogfighting game.">
   <title>Wingman · Pixel Dogfights</title>
-  <link rel="stylesheet" href="./styles.css?v=20261028v08tactical">
-  <link rel="stylesheet" href="./career.css?v=20261028phase4a1">
+  <link rel="stylesheet" href="./styles.css?v=20261028phase5wind1">
+  <link rel="stylesheet" href="./career.css?v=20261028phase5wind1">
 </head>
 <body>
   <div class="app">
@@ -24,16 +24,16 @@
           <h1>WINGMAN</h1>
           <p class="intro">Pick your aircraft. Out-turn your rival. Time every shot.</p>
           <div class="plane-picker" role="group" aria-label="Choose aircraft">
-            <button class="plane-choice selected" type="button" data-plane="fighter" aria-pressed="true"><b>SPITFIRE</b><small>Fighter · Reverse</small></button>
+            <button class="plane-choice selected" type="button" data-plane="fighter" aria-pressed="true"><b>SPITFIRE</b><small>Fighter · Overdrive</small></button>
             <button class="plane-choice" type="button" data-plane="heavy" aria-pressed="false"><b>BEAUFIGHTER</b><small>Heavy Fighter</small></button>
             <button class="plane-choice" type="button" data-plane="bomber" aria-pressed="false"><b>LANCASTER</b><small>Heavy Bomber</small></button>
-            <button class="plane-choice" type="button" data-plane="bf109" aria-pressed="false"><b>BF 109</b><small>Fighter · Reverse</small></button>
+            <button class="plane-choice" type="button" data-plane="bf109" aria-pressed="false"><b>BF 109</b><small>Fighter · Overdrive</small></button>
             <button class="plane-choice" type="button" data-plane="bf110" aria-pressed="false"><b>BF 110</b><small>Heavy Fighter</small></button>
             <button class="plane-choice" type="button" data-plane="he111" aria-pressed="false"><b>HE 111</b><small>Medium Bomber</small></button>
           </div>
           <button class="start-button" id="start" type="button">START DOGFIGHT <span aria-hidden="true">▶</span></button>
-          <div class="mode-row"><label>OPPONENTS <select id="pilots-select"><option value="2">1 AI · DUEL</option><option value="3">2 AI · TRIPLE</option><option value="4">3 AI · FOUR-PLANE</option></select></label><label>AI <select id="difficulty-select"><option value="rookie">ROOKIE</option><option value="standard" selected>STANDARD</option><option value="ace">ACE</option></select></label><label>BATTLE <select id="team-select"><option value="ffa">FREE FOR ALL</option><option value="teams">2v2 TEAMS (4 PLANES)</option></select></label><label>MODE <select id="mode-select"><option value="duel">DUEL</option><option value="survival">SURVIVAL</option></select></label><label>HUD <select id="hud-style"><option value="arcade">MINIMAL ARCADE</option><option value="cockpit">WW2 INSTRUMENTS</option><option value="competitive">COMPETITIVE</option></select></label><label>ARENA <select id="arena-select"><option value="0">ALPINE</option><option value="1">COAST</option><option value="2">DESERT</option><option value="3">STORM</option></select></label></div>
-          <p class="tip">A/D turn · Space fire · E special · Q pilot skill. On touch: double-tap turn to roll.</p>
+          <div class="mode-row"><label>OPPONENTS <select id="pilots-select"><option value="2">1 AI · DUEL</option><option value="3">2 AI · TRIPLE</option><option value="4">3 AI · FOUR-PLANE</option></select></label><label>AI <select id="difficulty-select"><option value="rookie">ROOKIE</option><option value="standard" selected>STANDARD</option><option value="ace">ACE</option></select></label><label>BATTLE <select id="team-select"><option value="ffa">FREE FOR ALL</option><option value="teams">2v2 TEAMS (4 PLANES)</option></select></label><label>MODE <select id="mode-select"><option value="duel">DUEL</option><option value="survival">SURVIVAL</option></select></label><label>HUD <select id="hud-style"><option value="arcade">MINIMAL ARCADE</option><option value="cockpit">WW2 INSTRUMENTS</option><option value="competitive">COMPETITIVE</option></select></label><label>ARENA <select id="arena-select"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">HOME FRONT (STORM)</option></select></label></div>
+          <p class="tip">A/D turn · Space fire · E aircraft ability · Q pilot skill. Crosswind is an occasional battle hazard.</p>
         </div>
       </div>
       <div class="overlay hidden" id="result" aria-live="polite">
@@ -68,8 +68,8 @@
       <span><b>P</b> pause</span>
     </footer>
   </div>
-  <script src="./src/art/aircraft.js?v=20261028v08tactical" defer></script>
-    <script src="./game.js?v=20261028phase4a1" defer></script>
-  <script src="./career.js?v=20261028phase4a1" defer></script>
+  <script src="./src/art/aircraft.js?v=20261028phase5wind1" defer></script>
+    <script src="./game.js?v=20261028phase5wind1" defer></script>
+  <script src="./career.js?v=20261028phase5wind1" defer></script>
 </body>
 </html>

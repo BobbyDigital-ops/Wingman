@@ -3,6 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
+  const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(2.25,Math.max(2,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
   const modelCanvas=document.getElementById('aircraft-layer');
@@ -21,7 +22,8 @@
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
     scores:[0,0],round:1,time:90,intermission:0,banner:'',bannerTime:0,paused:false,
-    impactLock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2,teams:false,difficulty:'standard'
+    impactLock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2,teams:false,difficulty:'standard',
+    wind:{active:false,base:0,current:0,elapsed:0}
   };
   const controls={left:false,right:false,boost:false};
   const ui={
@@ -81,6 +83,30 @@ function plane(type,id,x,y,angle){
       energy:85,rollTime:0,rollRecovery:0,stallTime:0,wallGrace:0,armourTime:0,bombCooldown:0,climbAssist:0,
       swoopTime:0,swoop:null,turnVelocity:0,damageCause:'',damageNotice:0,muzzleFlash:0};
   }
+
+  // Wind is an infrequent, symmetric difficulty modifier, not the baseline physics.
+  function rollWind(mode,rank=1){
+    const chance=mode==='campaign'?Math.min(.38,.18+Math.max(1,rank)*.025):.28;
+    if(Math.random()>=chance)return {active:false,base:0,current:0,elapsed:0};
+    const base=(Math.random()<.5?-1:1)*(8+Math.random()*9);
+    return {active:true,base,current:base,elapsed:0};
+  }
+  function updateWind(dt){
+    const w=state.wind;if(!w?.active)return;
+    w.elapsed+=dt;
+    w.current=w.base*(1+.16*Math.sin(w.elapsed*1.1)+.07*Math.sin(w.elapsed*2.7));
+  }
+  function drawWind(){
+    const w=state.wind;if(!w?.active)return;
+    g.save();g.strokeStyle='#e7edf2a0';g.lineWidth=.65;
+    const dir=Math.sign(w.current),shift=w.elapsed*w.current*.88;
+    for(let i=0;i<10;i++){
+      const x=((i*83+shift)%(W+72)+(W+72))%(W+72)-36;
+      const y=63+(i*37)%Math.max(100,H-112);
+      g.beginPath();g.moveTo(x,y);g.lineTo(x+dir*(9+i%4*2),y-1.2);g.stroke();
+    }
+    g.restore();
+  }
   const ARENAS=['ALPINE','COAST','DESERT','STORM'];
   function newRound(){
     state.fliers=[
@@ -120,8 +146,9 @@ function plane(type,id,x,y,angle){
       }
     }
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
+    state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
     state.time=state.mode==='survival'?70:state.mode==='campaign'?120:90;state.impactLock=0;state.phase='playing';state.paused=false;
-    state.banner='ROUND '+state.round;state.bannerTime=1.5;
+    state.banner=state.wind.active?(state.wind.base>0?'CROSSWIND →':'← CROSSWIND'):'ROUND '+state.round;state.bannerTime=1.5;
     controls.left=false;controls.right=false;controls.boost=false;
   }
   function startMatch(){
@@ -314,7 +341,7 @@ function plane(type,id,x,y,angle){
       p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
       p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
       const oldY=p.y;
-      p.x+=p.vx*dt;p.y+=p.vy*dt;
+      p.x+=(p.vx+state.wind.current)*dt;p.y+=p.vy*dt;
       if(p.x<-p.d.radius)p.x+=W+2*p.d.radius;
       if(p.x>W+p.d.radius)p.x-=W+2*p.d.radius;
       crossTopEdge(p);
@@ -338,7 +365,7 @@ function plane(type,id,x,y,angle){
     if(p.topRecovery>0){
       p.topRecovery=Math.max(0,p.topRecovery-dt);
       p.vy=Math.max(p.vy,p.d.speed*.42);
-      p.y+=p.vy*dt;p.x+=p.vx*dt;
+      p.y+=p.vy*dt;p.x+=(p.vx+state.wind.current)*dt;
       if(p.x<0)p.x+=W;else if(p.x>W)p.x-=W;
       return;
     }
@@ -384,7 +411,7 @@ function plane(type,id,x,y,angle){
     // Phase 1 climb, dive, drag and steering physics are unchanged.
     if(p.flightRisk>0)p.vy+=dt*(5+15*p.flightRisk);
     const oldY=p.y;
-    p.x+=p.vx*dt;p.y+=p.vy*dt;
+    p.x+=(p.vx+state.wind.current)*dt;p.y+=p.vy*dt;
     // Fast, sustained ascents increase load. A dive drains it quickly.
     // This is a rolling-memory proxy and independent of absolute altitude.
     const altitudeGain=Math.max(0,oldY-p.y);
@@ -603,7 +630,7 @@ function plane(type,id,x,y,angle){
   function projectiles(dt){
     for(let i=state.bullets.length-1;i>=0;i--){
       const b=state.bullets[i],px=b.x,py=b.y;
-      b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;b.age=(b.age||0)+dt;
+      b.x+=(b.vx+state.wind.current*.18)*dt;b.y+=b.vy*dt;b.life-=dt;b.age=(b.age||0)+dt;
       const shooter=state.fliers[b.owner];
       const targets=state.fliers.filter(p=>p.id!==b.owner&&p.alive&&(!state.teams||p.team!==shooter?.team));
       // Neither a gun muzzle nor a bomber can inflict disguised impact damage
@@ -639,7 +666,7 @@ function plane(type,id,x,y,angle){
       b.delay=Math.max(0,(b.delay||0)-dt);
       if(b.delay>0)continue;
       b.age=(b.age||0)+dt;
-      b.vy+=94*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
+      b.vy+=94*dt;b.x+=(b.vx+state.wind.current*.4)*dt;b.y+=b.vy*dt;b.life-=dt;
       const target=state.fliers.find(p=>p.id!==b.owner&&p.alive&&(!state.teams||p.team!==state.fliers[b.owner]?.team)&&distance(b,p)<p.d.radius+4);
       if(b.y>=H-8||(b.age>.24&&target)){
         explosion(b.x,Math.min(b.y,H-8),27,b.owner,40);
@@ -665,6 +692,7 @@ function plane(type,id,x,y,angle){
     if(state.phase!=='playing'&&state.phase!=='intermission')return;
     state.bannerTime=Math.max(0,state.bannerTime-dt);
     if(state.phase==='playing'){
+      updateWind(dt);
       state.time-=dt;
       if(state.mode==='survival'&&state.time<=0){endRound(1);return;}
       const user=state.fliers[0];
@@ -700,8 +728,8 @@ function plane(type,id,x,y,angle){
   // Cached, deterministic low-resolution 16-bit inspired alpine landscape.
   // There are no image downloads and no per-frame scenery allocations.
   function makeBackground(){
-    const c=document.createElement('canvas');c.width=W;c.height=H;
-    const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
+    const c=document.createElement('canvas');c.width=Math.round(W*renderScale);c.height=Math.round(H*renderScale);
+    const ctx=c.getContext('2d');ctx.setTransform(c.width/W,0,0,c.height/H,0,0);ctx.imageSmoothingEnabled=renderScale>1;
     const scene=ARENAS[state.arena]||'ALPINE';
     ctx.fillStyle={ALPINE:'#73adcf',COAST:'#6ebccc',DESERT:'#d6aa73',STORM:'#506b80'}[scene];ctx.fillRect(0,0,W,H);
     ctx.save();ctx.translate(0,H-180);
@@ -937,6 +965,14 @@ function plane(type,id,x,y,angle){
       g.fillStyle='#9ed2e8';g.font='bold 6px monospace';g.fillText('ARM '+Math.round(p.armour),W-100,24);
       g.fillStyle='#bce3b4';g.fillText('HULL '+Math.round(p.health),W-100,33);
     }
+    if(state.wind?.active){
+      const label=state.wind.current>0?'WIND →':'← WIND';
+      g.fillStyle='#213847d8';g.fillRect(W/2-31,65,62,13);
+      g.strokeStyle='#a9cad7';g.strokeRect(W/2-31,65,62,13);
+      g.fillStyle='#e6f4f1';g.font='bold 8px monospace';g.textAlign='center';
+      g.fillText(label+' '+Math.round(Math.abs(state.wind.current)),W/2,67);
+      g.textAlign='left';
+    }
     g.fillStyle=hud.divider;g.fillRect(0,37,W,1);
   }
   function damageDiagram(){
@@ -953,7 +989,8 @@ function plane(type,id,x,y,angle){
     c.restore();
   }
   function draw(){
-    g.drawImage(background,0,0);
+    g.drawImage(background,0,0,W,H);
+    drawWind();
     // Light under-aircraft shadows create altitude clues.
     for(const m of state.mines){
       const x=Math.round(m.x),y=Math.round(m.y+Math.sin(m.phase)*1.4);
@@ -1134,10 +1171,12 @@ function plane(type,id,x,y,angle){
       modelCanvas.width=pixelWidth;modelCanvas.height=pixelHeight;
       modelCtx.imageSmoothingEnabled=true;
     }
-    if(nextW===W&&canvas.width===W)return;
+    if(nextW===W&&canvas.width===Math.round(W*renderScale)&&canvas.height===Math.round(H*renderScale))return;
     const old=W;
     W=nextW;
-    canvas.width=W;canvas.height=H;g.imageSmoothingEnabled=false;
+    canvas.width=Math.round(W*renderScale);canvas.height=Math.round(H*renderScale);
+    g.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);
+    g.imageSmoothingEnabled=renderScale>1;
     const factor=W/old;
     for(const p of state.fliers){
       p.x*=factor;
