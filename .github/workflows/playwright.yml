@@ -1,7 +1,7 @@
 name: Playwright Browser Tests
 on:
   push:
-    branches: [main, wingman-playwright-ci, wingman-v07-critical-damage, wingman-v08-phase1-flight, wingman-v08-phase1-tuning, wingman-v08-phase2, wingman-v08-phase3-overhaul, wingman-v08-tactical-rebalance]
+    branches: [main, wingman-playwright-ci, wingman-v07-critical-damage, wingman-v08-phase1-flight, wingman-v08-phase1-tuning, wingman-v08-phase2, wingman-v08-phase3-overhaul, wingman-v08-tactical-rebalance, wingman-v08-top-wrap]
   pull_request:
   workflow_dispatch:
 

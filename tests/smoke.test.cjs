@@ -255,12 +255,31 @@ test('floor collision crashes the plane and finishes the duel',()=>{
  assert.equal(p.alive,false);
  assert.equal(p.damageCause,'GROUND');
 });
-test('top boundary is recoverable and does not deal health damage',()=>{
+test('ceiling allows exit then re-enters with reversed horizontal heading and no damage',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0];p.spawnSafe=0;
+ p.y=1;p.angle=-Math.PI/3;p.speed=88;
+ p.vx=44;p.vy=-75;p.climbLoad=30;
+ const hp=p.health;
+ game.internals.steerPlane(p,0,1/60);
+ assert.ok(p.y<31,'aircraft may pass above playable sky before wrapping');
+ assert.ok(p.vy<0,'flight continues upwards without ceiling bounce');
+ p.y=-p.d.radius-1;
+ game.internals.steerPlane(p,0,1/60);
+ assert.ok(p.alive);assert.equal(p.health,hp);
+ assert.ok(p.y>31&&p.y<50,'aircraft returns just below top edge');
+ assert.ok(p.vx<0,'horizontal direction reverses');
+ assert.ok(p.vy>0,'aircraft flies back into arena');
+ assert.equal(p.flightRisk,0);
+});
+test('ceiling re-entry works during a special reversal too',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];
- p.spawnSafe=0;p.y=32;p.angle=-Math.PI/2;
- const hp=p.health;game.advance(2,1000);
- assert.ok(p.alive);assert.equal(p.health,hp);assert.ok(p.y>=37);
+ game.internals.triggerSpecial(p);
+ p.y=-p.d.radius-2;
+ game.internals.steerPlane(p,0,1/60);
+ assert.ok(p.y>31&&p.vy>0);
+ assert.ok(p.alive);
 });
 
 test('2v2 uses two sides and never allows friendly-fire to target an ally',()=>{
