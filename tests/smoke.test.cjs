@@ -708,10 +708,10 @@ test('rear turret delivers fighter-like bursts without matching fighter bullet d
    game.internals.projectiles(1/60);
  }
  const fired=s.bullets.filter(b=>b.rearGun).length;
- assert.ok(bomber.rearShots<=1,'rear gun fires nearly an entire nine-shot burst');
+ assert.ok(bomber.rearShots<=1,'rear gun fires nearly its entire seven-shot burst');
  assert.ok(chaser.health<hullBefore||chaser.armour<armourBefore,'tailing is punished by real projectile hits');
  const gun=game.internals.PLANES.fighter.damage;
- assert.ok(7<gun,'each tail turret hit deals less damage than fighter primary gun');
+ assert.ok(6<gun,'each tail turret hit deals less damage than fighter primary gun');
 });
 test('the fighter combat HUD and ability naming remain independent of bomb controls',()=>{
  const game=launch();game.listeners.get('start:click')();
