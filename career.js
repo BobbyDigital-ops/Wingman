@@ -322,7 +322,7 @@ screen.addEventListener('change',e=>{
   if(picker)picker.innerHTML=candidatePicker();
  }
 });
-nav.addEventListener('click',()=>show('select'));licenceBtn.addEventListener('click',()=>show('licence'));
+nav.addEventListener('click',()=>show(data?'ladder':'select'));licenceBtn.addEventListener('click',()=>show('licence'));
 document.getElementById('career-open-mobile')?.addEventListener('click',()=>show('select'));
 window.WingmanCareer={finishEncounter,open:show};
 })();
