@@ -86,30 +86,14 @@ const fleet={
  bf110:{name:'ZERSTÖRER',tag:'LUFTWAFFE · MESSERSCHMITT BF 110 · HEAVY FIGHTER · SHIELD',stats:[70,45,77]},
  he111:{name:'HEINKEL',tag:'LUFTWAFFE · HE 111 · MEDIUM BOMBER · DEFENSIVE GUNNERS',stats:[54,32,93]}
 };
-const paintedPlaneTypes=['fighter','heavy','bomber','bf109','bf110','he111'];
-const paintedArtImage=new Image();
-paintedArtImage.onload=()=>renderFleet();
-if(window.WingmanPaintedAtlas)paintedArtImage.src=window.WingmanPaintedAtlas;
+// Keep crisp native-resolution vector aircraft previews until the painted
+// assets are generated as separate full-resolution files, not 86x60 crops.
 function paintPlane(canvas,type,scale){
  if(!canvas||!window.WingmanSprites)return;
  const g=canvas.getContext('2d');if(!g)return;
  g.clearRect(0,0,canvas.width,canvas.height);
- const w=canvas.width,h=canvas.height;
- // Six individually illustrated aircraft on distinct scenic backdrops.
- // The flight renderer still uses the exact original model geometry.
- const artSlot=paintedPlaneTypes.indexOf(type);
- if(artSlot>=0&&paintedArtImage.complete&&paintedArtImage.naturalWidth>=516){
-  // Preserve the painting's proportions, particularly in the wide
-  // featured hangar canvas. Never stretch an aircraft into a long shape.
-  const aspect=86/60;
-  const drawHeight=h,drawWidth=Math.min(w,h*aspect);
-  g.drawImage(paintedArtImage,artSlot*86,84,86,60,
-    (w-drawWidth)/2,(h-drawHeight)/2,drawWidth,drawHeight);
-  return;
- }
- g.save();g.translate(w*.5,h*.52);
- g.scale(scale,scale);g.rotate(-.085);
- g.shadowColor='#051928';g.shadowBlur=1.3;g.shadowOffsetY=1.2;
+ g.save();g.translate(canvas.width*.5,canvas.height*.52);g.scale(scale,scale);
+ g.rotate(-.085);g.shadowColor='#051928';g.shadowBlur=1.3;g.shadowOffsetY=1.2;
  window.WingmanSprites.draw(g,type,'level');
  g.restore();
 }
