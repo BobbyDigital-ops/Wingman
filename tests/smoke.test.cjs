@@ -314,7 +314,7 @@ test('armour absorbs hits before the hull is damaged',()=>{
 test('all classes have their intended simple armour and health',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];
- assert.equal(p.d.hull,100);assert.equal(p.d.armour,30);
+ assert.equal(p.d.hull,130);assert.equal(p.d.armour,40);
  assert.equal(p.d.burst,10);
 });
 test('damaged aircraft still turn and are not component-disabled',()=>{
@@ -451,7 +451,7 @@ test('bomber rear gunner triggers automatically on a pursuer behind it',()=>{
 test('depleted armour reduces hull; shield only protects and never recharges armour',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];p.spawnSafe=0;
- game.internals.hit(p,30,p.x,p.y);
+ game.internals.hit(p,p.d.armour,p.x,p.y);
  assert.equal(p.armour,0);assert.equal(p.health,p.d.hull);
  p.armourTime=5;
  game.internals.hit(p,40,p.x,p.y);
@@ -466,4 +466,15 @@ test('low-health performance loss stays mild and flight controls survive',()=>{
  game.internals.steerPlane(p,1,1/60);
  assert.ok(p.alive);assert.notEqual(p.angle,old);
  assert.ok(p.speed>p.d.speed*.9,'no abrupt speed collapse from low health');
+});
+
+test('durability hierarchy preserves protection and fighter manoeuvrability',()=>{
+ const planes=launch().internals.PLANES;
+ for(const nation of [['fighter','heavy','bomber'],['bf109','bf110','he111']]){
+  const [f,h,b]=nation.map(type=>planes[type]);
+  assert.ok(f.turn>h.turn&&h.turn>b.turn);
+  assert.ok(f.speed>h.speed&&h.speed>b.speed);
+  assert.ok(f.armour<h.armour&&h.armour<b.armour);
+  assert.ok(f.hull<h.hull&&h.hull<b.hull);
+ }
 });
