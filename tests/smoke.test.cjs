@@ -480,7 +480,8 @@ test('durability hierarchy preserves protection and fighter manoeuvrability',()=
 });
 
 test('campaign rank AI changes tactical decision level without modifying hull or damage',()=>{
- const game=launch(),p=game.internals.state.fliers[1];
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[1];
  const hull=p.d.hull,damage=p.d.damage;
  game.internals.assignCampaignAI(p,{rank:1,id:'von-test'});
  assert.equal(p.aiRank,1);assert.equal(p.aiSkillLevel,0);
