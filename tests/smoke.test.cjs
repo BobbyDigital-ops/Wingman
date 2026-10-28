@@ -176,7 +176,7 @@ test('Spitfire has effective guns while remaining controllable',()=>{
  const game=launch();
  game.listeners.get('start:click')();
  const s=game.internals.state.fliers[0];
- assert.equal(s.d.speed,88);
+ assert.equal(s.d.speed,82);
  assert.equal(s.d.damage,11);
  assert.equal(s.d.burst,10);
  assert.ok(s.d.turn>3);
@@ -422,12 +422,12 @@ test('HUD styles all have the same playable game state',()=>{
 test('all six aircraft use distinct tactical class statistics',()=>{
  const game=launch(),planes=game.internals.PLANES;
  const cases=[
-  ['fighter',88,3.15,100,30,11],
-  ['heavy',80,1.85,125,75,16],
-  ['bomber',70,1.30,140,115,10],
-  ['bf109',90,3.05,96,32,11],
-  ['bf110',82,1.78,125,70,17],
-  ['he111',73,1.35,136,105,10]
+  ['fighter',82,3.15,100,30,11],
+  ['heavy',75,1.85,125,75,16],
+  ['bomber',66,1.30,140,115,10],
+  ['bf109',84,3.05,96,32,11],
+  ['bf110',77,1.78,125,70,17],
+  ['he111',69,1.35,136,105,10]
  ];
  for(const [type,speed,turn,hull,armour,damage] of cases){
   const p=planes[type];assert.equal(p.speed,speed);assert.equal(p.turn,turn);
