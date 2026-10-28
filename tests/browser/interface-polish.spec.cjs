@@ -334,16 +334,16 @@ test('German aircraft display recognisable identities with accurate original des
  }
 });
 
-test('fixed roster uses painted portraits instead of displaying the old SVG model',async({page})=>{
+test('all fixed pilots use their own painted atlas slot rather than five reused faces',async({page})=>{
  await page.goto('/');
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
  else await page.locator('#career-open-mobile').click();
  await expect(page.locator('[data-candidate]')).toHaveCount(20);
- await expect(page.locator('.candidate-portrait .painted-pilot-portrait')).toHaveCount(20);
+ await expect(page.locator('.candidate-portrait .unique-pilot-portrait')).toHaveCount(20);
  await page.locator('[data-candidate="2"]').click();
- await expect(page.locator('.career-photo .painted-pilot-portrait')).toHaveCount(1);
+ await expect(page.locator('.career-photo .unique-pilot-portrait')).toHaveCount(1);
  await page.locator('[data-action="character"]').click();
- await expect(page.locator('.character-roster .painted-pilot-portrait')).toHaveCount(20);
+ await expect(page.locator('.character-roster .unique-pilot-portrait')).toHaveCount(20);
 });
 test('active rivals use stable defined identities, separate from historic records',async({page})=>{
  await page.goto('/');
@@ -388,4 +388,70 @@ test('fixed roster gives persistent predesigned identities without erasing caree
  for(const field of ['wins','losses','kills','best','completed','run']){
   expect(updated[field]).toEqual(original[field]);
  }
+});
+
+test('the roster artwork contains 32 individually addressable paintings with distinct image offsets',async({page})=>{
+ await page.goto('/');
+ const dimensions=await page.evaluate(async()=>{
+  const img=new Image();img.src=window.WingmanRosterPortraitAtlas;
+  await img.decode();return [img.naturalWidth,img.naturalHeight];
+ });
+ expect(dimensions).toEqual([608,376]);
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ const allOffsets=async()=>page.locator('.candidate-portrait .unique-pilot-portrait image').evaluateAll(els=>
+  els.map(x=>x.getAttribute('x')+','+x.getAttribute('y')));
+ const rafOffsets=await allOffsets();
+ expect(rafOffsets).toHaveLength(20);
+ expect(new Set(rafOffsets).size).toBe(20);
+ await page.locator('#career-faction').selectOption('Axis');
+ const axisOffsets=await allOffsets();
+ expect(axisOffsets).toHaveLength(12);
+ expect(new Set([...rafOffsets,...axisOffsets]).size).toBe(32);
+});
+
+test('every roster name has a portrait-matched gender and no new pilot is preselected',async({page})=>{
+ await page.goto('/');
+ const result=await page.evaluate(()=>{
+  const rs=window.WingmanRoster;
+  const female=[8,9,10,14,17,18,19,24,27,31];
+  return {length:rs.length,uniqueIds:new Set(rs.map(p=>p.id)).size,
+   uniquePortraits:new Set(rs.map(p=>p.portrait)).size,
+   errors:rs.flatMap((p,i)=>[
+     p.gender!==(female.includes(i)?'female':'male')?'gender '+i:null,
+     p.portrait!==i?'portrait '+i:null,
+     !(p.name.includes('"'))?'name '+i:null
+   ].filter(Boolean))};
+ });
+ expect(result).toEqual({length:32,uniqueIds:32,uniquePortraits:32,errors:[]});
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ await expect(page.locator('[data-candidate]')).toHaveCount(20);
+ await expect(page.locator('[data-candidate].selected')).toHaveCount(0);
+ expect(await page.evaluate(()=>localStorage.getItem('wingman-road-to-ace-v1'))).toBeNull();
+});
+
+test('legacy saved pilot must explicitly pick a character without wiping progress',async({page})=>{
+ await page.goto('/');
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ await page.locator('[data-candidate="2"]').click();
+ await page.evaluate(()=>{
+  const key='wingman-road-to-ace-v1';
+  const save=JSON.parse(localStorage.getItem(key));
+  delete save.profile.characterConfirmed;
+  save.wins=9;save.kills=17;
+  localStorage.setItem(key,JSON.stringify(save));
+ });
+ await page.reload();
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ await expect(page.getByRole('heading',{name:'CHOOSE YOUR PILOT'})).toBeVisible();
+ await expect(page.locator('[data-roster].selected')).toHaveCount(0);
+ await page.locator('[data-roster="ace-01"]').click();
+ const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
+ expect(result.profile.characterConfirmed).toBe(true);
+ expect(result.profile.name).toContain('Biscuit');
+ expect(result.wins).toBe(9);
+ expect(result.kills).toBe(17);
 });
