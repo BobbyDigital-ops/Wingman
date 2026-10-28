@@ -158,10 +158,16 @@ function rollAttributes(){
  return Object.fromEntries(shuffled.map((key,i)=>[ATTRS[key],values[i]+Math.floor(Math.random()*7)-3]));
 }
 function generateCandidates(){
- const pool=[];
+ const pool=[],usedFaces=new Set(),usedStyles=new Set();
  for(let i=0;i<3;i++){
-  const seed=Math.floor(Math.random()*2147483647);
-  pool.push({style:appearance(seed),attributes:rollAttributes(),id:seed});
+  const seed=Math.floor(Math.random()*2147483647),style=appearance(seed);
+  // Recruit choices should look distinct side by side, not merely be random
+  // with a chance of all three having the same silhouette or hiding their hair.
+  while(usedFaces.has(style.face))style.face=(style.face+1)%5;
+  while(usedStyles.has(style.hairstyle))style.hairstyle=(style.hairstyle+1)%6;
+  usedFaces.add(style.face);usedStyles.add(style.hairstyle);
+  if(i===0)style.headwear=2; // always preview at least one hairstyle uncovered
+  pool.push({style,attributes:rollAttributes(),id:seed});
  }
  return pool;
 }
