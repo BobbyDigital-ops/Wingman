@@ -85,6 +85,11 @@ function germanPilotPortrait(slot){
  const pilots=window.WingmanRoster||[];
  const p=pilots.find(x=>x.portrait===slot&&x.faction==='Axis');
  const i=p?pilots.filter(x=>x.faction==='Axis').findIndex(x=>x.id===p.id):Math.max(0,slot-20);
+ const paintedReady=window.WingmanGermanPortraitsReady===true;
+ if(i>=0&&i<16&&paintedReady){
+  const col=i%4,row=Math.floor(i/4);
+  return '<svg class="pilot-avatar german-painted" viewBox="0 0 96 112" role="img" aria-label="'+escape(p?.name||'German pilot')+' portrait" overflow="hidden"><image href="./assets/art/wingman-german-16.webp" x="'+(-col*96)+'" y="'+(-row*112)+'" width="384" height="448" preserveAspectRatio="none"/></svg>';
+ }
  const female=p?.gender==='female';
  const faces=['#e6b18c','#e2a77e','#c9906c','#efc4a3','#bd876b','#e9b897','#d6a081','#efc9a7','#b68161','#eabda0',
  '#dbad91','#c98f73','#e8b998','#e0a987','#f0c5a4','#d4a184','#c98b67','#e9b794','#dba68a','#edc3a6'];
