@@ -11,6 +11,10 @@
   let g=canvas.getContext('2d',{alpha:false});
   g.imageSmoothingEnabled=false;
 
+  // Stronger gravity-driven dive momentum and Spitfire-specific Overdrive.
+  const DIVE_SPEED_GAIN=64;
+  const DIVE_OVERSPEED_LIMIT=1.60;
+  const SPITFIRE_BOOST_GAIN=1.25;
   const PLANES={
     fighter:{name:'SUPERMARINE SPITFIRE',speed:82,turn:3.15,hull:130,armour:40,radius:5.5,burst:10,interval:.055,cooldown:1.5,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'REVERSE'},
     heavy:{name:'BRISTOL BEAUFIGHTER',speed:75,turn:1.85,hull:160,armour:96,radius:8,burst:5,interval:.19,cooldown:2.45,damage:16,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
@@ -446,20 +450,21 @@ function plane(type,id,x,y,angle){
     if(p.angle>Math.PI)p.angle-=TAU;
     if(p.angle< -Math.PI)p.angle+=TAU;
     const power=1-.15*clamp((.6-p.health/p.d.hull)/.6,0,1);
-    const wanted=p.d.speed*engine*(p.engineCutTime>0?.42:1)*(p.diveTime>0?1.15:1)*power*(.87+.13*p.energy/100)*(p.boosting?1.27:1)*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
-    // Fighters retain less momentum than big, heavier aircraft.
-    // Weak engine recovery while climbing/dive bombing lets pitch matter:
-    // a two-second steep climb now bleeds a noticeable amount of speed.
+    // The Spitfire's Overdrive has 25% more power; the BF 109 stays unchanged.
+    const boostGain=p.boosting?(p.type==='fighter'?1.27*SPITFIRE_BOOST_GAIN:1.27):1;
+    const wanted=p.d.speed*engine*(p.engineCutTime>0?.42:1)*(p.diveTime>0?1.15:1)*power*(.87+.13*p.energy/100)*boostGain*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
+    // Airspeed gained in a dive carries through a level-out, then fades.
     const drag=p.role==='fighter'?1.08:p.role==='heavy'?.93:.79;
     const accel=p.role==='fighter'?1.10:p.role==='heavy'?.89:.72;
     const recovery=(1-climb*.70-dive*.55);
-    p.speed+=(wanted-p.speed)*Math.min(1,dt*(p.speed>wanted?drag:accel)*skill.accel*recovery);
+    const diveCoast=p.speed>p.d.speed*engine*1.05 && p.engineCutTime<=0 && !p.boosting ? .55 : 1;
+    p.speed+=(wanted-p.speed)*Math.min(1,dt*(p.speed>wanted?drag*diveCoast:accel)*skill.accel*recovery);
     const exchange=p.role==='fighter'?1:p.role==='heavy'?.86:.76;
-    p.speed+=dt*exchange*(43*dive*dive-29*climb*climb);
+    p.speed+=dt*exchange*(DIVE_SPEED_GAIN*dive*dive-29*climb*climb);
     if(p.diveTime>0){p.speed+=dt*11;p.vy+=dt*36;}
-    // A strong dive stores a temporary overspeed, which gradually dissipates
-    // after levelling off; no infinite acceleration or negative stall speed.
-    p.speed=clamp(p.speed,p.d.speed*.43,p.d.speed*engine*(p.boosting?1.52:1.43));
+    // Higher but bounded dive ceiling; proportional Overdrive headroom.
+    const speedLimit=p.boosting?(p.type==='fighter'?1.52*SPITFIRE_BOOST_GAIN:DIVE_OVERSPEED_LIMIT):DIVE_OVERSPEED_LIMIT;
+    p.speed=clamp(p.speed,p.d.speed*.43,p.d.speed*engine*speedLimit);
     // The velocity vector gently follows the fuselage, rather than snapping.
     const follow=Math.min(1,dt*(p.role==='bomber'?3.2:p.role==='heavy'?4:5.1));
     p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
@@ -1130,7 +1135,7 @@ function plane(type,id,x,y,angle){
     g.fillStyle='#aabec3';g.textAlign='left';g.font='bold 7px monospace';
     g.fillText('SPD '+Math.round(speed),left,y-1);
     g.fillText('CLIMB',right,y-1);
-    const speedT=clamp(speed/(normal*1.43),0,1);
+    const speedT=clamp(speed/(normal*(pilot?.type==='fighter'?1.90:DIVE_OVERSPEED_LIMIT)),0,1);
     g.fillStyle='#405660';g.fillRect(left,y+10,59,3);
     g.fillStyle=speed<normal*.68?'#e4a66b':'#8cc8d1';
     g.fillRect(left,y+10,59*speedT,3);
