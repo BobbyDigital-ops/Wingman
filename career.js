@@ -248,15 +248,15 @@ function ladder(run){
  for(let rank=MAX_RANK;rank>=1;rank--){
   const current=rank===run.rank,cleared=rank<run.rank;
   const status=current?'current':cleared?'cleared':'locked';
-  const occupied=new Set();
   const options=[0,1,2].map((lane)=>{
    if(!current)return '<div class="route-node '+status+'" aria-label="Rank '+rank+' route '+(lane+1)+' '+status+'"><span class="route-node-symbol">'+(cleared?'✓':'◆')+'</span><small>'+(cleared?'CLEARED':'UNKNOWN ACE')+'</small></div>';
    const op=run.choices[lane],p=byId[op?.id],record=data.records[op?.id];
    if(!p)return '<div class="route-node locked">?</div>';
    const appearance={...p.appearance};
-   let portraitIndex=((Number(p.id.replace('pilot-',''))||0)*7)%5;
-   while(occupied.has(portraitIndex))portraitIndex=(portraitIndex+1)%5;
-   occupied.add(portraitIndex);appearance.portraitIndex=portraitIndex;
+   const fixed=ROSTER.find(x=>x.id===p.rosterId);
+   // Identity remains stable wherever this pilot reappears in the tree.
+   if(fixed)appearance.rosterPortrait=fixed.portrait;
+   else appearance.portraitIndex=((Number(p.id.replace('pilot-',''))||0)*7)%5;
    return '<button class="route-node route-opponent" data-choice="'+lane+'" aria-label="Challenge '+escape(p.name)+'"><span class="route-photo">'+pilotPortrait(p.faction,{...appearance,rosterPortrait:ROSTER.find(x=>x.id===p.rosterId)?.portrait??Number(p.id.replace('pilot-',''))})+'</span><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+'</small>'+(record?'<em>'+record.wins+'–'+record.losses+' RIVALRY</em>':'')+'<span class="route-cta">CHALLENGE →</span></button>';
   }).join('');
   rows.push('<section class="route-tier '+status+'" '+(current?'id="active-rung"':'')+'><div class="route-rank">'+(rank===MAX_RANK?'★ FINAL ACE':'RANK '+rank)+(current?' • CHOOSE A BRANCH':'')+'</div><div class="route-fork" aria-hidden="true"><span></span><span></span><span></span></div><div class="route-three">'+options+'</div><div class="route-join" aria-hidden="true"><span></span><span></span><span></span></div></section>');
