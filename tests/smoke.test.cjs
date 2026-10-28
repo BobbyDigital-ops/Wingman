@@ -448,7 +448,7 @@ test('bomber rear gunner triggers automatically on a pursuer behind it',()=>{
  assert.equal(bomber.rearCooldown,0);
  game.internals.updatePlane(bomber,1/60,0);
  assert.ok(bomber.rearCooldown>1.5);
- assert.ok(game.internals.state.bullets.some(b=>b.owner===0&&b.damage===8&&b.rearGun));
+ assert.ok(game.internals.state.bullets.some(b=>b.owner===0&&b.damage===7&&b.rearGun));
 });
 test('depleted armour reduces hull; shield only protects and never recharges armour',()=>{
  const game=launch();game.listeners.get('start:click')();
@@ -693,4 +693,30 @@ test('climbing trades forward airspeed for height and diving restores it',()=>{
  assert.ok(p.speed>base,`a dive must recover and exceed initial speed: ${p.speed} vs ${base}`);
  assert.ok(p.speed<=p.d.speed*1.43+1,'diving should not create unlimited speed');
  assert.ok(p.alive,'normal altitude/speed exchange should not damage the plane');
+});
+
+test('rear turret delivers fighter-like bursts without matching fighter bullet damage',()=>{
+ const game=launch();game.listeners.get('bomber:click')();game.listeners.get('start:click')();
+ const s=game.internals.state,[bomber,chaser]=s.fliers;
+ bomber.x=205;bomber.y=120;bomber.angle=0;
+ bomber.vx=0;bomber.vy=0;
+ chaser.x=156;chaser.y=120;chaser.vx=0;chaser.vy=0;
+ chaser.spawnSafe=0;
+ const hullBefore=chaser.health,armourBefore=chaser.armour;
+ for(let i=0;i<45;i++){
+   game.internals.updatePlane(bomber,1/60,0);
+   game.internals.projectiles(1/60);
+ }
+ const fired=s.bullets.filter(b=>b.rearGun).length;
+ assert.ok(bomber.rearShots<=1,'rear gun fires nearly an entire nine-shot burst');
+ assert.ok(chaser.health<hullBefore||chaser.armour<armourBefore,'tailing is punished by real projectile hits');
+ const gun=game.internals.PLANES.fighter.damage;
+ assert.ok(7<gun,'each tail turret hit deals less damage than fighter primary gun');
+});
+test('the fighter combat HUD and ability naming remain independent of bomb controls',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const s=game.internals.state;
+ assert.equal(s.selected,'fighter');
+ assert.equal(s.fliers[0].role,'fighter');
+ assert.equal(s.phase,'playing');
 });
