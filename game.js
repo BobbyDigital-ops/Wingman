@@ -21,7 +21,7 @@
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
     scores:[0,0],round:1,time:90,intermission:0,banner:'',bannerTime:0,paused:false,
-    impactLock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0
+    impactLock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2
   };
   const controls={left:false,right:false};
   const ui={
@@ -73,6 +73,14 @@
       plane(state.selected,0,W*.22,H*.45,-.14),
       plane(state.enemyType,1,W*.78,H*.52,Math.PI+.15)
     ];
+    if(state.participants>2){
+      const pool=Object.keys(PLANES).filter(t=>t!==state.selected);
+      for(let id=2;id<state.participants;id++){
+        const type=pool[(id+state.round)%pool.length];
+        const p=plane(type,id,W*(id===2?.42:.61),H*(id===2?.62:.36),id===2?-.8:2.4);
+        state.fliers.push(p);
+      }
+    }
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.time=state.mode==='survival'?70:90;state.impactLock=0;state.phase='playing';state.paused=false;
     state.banner='ROUND '+state.round;state.bannerTime=1.5;
@@ -84,6 +92,7 @@
     state.enemyType=others[Math.floor(Math.random()*others.length)];
     state.scores=[0,0];state.round=1;state.kills=0;
     state.mode=document.getElementById('mode-select')?.value||'duel';
+    state.participants=Number(document.getElementById('pilots-select')?.value||2);
     state.arena=Number(document.getElementById('arena-select')?.value||0);
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
     document.getElementById('bomb').hidden=!['bomber','he111'].includes(state.selected);
@@ -120,6 +129,8 @@
     if(!p||!p.alive||p.gunCooldown>0||p.burstLeft>0||p.rollTime>0||state.phase!=='playing'||state.paused)return;
     p.burstLeft=p.d.burst;p.shotTimer=0;
   }
+  function opponents(p){return state.fliers.filter(other=>other.alive&&other.id!==p.id);}
+  function nearestEnemy(p){return opponents(p).sort((a,b)=>distance(p,a)-distance(p,b))[0];}
   function triggerSpecial(p){
     if(!p||!p.alive||p.specialCooldown>0||state.phase!=='playing'||state.paused)return;
     p.specialCooldown=p.d.specialCd;
@@ -127,7 +138,7 @@
       // A physically continuous high yo-yo: follow a single smooth arc
       // through the upper air, then descend toward the rival's predicted tail.
       // Its destination is captured at launch, so accurate timing matters.
-      const rival=state.fliers[1-p.id];
+      const rival=nearestEnemy(p);
       const heading={x:Math.cos(p.angle),y:Math.sin(p.angle)};
       const p0={x:p.x,y:p.y};
       const predicted=rival?{
@@ -213,7 +224,7 @@
       p.health=0;p.alive=false;
       emit(p.x,p.y,28,'#ffc47e',75);
       emit(p.x,p.y,16,'#625765',35);
-      endRound(p.id===0?1:0);
+      if(state.participants===2||p.id===0||state.fliers.slice(1).every(other=>!other.alive))endRound(p.id===0?1:0);
     }
   }
   function triggerRoll(p){
@@ -273,13 +284,14 @@
     p.x+=p.vx*dt;p.y+=p.vy*dt;
     // A soft, continuous boundary recovery avoids frame-to-frame angle snaps.
     const margin=15;
-    if(p.x<margin||p.x>W-margin||p.y<37||p.y>H-18){
-      p.x=clamp(p.x,margin,W-margin);p.y=clamp(p.y,37,H-18);
-      const inward=Math.atan2(H*.52-p.y,W*.5-p.x);
-      p.angle+=clamp(angleDiff(inward,p.angle),-2.7*dt,2.7*dt);
-      if(p.x===margin&&p.vx<0||p.x===W-margin&&p.vx>0)p.vx=0;
-      if(p.y===37&&p.vy<0||p.y===H-18&&p.vy>0)p.vy=0;
-    }
+    // Wrap horizontally, conserving momentum and direction.
+    if(p.x<-p.d.radius)p.x+=W+2*p.d.radius;
+    else if(p.x>W+p.d.radius)p.x-=W+2*p.d.radius;
+    // Soft ceiling: deflect upward velocity rather than teleporting or damaging.
+    if(p.y<37){p.y=37;p.vy=Math.max(3,p.vy);p.angle+=clamp(angleDiff(.3,p.angle),-dt*3,dt*3);}
+    // Floor is a deliberate lethal hazard, not a source of component damage.
+    if(p.y>=H-13){p.y=H-13;p.health=0;p.alive=false;p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);endRound(p.id===0?1:0);}
+
   }
   // Tactical AI: state changes prevent indefinite tail-chasing and combat orbits.
   function aiInput(p,target){
@@ -289,7 +301,7 @@
     const facing=Math.abs(angleDiff(targetAngle,p.angle));
     const enemyBehind=Math.abs(angleDiff(Math.atan2(p.y-target.y,p.x-target.x),target.angle))<.65;
     if(p.aiThink<=0){
-      if(p.x<45||p.x>W-45||p.y<46||p.y>H-24) p.aiMode='recover';
+      if(p.y<46||p.y>H-44) p.aiMode='recover';
       else if(target.burstLeft>0&&range<95) p.aiMode='evade';
       else if(enemyBehind&&range<80) p.aiMode='break';
       else if(p.gunCooldown>0&&range<110) p.aiMode='extend';
@@ -321,7 +333,7 @@
       if(p.y<target.y-14&&Math.abs((p.x+p.vx*.15)-(target.x+target.vx*.15))<24)
         triggerBomb(p);
     }
-    tx=clamp(tx,32,W-32);ty=clamp(ty,48,H-27);
+    tx=clamp(tx,12,W-12);ty=clamp(ty,48,H-43);
     if(p.role==='fighter'&&p.aiMode==='attack'&&range<65&&facing>1){tx=p.x+p.vx*.65;ty=clamp(p.y-35,45,H-30);}
     const goal=Math.atan2(ty-p.y,tx-p.x);
     const error=angleDiff(goal,p.angle);
@@ -377,23 +389,25 @@
     for(let i=state.bullets.length-1;i>=0;i--){
       const b=state.bullets[i],px=b.x,py=b.y;
       b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;b.age=(b.age||0)+dt;
-      const target=state.fliers[1-b.owner],shooter=state.fliers[b.owner];
+      const shooter=state.fliers[b.owner];
+      const targets=state.fliers.filter(p=>p.id!==b.owner&&p.alive);
       // Neither a gun muzzle nor a bomber can inflict disguised impact damage
       // by touching another airframe: rounds must leave the collision envelope.
-      const clear=target&&shooter&&distance(target,shooter)>
-        target.d.radius+shooter.d.radius+3;
-      if(target&&target.alive&&target.rollTime<=0&&b.age>.035&&clear){
-        const vx=b.x-px,vy=b.y-py;
-        const denom=vx*vx+vy*vy;
+      let struck=false;
+      for(const target of targets){
+        const clear=shooter&&distance(target,shooter)>target.d.radius+shooter.d.radius+3;
+        if(!clear||target.rollTime>0||b.age<=.035)continue;
+        const vx=b.x-px,vy=b.y-py,denom=vx*vx+vy*vy;
         const t=denom>0?clamp(((target.x-px)*vx+(target.y-py)*vy)/denom,0,1):0;
         const nx=px+t*vx,ny=py+t*vy;
         if(Math.hypot(target.x-nx,target.y-ny)<target.d.radius+
           (shooter.role==='fighter'?2.7:1.4)){
-          hit(target,b.damage,b.x,b.y,undefined,'GUN');
-          state.bullets.splice(i,1);continue;
+          hit(target,b.damage,b.x,b.y,undefined,'GUN');struck=true;break;
         }
       }
-      if(b.life<=0||b.x<0||b.x>W||b.y<31||b.y>H-4)
+      if(struck){state.bullets.splice(i,1);continue;}
+      if(b.x<0)b.x+=W;else if(b.x>W)b.x-=W;
+      if(b.life<=0||b.y<31||b.y>H-4)
         state.bullets.splice(i,1);
     }
     for(let i=state.bombs.length-1;i>=0;i--){
@@ -402,8 +416,8 @@
       if(b.delay>0)continue;
       b.age=(b.age||0)+dt;
       b.vy+=94*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
-      const target=state.fliers[1-b.owner];
-      if(b.y>=H-8||(b.age>.24&&target&&target.alive&&distance(b,target)<target.d.radius+4)){
+      const target=state.fliers.find(p=>p.id!==b.owner&&p.alive&&distance(b,p)<p.d.radius+4);
+      if(b.y>=H-8||(b.age>.24&&target)){
         explosion(b.x,Math.min(b.y,H-8),24,b.owner,55);
         state.bombs.splice(i,1);continue;
       }
@@ -411,7 +425,7 @@
     }
     for(let i=state.mines.length-1;i>=0;i--){
       const m=state.mines[i];m.arm-=dt;m.life-=dt;m.phase+=dt*2;
-      const target=state.fliers[1-m.owner];
+      const target=state.fliers.find(p=>p.id!==m.owner&&p.alive&&distance(m,p)<p.d.radius+6);
       if(m.arm<=0&&target&&target.alive&&distance(m,target)<target.d.radius+6){
         explosion(m.x,m.y,21,m.owner,54,'MINE');state.mines.splice(i,1);continue;
       }
@@ -429,28 +443,20 @@
     if(state.phase==='playing'){
       state.time-=dt;
       if(state.mode==='survival'&&state.time<=0){endRound(1);return;}
-      const user=state.fliers[0],enemy=state.fliers[1];
+      const user=state.fliers[0];
       updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0));
-      updatePlane(enemy,dt,aiInput(enemy,user));
-      projectiles(dt);
-      // Airframes cannot hurt one another. Separate overlaps without HP or
-      // component damage; bombers must win through bombing, not ramming.
-      if(user.alive&&enemy.alive){
-        const dx=enemy.x-user.x,dy=enemy.y-user.y;
-        const gap=user.d.radius+enemy.d.radius-2;
-        const dist=Math.hypot(dx,dy);
-        if(dist<gap){
-          const nx=dist>.001?dx/dist:Math.cos(user.angle);
-          const ny=dist>.001?dy/dist:Math.sin(user.angle);
-          const push=(gap-dist)*.5;
-          user.x=clamp(user.x-nx*push,12,W-12);
-          user.y=clamp(user.y-ny*push,34,H-12);
-          enemy.x=clamp(enemy.x+nx*push,12,W-12);
-          enemy.y=clamp(enemy.y+ny*push,34,H-12);
-        }
+      for(const p of state.fliers.slice(1)){
+        if(p.alive){const target=nearestEnemy(p);updatePlane(p,dt,target?aiInput(p,target):0);}
       }
-      if(state.time<=0){
-        const a=user.health/user.d.hull,b=enemy.health/enemy.d.hull;
+      projectiles(dt);
+      // Airframes may overlap without dealing damage. No ramming penalty.
+      const enemies=state.fliers.slice(1);
+      if(state.participants>2){
+        if(!user.alive)endRound(1);
+        else if(enemies.every(p=>!p.alive))endRound(0);
+        else if(state.time<=0)endRound(1);
+      }else if(state.time<=0){
+        const enemy=enemies[0],a=user.health/user.d.hull,b=enemy.health/enemy.d.hull;
         endRound(Math.abs(a-b)<.025?-1:a>b?0:1);
       }
     }
@@ -594,21 +600,21 @@
     c.save();c.translate(p.x,p.y);c.rotate(p.angle);
     if(p.rollTime>0)c.scale(1,Math.max(.2,Math.abs(Math.cos(p.rollTime*22))));
     if(p.armourTime>0){
-      c.beginPath();c.ellipse(0,0,15,14,0,0,TAU);
+      c.beginPath();c.ellipse(0,0,10,8,0,0,TAU);
       c.strokeStyle='#b1ecf5c9';c.lineWidth=.75;c.stroke();
     }
-    c.scale(1.05,1.05);
+    c.scale(.54,.54);
     aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':'level');
     if(p.muzzleFlash>0){c.fillStyle='#fff4ad';c.fillRect(13,-1,7,2);}
     if(p.hitFlash>0){
-      c.beginPath();c.ellipse(0,0,12,8,0,0,TAU);
+      c.beginPath();c.ellipse(0,0,8,5,0,0,TAU);
       c.strokeStyle='#fff0bd';c.lineWidth=.8;c.stroke();
     }
     c.restore();
-    c.fillStyle='#1e3341d9';c.fillRect(p.x-7,p.y-19,14,5.5);
+    c.fillStyle='#1e3341d9';c.fillRect(p.x-7,p.y-14,14,5.5);
     c.font='bold 5px sans-serif';c.textAlign='center';c.textBaseline='top';
     c.fillStyle=p.id===0?'#ffe7b4':'#ffc2b8';
-    c.fillText(p.id===0?'P1':'AI',p.x,p.y-18.6);
+    c.fillText(p.id===0?'P1':'AI',p.x,p.y-13.6);
   }
   function drawModels(){
     if(!modelCanvas.width||!modelCanvas.height)return;
@@ -628,7 +634,7 @@
     g.fillStyle='#182d3bdc';g.fillRect(0,0,W,31);
     g.font='bold 7px monospace';g.textBaseline='top';
     g.fillStyle='#f5e6c2';g.fillText(p?p.d.name:'WINGMAN',7,3);
-    const en=e?e.d.name:'SELECT PLANE';
+    const en=e?e.d.name+(state.participants>2?' + '+(state.participants-2):''):'SELECT PLANE';
     g.fillText(en,W-7-g.measureText(en).width,3);
     g.font='bold 8px monospace';g.textAlign='center';
     g.fillText(state.mode==='survival'?'WAVE '+state.round:state.scores[0]+' : '+state.scores[1],W/2,3);
