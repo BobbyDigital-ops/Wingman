@@ -245,7 +245,7 @@ test('saved pilot can reopen selection safely and keep their career on cancel',a
  else await page.locator('#career-open-mobile').click();
  await page.locator('[data-candidate="0"]').click();
  const original=await page.evaluate(()=>localStorage.getItem('wingman-road-to-ace-v1'));
- await page.getByRole('button',{name:'CHOOSE A DIFFERENT PILOT'}).click();
+ await page.getByRole('button',{name:'START A NEW PILOT'}).click();
  await expect(page.locator('[data-candidate]')).toHaveCount(3);
  page.once('dialog',dialog=>dialog.dismiss());
  await page.locator('[data-candidate="1"]').click();
@@ -268,7 +268,7 @@ test('rank map has eight three-way branching tiers and an active challenge lane'
  await expect(map.locator('.route-fork')).toHaveCount(8);
  await expect(map.locator('.route-join')).toHaveCount(8);
  await expect(map.locator('#active-rung [data-choice]')).toHaveCount(3);
- await expect(page.locator('[data-action="select"]')).toBeVisible();
+ await expect(page.locator('[data-action="character"]')).toBeVisible();
 });
 
 test('Wingman 2.0 title and operation cards load illustrated artwork',async({page})=>{
