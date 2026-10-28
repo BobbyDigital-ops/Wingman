@@ -42,7 +42,7 @@ function launch(){
     console
   };
   const instrumented=code.replace('  // All scenery is painted once;',
-    '  window.__wingmanTest={state,triggerBomb,triggerSpecial};\n  // All scenery is painted once;');
+    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,hit};\n  // All scenery is painted once;');
   const artCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/aircraft.js'),'utf8');
   vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
   vm.runInNewContext(instrumented,sandbox,{timeout:3000,filename:'game.js'});
@@ -293,4 +293,25 @@ test('the four-pilot arena continues after a single AI is destroyed',()=>{
  game.advance(2,1000);
  assert.equal(state.phase,'playing');
  assert.equal(state.fliers.length,4);
+});
+
+test('repeated targeted hits detach a wing while hull remains intact',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const enemy=game.internals.state.fliers[1];
+ enemy.spawnSafe=0;
+ game.internals.hit(enemy,16,enemy.x,enemy.y,'left');
+ game.internals.hit(enemy,16,enemy.x,enemy.y,'left');
+ assert.equal(enemy.detached.left,true);
+ assert.equal(enemy.critical,true);
+ assert.equal(enemy.criticalCause,'WING FAILURE');
+ assert.ok(enemy.health>0,'component destruction must precede hull destruction');
+});
+test('repeated engine hits cause unrecoverable loss of thrust',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const enemy=game.internals.state.fliers[1];enemy.spawnSafe=0;
+ game.internals.hit(enemy,19,enemy.x,enemy.y,'engine');
+ game.internals.hit(enemy,19,enemy.x,enemy.y,'engine');
+ assert.equal(enemy.parts.engine,0);
+ assert.equal(enemy.criticalCause,'ENGINE FAILURE');
+ assert.ok(enemy.health>0);
 });
