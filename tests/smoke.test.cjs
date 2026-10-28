@@ -545,6 +545,8 @@ test('predicted gun interception accounts for relative movement and wind',()=>{
   const [target,p]=game.internals.state.fliers;
   p.x=80;p.y=100;p.angle=0;p.vx=40;p.vy=0;
   target.x=155;target.y=100;target.vx=0;target.vy=38;
+  // The match may randomly start with wind; compare against a calm baseline.
+  game.internals.state.wind={active:false,base:0,current:0,elapsed:0};
   const solution=game.internals.interceptPoint(p,target);
   assert.ok(solution.time>0);
   assert.ok(solution.y>target.y,'a moving target requires vertical lead');
