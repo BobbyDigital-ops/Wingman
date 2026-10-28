@@ -458,3 +458,160 @@ body:has(#career-screen:not([hidden])) #touch-controls{
  .site-header,.site-footer,.career-nav{display:none!important}
  .game-frame{width:100vw!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;min-height:0!important;aspect-ratio:auto!important;border:0!important;box-shadow:none!important}
 }
+
+/* ================================================================
+   WINGMAN 2.0 / VISUAL SYSTEM / FIRST PLAYABLE ART PASS
+   Painted aviation skies, editorial composition and aircraft art.
+   Keeps accessibility, hitboxes and mode/game logic unchanged.
+   ================================================================ */
+:root{--wingman-cream:#ffedc6;--wingman-gold:#e5bc78;--wingman-ink:#071724;--wingman-blue:#21455b}
+.wingman-front{background:#061826!important;backdrop-filter:none!important}
+.splash-panel{
+ display:flex!important;align-items:flex-start!important;justify-content:center!important;
+ text-align:left!important;padding:clamp(18px,5vw,66px)!important;
+ background:
+  linear-gradient(90deg,#061421ec 0%,#0a2137df 28%,#0b1e30aa 47%,#0a203121 73%,#071b2a3d 100%),
+  url('../../assets/art/wingman-menu-scene.svg') 63% 48% /cover no-repeat!important;
+ border:1px solid #d8b67e9c!important;
+ box-shadow:inset 0 0 0 5px #0a1b28a8,inset 0 0 0 7px #e7c99444!important;
+}
+.splash-panel:before{background:radial-gradient(ellipse at 80% 55%,transparent 43%,#06162275)!important;pointer-events:none}
+.splash-panel:after{inset:12px!important;border-color:#e5c8975c!important}
+.splash-copy{
+ display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+ max-width:min(53%,600px);height:100%;position:relative;z-index:2;
+ gap:clamp(5px,1.5svh,15px);
+}
+.splash-topline{font-family:'Arial Narrow',Arial,sans-serif!important;font-weight:800!important;font-size:clamp(9px,1.7svh,14px)!important;letter-spacing:.25em;max-width:100%;margin:0 0 5px!important;border:0!important;padding:0!important;color:#e8ce9d!important;text-shadow:0 2px 6px #09192c}
+.splash-mark{margin:0!important;justify-content:flex-start}
+.splash-mark .wing-rule{width:45px!important;background:#e4be7d!important}
+.splash-mark .wing-emblem{font-size:14px!important}
+.splash-title{
+ width:auto!important;max-width:100%;transform:none!important;
+ font-family:Impact,'Arial Narrow',sans-serif!important;
+ font-size:clamp(56px,9.4vw,146px)!important;line-height:.88!important;
+ letter-spacing:.035em!important;
+ text-shadow:0 2px 0 #cfb489,0 7px 0 #102a35,0 14px 24px #061523b3!important;
+ margin:0!important;color:#f8ead1!important;white-space:nowrap;
+}
+.splash-subtitle{font-family:Georgia,serif!important;font-style:italic;font-weight:700;font-size:clamp(10px,1.75vw,24px)!important;letter-spacing:.23em!important;margin:1px 0 5px!important;color:#f4dfbd!important;text-shadow:0 3px 8px #061523}
+.splash-panel #splash-aircraft{display:none!important}
+.splash-tagline{font:italic clamp(11px,1.4vw,17px) Georgia,serif!important;letter-spacing:.07em!important;margin:clamp(8px,2svh,19px) 0 0!important;color:#f5ead0!important;text-shadow:0 3px 7px #071b29}
+.splash-copy>.front-action,.splash-copy>.front-secondary{
+ font-family:'Arial Narrow',Arial,sans-serif!important;
+ display:flex;align-items:center;justify-content:space-between;
+ min-height:clamp(38px,6.7svh,62px)!important;width:min(100%,360px);margin:0!important;
+ text-align:left!important;padding:7px 16px!important;letter-spacing:.13em!important;
+ font-weight:900!important;font-size:clamp(11px,1.4vw,16px)!important;
+}
+.splash-copy>.front-action{background:linear-gradient(#f2d49d,#bf9262)!important}
+.splash-copy>.front-secondary{background:linear-gradient(#1a3948,#091b2c)!important;color:#eedbb8!important;border-color:#d9b788!important}
+.splash-foot{font:700 9px monospace!important;letter-spacing:.19em!important;color:#e0caa5!important;margin:2px 0 0!important}
+.wm-hero-insignia{position:absolute;right:clamp(22px,5vw,75px);bottom:clamp(12px,3svh,38px);display:flex;align-items:center;gap:8px;z-index:1;opacity:.78;color:#e6d7b5;text-shadow:0 3px 7px #071625}
+.wm-hero-insignia span{font:900 clamp(15px,2.5vw,32px) Impact,sans-serif;letter-spacing:.08em}
+.wm-hero-insignia b{font-size:clamp(28px,4vw,48px);color:#eec8a4;text-shadow:-4px 0 #37658a,4px 0 #b44e4d}
+.wm-hero-insignia small{font:700 9px/1.5 monospace;letter-spacing:.11em}
+#menu-fullscreen{z-index:38!important;border-color:#e5c58d!important;background:#0c2735d9!important;backdrop-filter:blur(4px)}
+
+/* Wartime operation selection: four full-scene illustrated mission cards. */
+.flow-panel{
+ background:
+ linear-gradient(180deg,#071826ce,#071b29f5),
+ url('../../assets/art/wingman-menu-scene.svg') center /cover!important;
+}
+.flow-panel .mode-cards{grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(8px,1.3vw,18px)}
+.flow-panel .mode-choice{
+ min-height:clamp(145px,37svh,280px)!important;justify-content:flex-end!important;
+ align-items:flex-start!important;overflow:hidden!important;isolation:isolate;
+ border:1px solid #abac9880!important;border-top:2px solid #d6b681!important;
+ border-radius:2px!important;clip-path:none!important;
+ padding:clamp(9px,1.6vw,18px)!important;
+ background:
+  linear-gradient(180deg,#07142000 3%,#12293729 36%,#0b1d29ee 78%,#081621f8 100%),
+  url('../../assets/art/wingman-menu-scene.svg') 50% 30% /auto 240% no-repeat!important;
+ box-shadow:inset 0 0 0 2px #0618268f,0 6px 15px #0006!important;
+}
+.flow-panel .mode-choice:nth-child(2){background-position:center,75% 32%!important}
+.flow-panel .mode-choice:nth-child(3){background-position:center,27% 74%!important}
+.flow-panel .mode-choice:nth-child(4){background-position:center,95% 70%!important}
+.flow-panel .mode-choice:before{display:block!important;content:"";position:absolute;inset:0;width:auto;height:auto;background:linear-gradient(180deg,#ffffff11,transparent 25%,#020e1f64);z-index:-1;pointer-events:none}
+.flow-panel .mode-choice:after{content:"✦";position:absolute;right:12px;top:9px;color:#ffdb9c;border:1px solid #e7cc8f6b;border-radius:50%;width:28px;height:28px;display:grid;place-items:center;font-size:12px}
+.flow-panel .mode-choice.selected{outline:2px solid #f5d79e!important;outline-offset:-3px;border-color:#ffe1a9!important;filter:brightness(1.18)}
+.flow-panel .mode-choice strong{font-family:Impact,'Arial Narrow',sans-serif!important;font-size:clamp(20px,2.8vw,35px)!important;text-shadow:0 3px 5px #020f19!important;color:#fff0d0!important}
+.flow-panel .mode-choice span{color:#ffdfab!important;text-shadow:0 2px 5px #000!important}
+.flow-panel .mode-choice small{font:700 9px/1.3 monospace!important;color:#dde5dd!important;text-shadow:0 2px 5px #000!important}
+
+/* Hangar-style airframe preview: the exact in-game sprite is enlarged and
+   presented against an illustrated environment with real art direction. */
+.setup-panel{max-width:1120px!important;background:
+ linear-gradient(90deg,#081c2bf0,#091d2ce9),
+ url('../../assets/art/wingman-menu-scene.svg') center/cover!important}
+.setup-panel .setup-columns{grid-template-columns:minmax(0,2.2fr) minmax(195px,.8fr);gap:clamp(8px,1.6vw,22px)!important}
+.wm-featured-aircraft{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(130px,.8fr);align-items:center;
+ min-height:clamp(110px,26svh,214px);border:1px solid #d4b58291;overflow:hidden;
+ background:#173950;box-shadow:inset 0 0 22px #011626,0 7px 20px #0006;margin:0 0 9px}
+.wm-featured-scene{height:100%;min-height:110px;
+ background:linear-gradient(90deg,#16374c33,#142d3b25),url('../../assets/art/wingman-menu-scene.svg') 50% 41% /cover}
+#wm-featured-plane{height:100%!important;width:100%!important;object-fit:contain;image-rendering:auto!important;filter:drop-shadow(0 9px 8px #0b1c26db)}
+.wm-featured-info{text-align:left;padding:clamp(9px,1.6vw,20px);background:#102736e5;height:100%;display:flex;flex-direction:column;justify-content:center;gap:7px}
+.wm-featured-info strong{font:900 clamp(18px,2.4vw,33px)/1 Impact,sans-serif;letter-spacing:.06em;color:#ffe2ac}
+.wm-featured-info>span{font:600 clamp(9px,1.1vw,12px)/1.4 Georgia,serif;color:#efdfbb}
+.wm-specs{display:grid;gap:5px;margin-top:6px}
+.wm-specs label{display:grid;grid-template-columns:45px 1fr;align-items:center;gap:7px;font:700 9px monospace;color:#d7bf93}
+.wm-specs i{display:block;height:5px;border-radius:1px;background:linear-gradient(90deg,#e6c38c var(--wm-stat,50%),#425a64 var(--wm-stat,50%));box-shadow:inset 0 1px 2px #001c31}
+.setup-panel .plane-picker{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px!important}
+.setup-panel .plane-choice{
+ min-width:0;min-height:clamp(70px,13svh,120px)!important;padding:4px!important;
+ align-items:center!important;justify-content:flex-end!important;text-align:center!important;
+ background:linear-gradient(#2a53649e,#091b29fa),url('../../assets/art/wingman-menu-scene.svg') center/cover!important;
+ box-shadow:inset 0 0 0 2px #06162296,0 3px 8px #0008!important;
+ border:1px solid #8e9f9d!important;clip-path:none!important;
+}
+.setup-panel .plane-choice.selected{border:2px solid #ffdb92!important;outline:none!important;box-shadow:0 0 0 1px #e0bb7e,0 0 16px #d9a96155!important}
+.wm-aircraft-card-canvas{height:clamp(24px,6svh,60px)!important;width:100%!important;object-fit:contain;image-rendering:auto!important;filter:drop-shadow(0 4px 4px #061721d9)}
+.setup-panel .plane-choice b{font:900 clamp(9px,1vw,14px) Impact,sans-serif!important;letter-spacing:.08em;white-space:nowrap}
+.setup-panel .plane-choice small{font:italic 9px Georgia,serif!important;text-align:center}
+.setup-panel .setup-controls{background:#081b2c9a;border:1px solid #d4b5825c;padding:11px!important}
+.setup-panel .setup-label{font-family:Impact,'Arial Narrow',sans-serif!important;font-size:clamp(12px,1.5vw,18px)!important;color:#f8dcaa!important;margin:0 0 5px!important}
+
+/* The same palette now carries through the rest of the campaign and results. */
+#result .result-card{background:linear-gradient(90deg,#071b2af4,#0d2c3ed8),url('../../assets/art/wingman-menu-scene.svg') center/cover!important}
+#result .result-card .eyebrow{color:#f2d4a1}
+.wingman-front .front-action:focus-visible,.wingman-front .mode-choice:focus-visible,.wingman-front .plane-choice:focus-visible{outline:3px solid #fff0bc!important;outline-offset:3px}
+@media (pointer:coarse) and (orientation:landscape), (max-height:540px){
+ .splash-panel{padding:clamp(10px,3vw,28px)!important}
+ .splash-copy{max-width:min(64%,560px);gap:clamp(3px,.6svh,6px)}
+ .splash-title{font-size:clamp(38px,10svh,78px)!important}
+ .splash-subtitle{font-size:clamp(9px,2.4svh,16px)!important}
+ .splash-topline,.splash-foot{font-size:9px!important}
+ .splash-tagline{font-size:10px!important;margin:3px 0!important}
+ .splash-mark{display:none}
+ .splash-copy>.front-action,.splash-copy>.front-secondary{min-height:clamp(29px,8svh,38px)!important;padding:5px 10px!important;font-size:11px!important}
+ .wm-hero-insignia{right:18px;bottom:12px;transform:scale(.7);transform-origin:bottom right}
+ .flow-panel .mode-cards{grid-template-columns:repeat(4,minmax(0,1fr));overflow-y:auto!important;gap:6px!important}
+ .flow-panel .mode-choice{min-height:clamp(77px,26svh,128px)!important;padding:6px!important}
+ .flow-panel .mode-choice strong{font-size:clamp(14px,4svh,23px)!important}
+ .flow-panel .mode-choice span{font-size:clamp(9px,2svh,13px)!important}
+ .flow-panel .mode-choice small{font-size:8px!important}
+ .flow-panel .mode-choice:after{display:none}
+ .wm-featured-aircraft{min-height:80px;margin:0 0 5px;grid-template-columns:minmax(0,1.5fr) minmax(112px,.8fr)}
+ .wm-featured-scene{min-height:80px}
+ .wm-featured-info{gap:3px;padding:5px 8px}
+ .wm-featured-info strong{font-size:clamp(14px,4svh,20px)}
+ .wm-featured-info>span{font-size:9px}
+ .wm-specs{gap:3px;margin:2px 0 0}
+ .wm-specs label{font-size:8px;grid-template-columns:39px 1fr}
+ .setup-panel .plane-choice{min-height:49px!important}
+ .wm-aircraft-card-canvas{height:21px!important}
+ .setup-panel .plane-choice b{font-size:9px!important}
+ .setup-panel .plane-choice small{display:none!important}
+ .setup-panel .setup-columns{grid-template-columns:minmax(0,2fr) minmax(165px,.8fr)}
+ .setup-panel .setup-controls{padding:6px!important}
+}
+@media(max-width:650px) and (orientation:portrait){
+ .splash-panel{background-position:60% 50%!important}
+ .splash-copy{max-width:85%}
+ .flow-panel .mode-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .setup-panel .setup-columns{grid-template-columns:minmax(0,1fr)}
+ .setup-panel .plane-picker{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
