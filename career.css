@@ -129,3 +129,23 @@
  .character-name-row{margin-bottom:4px;gap:6px}
  .character-name-row input{padding:6px}
 }
+
+/* The pilots are defined characters, not random placeholder recruits. */
+.career-panel .character-roster{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;max-height:min(59dvh,540px);overflow:auto;padding:7px;overscroll-behavior:contain}
+.career-panel .character-roster .candidate-card{display:flex;flex-direction:column;align-items:center;min-width:0;padding:10px!important;gap:6px;min-height:240px}
+.career-panel .character-roster .candidate-portrait{width:min(100%,104px);height:auto;aspect-ratio:5/6;flex:none}
+.career-panel .character-roster strong{font-size:clamp(12px,1.4vw,17px);line-height:1.2;text-align:center}
+.career-panel .character-roster small{font:11px/1.25 monospace;text-align:center}
+.career-panel .character-roster .character-bio{font:italic 12px/1.3 Georgia,serif;text-align:center;color:#deccb1;margin:2px 0;flex:1}
+.career-panel .character-roster .candidate-card.selected{outline:2px solid #eec987;outline-offset:2px}
+@media (pointer:coarse) and (orientation:landscape){
+ .career-panel .character-roster{grid-template-columns:repeat(4,minmax(0,1fr));max-height:49dvh;gap:6px}
+ .career-panel .character-roster .candidate-card{min-height:164px;padding:5px!important}
+ .career-panel .character-roster .candidate-portrait{width:min(100%,61px)!important}
+ .career-panel .character-roster strong{font-size:10px}
+ .career-panel .character-roster .character-bio{font-size:10px}
+ .career-panel .character-roster small{font-size:9px}
+}
+@media(max-width:540px) and (orientation:portrait){
+ .career-panel .character-roster{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
