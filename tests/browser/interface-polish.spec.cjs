@@ -176,3 +176,63 @@ test('Road to Ace has a preflight fullscreen control outside its rerendered pane
  await page.locator('[data-candidate="0"]').click();
  await expect(page.locator('#career-fullscreen')).toBeVisible();
 });
+
+test('cartoon pilots have distinct facial geometry and full-volume hairstyle paths',async({page})=>{
+ await page.goto('/');
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ await expect(page.locator('.pilot-avatar')).toHaveCount(3);
+ const shapes=new Map(),styles=new Map();
+ for(let round=0;round<20;round++){
+  const features=await page.locator('.pilot-avatar').evaluateAll(avatars=>avatars.map(svg=>{
+    const face=svg.querySelector('.pilot-face-shape');
+    const hair=svg.querySelector('.pilot-hair-style');
+    const back=svg.querySelector('.hair-back');
+    const front=svg.querySelector('.hair-front');
+    return {
+      face:face?.getAttribute('data-face-shape'),
+      facePath:face?.getAttribute('d'),
+      hair:hair?.getAttribute('data-hair-style'),
+      hairPath:back?.getAttribute('d'),
+      frontPath:front?.getAttribute('d'),
+      volume: back&&face ? face.getBBox().y-back.getBBox().y : -1
+    };
+  }));
+  expect(features).toHaveLength(3);
+  for(const f of features){
+    expect(f.facePath?.length).toBeGreaterThan(35);
+    expect(f.hairPath?.length).toBeGreaterThan(35);
+    expect(f.frontPath?.length).toBeGreaterThan(30);
+    expect(f.volume).toBeGreaterThan(7);
+    shapes.set(f.face,f.facePath);
+    styles.set(f.hair,f.hairPath);
+  }
+  if(shapes.size===5&&styles.size===6)break;
+  await page.getByRole('button',{name:'GENERATE THREE NEW RECRUITS'}).click();
+ }
+ expect(shapes.size,'five visibly different face silhouettes').toBe(5);
+ expect(new Set(shapes.values()).size).toBe(5);
+ expect(styles.size,'six distinct raised hairstyles').toBe(6);
+ expect(new Set(styles.values()).size).toBe(6);
+});
+
+test('older saved pilot portraits without hairstyle still render on licence',async({page})=>{
+ await page.goto('/');
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ await page.locator('[data-candidate="0"]').click();
+ await page.evaluate(()=>{
+   const key='wingman-road-to-ace-v1';
+   const save=JSON.parse(localStorage.getItem(key));
+   delete save.profile.style.hairstyle;
+   localStorage.setItem(key,JSON.stringify(save));
+ });
+ await page.reload();
+ if(await page.locator('#career-license').isVisible())await page.locator('#career-license').click();
+ else {await page.locator('#career-open-mobile').click();await page.locator('[data-action="licence"]').click();}
+ const portrait=page.locator('.career-photo .pilot-avatar');
+ await expect(portrait).toBeVisible();
+ await expect(portrait.locator('.pilot-face-shape')).toHaveCount(1);
+ await expect(portrait.locator('.hair-back')).toHaveCount(1);
+ await expect(portrait.locator('.hair-front')).toHaveCount(1);
+});
