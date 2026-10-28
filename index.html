@@ -8,7 +8,7 @@
   <title>Wingman · Pixel Dogfights</title>
   <link rel="stylesheet" href="./styles.css?v=20261028phase8c">
   <link rel="stylesheet" href="./career.css?v=20261028routes1">
-  <link rel="stylesheet" href="./src/ui/interface.css?v=20261028mobilemenu3">
+  <link rel="stylesheet" href="./src/ui/interface.css?v=20261028wingman2art1">
 </head>
 <body>
   <div class="app">
@@ -22,6 +22,7 @@
       <div class="overlay wingman-front" id="menu">
         <button type="button" id="menu-fullscreen" class="menu-fullscreen" aria-label="Enter full screen" title="Full screen">⛶ <span>FULL SCREEN</span></button>
         <section class="front-panel splash-panel" id="splash-panel" aria-label="Wingman title screen">
+          <div class="splash-copy">
           <div class="splash-topline">EUROPE · 1940–1945 · AIR OPERATIONS</div>
           <div class="splash-mark"><span class="wing-rule"></span><span class="wing-emblem">✦</span><span class="wing-rule"></span></div>
           <h1 class="splash-title">WINGMAN</h1>
@@ -31,6 +32,8 @@
           <button type="button" class="front-action" id="splash-continue">BEGIN OPERATIONS <span aria-hidden="true">▶</span></button>
           <button type="button" class="front-secondary" id="career-open-mobile">ROAD TO ACE · PILOT CAREER</button>
           <div class="splash-foot">SIX HISTORIC AIRCRAFT  /  FOUR WAR THEATRES</div>
+          </div>
+          <div class="wm-hero-insignia" aria-hidden="true"><span>RAF</span><b>◉</b><small>FIGHTER COMMAND<br/>EST. 1940</small></div>
         </section>
         <section class="front-panel flow-panel" id="mode-panel" hidden aria-label="Choose game mode">
           <p class="flow-step">01 / SELECT OPERATION</p><h2>SELECT OPERATION</h2>
@@ -48,13 +51,14 @@
           <div class="setup-columns">
             <div>
               <p class="setup-label">SELECT AIRCRAFT</p>
+              <div class="wm-featured-aircraft"><div class="wm-featured-scene"><canvas id="wm-featured-plane" width="780" height="230" aria-hidden="true"></canvas></div><div class="wm-featured-info"><strong id="wm-featured-name">SPITFIRE</strong><span id="wm-featured-description">RAF / AGILE FIGHTER / OVERDRIVE</span><div class="wm-specs" aria-label="Aircraft handling characteristics"><label>SPEED <i id="wm-stat-speed"></i></label><label>TURN <i id="wm-stat-turn"></i></label><label>ARMOUR <i id="wm-stat-armour"></i></label></div></div></div>
               <div class="plane-picker" role="group" aria-label="Choose aircraft">
-                <button class="plane-choice selected" type="button" data-plane="fighter" aria-pressed="true"><b>SPITFIRE</b><small>Agile fighter · Overdrive</small></button>
-                <button class="plane-choice" type="button" data-plane="heavy" aria-pressed="false"><b>BEAUFIGHTER</b><small>Heavy Fighter · Shield</small></button>
-                <button class="plane-choice" type="button" data-plane="bomber" aria-pressed="false"><b>LANCASTER</b><small>Bomber · Defensive gunners</small></button>
-                <button class="plane-choice" type="button" data-plane="bf109" aria-pressed="false"><b>BF 109</b><small>Agile fighter · Overdrive</small></button>
-                <button class="plane-choice" type="button" data-plane="bf110" aria-pressed="false"><b>BF 110</b><small>Heavy Fighter · Shield</small></button>
-                <button class="plane-choice" type="button" data-plane="he111" aria-pressed="false"><b>HE 111</b><small>Bomber · Defensive gunners</small></button>
+                <button class="plane-choice selected" type="button" data-plane="fighter" aria-pressed="true"><canvas class="wm-aircraft-card-canvas" data-aircraft-art="fighter" width="340" height="110" aria-hidden="true"></canvas><b>SPITFIRE</b><small>Agile fighter · Overdrive</small></button>
+                <button class="plane-choice" type="button" data-plane="heavy" aria-pressed="false"><canvas class="wm-aircraft-card-canvas" data-aircraft-art="heavy" width="340" height="110" aria-hidden="true"></canvas><b>BEAUFIGHTER</b><small>Heavy Fighter · Shield</small></button>
+                <button class="plane-choice" type="button" data-plane="bomber" aria-pressed="false"><canvas class="wm-aircraft-card-canvas" data-aircraft-art="bomber" width="340" height="110" aria-hidden="true"></canvas><b>LANCASTER</b><small>Bomber · Defensive gunners</small></button>
+                <button class="plane-choice" type="button" data-plane="bf109" aria-pressed="false"><canvas class="wm-aircraft-card-canvas" data-aircraft-art="bf109" width="340" height="110" aria-hidden="true"></canvas><b>BF 109</b><small>Agile fighter · Overdrive</small></button>
+                <button class="plane-choice" type="button" data-plane="bf110" aria-pressed="false"><canvas class="wm-aircraft-card-canvas" data-aircraft-art="bf110" width="340" height="110" aria-hidden="true"></canvas><b>BF 110</b><small>Heavy Fighter · Shield</small></button>
+                <button class="plane-choice" type="button" data-plane="he111" aria-pressed="false"><canvas class="wm-aircraft-card-canvas" data-aircraft-art="he111" width="340" height="110" aria-hidden="true"></canvas><b>HE 111</b><small>Bomber · Defensive gunners</small></button>
               </div>
             </div>
             <div class="setup-controls">
@@ -109,6 +113,6 @@
   <script src="./src/art/scenery.js?v=20261028phase8bfix1" defer></script>
   <script src="./game.js?v=20261028cinematic2" defer></script>
   <script src="./career.js?v=20261028routes1" defer></script>
-  <script src="./src/ui/flow.js?v=20261028mobilemenu3" defer></script>
+  <script src="./src/ui/flow.js?v=20261028wingman2art1" defer></script>
 </body>
 </html>
