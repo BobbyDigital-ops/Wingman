@@ -113,3 +113,6 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
   .career-nav{display:none}
 }
 .game-frame:fullscreen{width:100vw!important;height:100dvh!important;max-height:none!important;border:0}
+
+/* Three-action phone layout: steer, FIRE, E ability, Q skill; no universal boost or separate bomb. */
+@media(pointer:coarse) and (orientation:landscape){.control-cluster.steer{gap:10px}.control-cluster.attack{gap:9px}}
