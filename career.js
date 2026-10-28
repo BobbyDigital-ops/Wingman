@@ -232,7 +232,13 @@ function render(){
  panel('ROAD TO ACE',`<div class="career-stats"><span>${escape(p.name)} · ${aircraft[run.aircraft]}</span><span>RANK ${run.rank}/${MAX_RANK}</span><span>${'♥'.repeat(run.lives)}${'♡'.repeat(3-run.lives)}</span></div>
  <p class="career-muted">Choose one of three rival branches to ascend. Cleared ranks remain below; future ranks are locked above.</p>
  ${ladder(run)}<button data-action="licence">VIEW PILOT LICENCE</button>`);
- const marker=screen.querySelector('#active-rung');if(marker)marker.scrollIntoView({block:'center'});
+ const marker=screen.querySelector('#active-rung'),list=screen.querySelector('.ladder-scroll');
+  // Only centre the active rank inside the ladder itself. scrollIntoView()
+  // also scrolled the outer career panel and hid the title/navigation on phones.
+  if(marker&&list){
+    const a=marker.getBoundingClientRect(),b=list.getBoundingClientRect();
+    list.scrollTop+=a.top-b.top-(list.clientHeight-a.height)/2;
+  }
 
 }
 screen.addEventListener('click',e=>{
