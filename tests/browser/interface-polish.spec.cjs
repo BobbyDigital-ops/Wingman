@@ -429,3 +429,26 @@ test('aircraft preview remains crisp transparent original geometry instead of en
  });
  expect(corners).toEqual([0,0,0]);
 });
+
+test('existing pilot has explicit 5-character selection with editable name and preserved career',async({page})=>{
+ await page.goto('/');
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ if(await page.locator('[data-candidate="0"]').isVisible())await page.locator('[data-candidate="0"]').click();
+ await page.locator('[data-action="character"]').first().click();
+ await expect(page.getByRole('heading',{name:'CHOOSE YOUR CHARACTER'})).toBeVisible();
+ await expect(page.locator('[data-portrait]')).toHaveCount(5);
+ const original=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
+ const selection=(Number(original.profile.style?.portraitIndex)||0)+1;
+ await page.locator('[data-portrait="'+selection%5+'"]').click();
+ await page.locator('#character-name').fill('Squadron Leader Test');
+ await page.locator('[data-action="save-character"]').click();
+ const updated=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
+ expect(updated.profile.name).toBe('Squadron Leader Test');
+ expect(updated.profile.style.portraitIndex).toBe(selection%5);
+ for(const field of ['wins','losses','kills','best','completed','run']){
+  expect(updated[field]).toEqual(original[field]);
+ }
+ await expect(page.locator('.career-photo')).toContainText('');
+ await expect(page.getByText('Squadron Leader Test')).toBeVisible();
+});
