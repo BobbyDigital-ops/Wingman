@@ -143,6 +143,7 @@ function makeChoices(run){
   difficulty:run.rank<2?'rookie':run.rank<5?'standard':'ace',
   arena:(run.rank+i)%4,
   attributes:p.attributes,
+  signature:p.signature||ROSTER.find(x=>x.id===p.rosterId)?.signature,
   label:p.name
  }));
 }
