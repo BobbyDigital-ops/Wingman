@@ -806,12 +806,13 @@ function plane(type,id,x,y,angle){
     };
     g.fillStyle=hud.panel;g.fillRect(0,0,W,31);
     g.font='bold 7px monospace';g.textBaseline='top';
-    g.fillStyle=hud.gold;g.fillText(p?p.d.name:'WINGMAN',7,3);
-    const en=e?e.d.name+(state.participants>2?' + '+(state.participants-2):''):'SELECT PLANE';
-    g.fillText(en,W-7-g.measureText(en).width,3);
-    g.font='bold 7px monospace';g.fillStyle='#f5d48c';
-    if(p)g.fillText('YOU: '+(p.role==='heavy'?'HEAVY FIGHTER':p.role==='bomber'?(p.type==='he111'?'MEDIUM BOMBER':'HEAVY BOMBER'):'FIGHTER'),7,9);
-    if(e){const cls=e.role==='heavy'?'HEAVY FIGHTER':e.role==='bomber'?(e.type==='he111'?'MEDIUM BOMBER':'HEAVY BOMBER'):'FIGHTER';g.fillText('ENEMY: '+cls,W-7-g.measureText('ENEMY: '+cls).width,9);}
+    // Class must appear on the top line: the previous labels at y=9
+    // were painted over by the armour and hull meters.
+    const className=q=>q.role==='heavy'?'HEAVY FIGHTER':q.role==='bomber'?'BOMBER':'FIGHTER';
+    const own=p?className(p)+' · '+p.d.name:'WINGMAN';
+    const opponent=e?className(e)+' · '+e.d.name+(state.participants>2?' +'+(state.participants-2):''):'SELECT PLANE';
+    g.fillStyle=hud.gold;g.fillText(own,7,3);
+    g.fillText(opponent,W-7-g.measureText(opponent).width,3);
     if(state.participants>2){
       for(const pilot of state.fliers){
         const ix=W/2-40+pilot.id*27;
