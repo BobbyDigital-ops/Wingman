@@ -671,23 +671,22 @@ function plane(type,id,x,y,angle){
         const clear=shooter&&combatDistance(target,shooter)>target.d.radius+shooter.d.radius+3;
         if(!clear||target.rollTime>0||target.evasiveTime>0||b.age<=.035)continue;
         const vx=b.x-px,vy=b.y-py,denom=vx*vx+vy*vy;
-        const t=denom>0?clamp(((target.x-px)*vx+(target.y-py)*vy)/denom,0,1):0;
-        const nx=px+t*vx,ny=py+t*vy;
-        // Rotate the contact point into the airframe's own axes.
-        // Extended fuselage and wing are independently hittable; no huge
-        // circular hit area around larger bombers.
+        // Extended fuselage and wing are independently hittable, without a
+        // giant circular hit area around the bombers.
         const halfLength=target.role==='bomber'?10.8:target.role==='heavy'?9.3:7.8;
         const wingWidth=target.role==='bomber'?4.5:target.role==='heavy'?4.1:3.5;
-        // Adjacent ghost positions allow a bullet crossing the side boundary
-        // to strike an airframe just over the other edge during the same tick.
+        // Closest point AND collision geometry must use the same wrapped
+        // target image; otherwise bullets miss on the frame they cross x=0.
         for(const shiftedX of [target.x-W,target.x,target.x+W]){
+          const t=denom>0?clamp(((shiftedX-px)*vx+(target.y-py)*vy)/denom,0,1):0;
+          const nx=px+t*vx,ny=py+t*vy;
           const rx=nx-shiftedX,ry=ny-target.y;
           const longitudinal=rx*Math.cos(target.angle)+ry*Math.sin(target.angle);
           const lateral=-rx*Math.sin(target.angle)+ry*Math.cos(target.angle);
           const hitBody=Math.abs(longitudinal)<=halfLength&&Math.abs(lateral)<=3.3;
           const hitWing=Math.abs(longitudinal)<=halfLength*.55&&Math.abs(lateral)<=wingWidth;
           if(hitBody||hitWing){
-            hit(target,b.damage,b.x,b.y,undefined,'GUN');struck=true;break;
+            hit(target,b.damage,nx,ny,undefined,'GUN');struck=true;break;
           }
         }
         if(struck)break;
