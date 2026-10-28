@@ -94,6 +94,7 @@
 function readPilotAttributes(){
  try{return JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')||'null')?.profile?.attributes;}catch{return null;}
 }
+function readPilotName(){try{return JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')||'null')?.profile?.name||'';}catch{return '';}}
 function readPilotSkill(){try{return JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')||'null')?.profile?.skill||'roll';}catch{return 'roll';}}
 function pilotFactors(p){
  const a=p.attributes||pilotAttributes();
@@ -521,7 +522,7 @@ function plane(type,id,x,y,angle){
     p.aiStyle=AI_STYLES[(hash+offset)%AI_STYLES.length];
     p.aiSkillLevel=clamp((rank-1)/7,0,1);
     p.aiMistake=0;
-    p.pilotSkill=['roll','reverse','smoke','harden','deadeye','cut','dive'][(hash+offset*3)%7];
+    p.pilotSkill=encounter.signature||['roll','reverse','smoke','harden','deadeye','cut','dive'][(hash+offset*3)%7];
   }
   function aiInput(p,target){
     p.aiThink=Math.max(0,p.aiThink-STEP);
@@ -1088,7 +1089,8 @@ function plane(type,id,x,y,angle){
       const x=right?W-9:9;
       g.textAlign=right?'right':'left';
       g.fillStyle=right?'#e9b09c':gold;g.font='bold 5.3px monospace';
-      g.fillText((right?'HOSTILE • ':'YOU • ')+craftClass(q),x,6,Math.min(W*.32,143));
+      const campaignPilot=(!right&&state.mode==='campaign')?readPilotName():'';
+       g.fillText((right?'HOSTILE • ':'YOU • ')+craftClass(q)+(campaignPilot?' • '+campaignPilot:''),x,6,Math.min(W*.32,143));
       g.fillStyle=white;g.font='bold 10px Georgia,serif';
       g.fillText(short(q),x,17,Math.min(W*.32,143));
       const width=Math.min(W*.24,105),start=right?x-width:x;

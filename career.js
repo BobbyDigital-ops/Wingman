@@ -5,21 +5,19 @@ const STORE='wingman-road-to-ace-v1',MAX_RANK=8;
 const PILOT_SKILLS=[['reverse','180° REVERSE'],['roll','BARREL ROLL'],['smoke','SMOKESCREEN'],['harden','HARDEN'],['deadeye','DEADEYE'],['cut','ENGINE CUT'],['dive','EMERGENCY DIVE']];
 
 const AXIS=['bf109','bf110','he111'],ALLIES=['fighter','heavy','bomber'];
-const CATALOG=[
- ['Arthur "Sparrow" Miles','fighter','rookie'],['James "Lucky" Mercer','fighter','rookie'],['Peter "Pip" Collins','heavy','rookie'],
- ['Friedrich "Finch" Bauer','bf109','rookie'],['Emil "Ghost" Hartmann','bf109','rookie'],['Otto "Tin Wing" Kruger','bf110','rookie'],
- ['Henry "Rook" Fletcher','fighter','standard'],['William "Red" Foster','heavy','standard'],['Douglas "Compass" Reed','bomber','standard'],
- ['Kurt "Jackal" Weber','bf109','standard'],['Erich "Knuckles" Vogel','bf110','standard'],['Hans "High Noon" Fischer','he111','standard'],
- ['Daniel "Skipper" Price','fighter','standard'],['Thomas "Bulldog" Grady','heavy','standard'],
- ['Lukas "Fox" Richter','bf109','standard'],['Karl "Iron" Neumann','bf110','standard'],
- ['Edward "Hawk" Bennett','fighter','ace'],['George "Mariner" Walsh','heavy','ace'],
- ['Adler "The Vulture" Klaus','bf109','ace'],['Walter "Sting" Engel','bf110','ace'],
- ['Michael "Northwind" Shaw','fighter','ace'],['Oliver "Anchor" Blake','bomber','ace'],
- ['Dietrich "Blackbird" Falk','bf109','ace'],['Rudolf "Wraith" Stein','bf110','ace'],
- ['Charles "Last Light" Morgan','fighter','ace'],['Wilhelm "The Baron" Adler','bf109','ace'],
- ['Hugh "Raven" Doyle','fighter','ace'],['Max "Nightwatch" Beck','bf109','ace']
-].map((x,i)=>({id:'pilot-'+i,name:x[0],plane:x[1],skill:x[2],faction:AXIS.includes(x[1])?'Axis':'Allies'}));
-const byId=Object.fromEntries(CATALOG.map((p,i)=>[p.id,{...p,appearance:appearance(i*47+9),attributes:{manoeuvrability:50+(i*17)%37,gunnery:48+(i*23)%40,engine:52+(i*11)%34}}]));
+const ROSTER=window.WingmanRoster||[];
+// Existing pilot-0…pilot-27 references remain valid for historical saves.
+const CATALOG=ROSTER.map((p,i)=>({id:p.id,name:p.name,plane:p.plane,skill:i<6?'rookie':i<17?'standard':'ace',faction:p.faction,signature:p.signature,bio:p.bio,archetype:p.archetype,rosterId:p.id}));
+const LEGACY_RIVALS=[["Arthur \"Sparrow\" Miles","fighter"],["James \"Lucky\" Mercer","fighter"],["Peter \"Pip\" Collins","heavy"],["Friedrich \"Finch\" Bauer","bf109"],["Emil \"Ghost\" Hartmann","bf109"],["Otto \"Tin Wing\" Kruger","bf110"],["Henry \"Rook\" Fletcher","fighter"],["William \"Red\" Foster","heavy"],["Douglas \"Compass\" Reed","bomber"],["Kurt \"Jackal\" Weber","bf109"],["Erich \"Knuckles\" Vogel","bf110"],["Hans \"High Noon\" Fischer","he111"],["Daniel \"Skipper\" Price","fighter"],["Thomas \"Bulldog\" Grady","heavy"],["Lukas \"Fox\" Richter","bf109"],["Karl \"Iron\" Neumann","bf110"],["Edward \"Hawk\" Bennett","fighter"],["George \"Mariner\" Walsh","heavy"],["Adler \"The Vulture\" Klaus","bf109"],["Walter \"Sting\" Engel","bf110"],["Michael \"Northwind\" Shaw","fighter"],["Oliver \"Anchor\" Blake","bomber"],["Dietrich \"Blackbird\" Falk","bf109"],["Rudolf \"Wraith\" Stein","bf110"],["Charles \"Last Light\" Morgan","fighter"],["Wilhelm \"The Baron\" Adler","bf109"],["Hugh \"Raven\" Doyle","fighter"],["Max \"Nightwatch\" Beck","bf109"]].map((x,i)=>({
+ id:'pilot-'+i,name:x[0],plane:x[1],
+ faction:AXIS.includes(x[1])?'Axis':'Allies',
+ skill:i<6?'rookie':i<16?'standard':'ace'
+}));
+const byId=Object.fromEntries([
+ ...CATALOG.map((p,i)=>[p.id,{...p,appearance:appearance(i*47+9),attributes:{...ROSTER[i].attributes}}]),
+ ...LEGACY_RIVALS.map((p,i)=>[p.id,{...p,appearance:appearance(i*47+9),attributes:{
+ manoeuvrability:50+(i*17)%37,gunnery:48+(i*23)%40,engine:52+(i*11)%34}}])
+]);
 const aircraft={fighter:'Spitfire',heavy:'Beaufighter',bomber:'Lancaster',bf109:'Emil (Bf 109)',bf110:'Zerstörer (Bf 110)',he111:'Heinkel He 111'};
 const screen=document.getElementById('career-screen'),menu=document.getElementById('menu'),result=document.getElementById('result');
 const nav=document.getElementById('career-open'),licenceBtn=document.getElementById('career-license');
@@ -100,7 +98,7 @@ function pilotPortrait(faction,look=0){
  // Legacy SVG stays as a no-network fallback and preserves saved appearances.
  const artIndex=Number.isInteger(opt.portraitIndex)?((opt.portraitIndex%5)+5)%5:
    ((Number(opt.face)||0)*3+(Number(opt.hair)||0))%5;
- const paintedArt=window.WingmanPaintedAtlas?
+ const paintedArt=window.WingmanPaintedAtlas&&!Number.isInteger(opt.rosterPortrait)?
   `<image class="painted-pilot-portrait" href="${window.WingmanPaintedAtlas}" x="${-artIndex*120}" y="0" width="774" height="247" preserveAspectRatio="none"/>`:'';
  return `<svg class="pilot-avatar" viewBox="0 0 120 144" role="img" aria-label="${faction} pilot wearing a customised uniform">
  <defs><linearGradient id="${bgId}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${bg[0]}"/><stop offset="1" stop-color="${bg[1]}"/></linearGradient><linearGradient id="${bgId}-skin" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="${skin}"/><stop offset=".73" stop-color="${skin}"/><stop offset="1" stop-color="#754545"/></linearGradient><linearGradient id="${bgId}-coat" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="${axis?'#8ca894':'#61a1bd'}"/><stop offset="1" stop-color="${axis?'#253e42':'#183c5b'}"/></linearGradient></defs>
@@ -145,6 +143,7 @@ function makeChoices(run){
   difficulty:run.rank<2?'rookie':run.rank<5?'standard':'ace',
   arena:(run.rank+i)%4,
   attributes:p.attributes,
+  signature:p.signature||ROSTER.find(x=>x.id===p.rosterId)?.signature,
   label:p.name
  }));
 }
@@ -165,37 +164,29 @@ function rollAttributes(){
  return Object.fromEntries(shuffled.map((key,i)=>[ATTRS[key],values[i]+Math.floor(Math.random()*7)-3]));
 }
 function generateCandidates(){
- const pool=[],usedFaces=new Set(),usedStyles=new Set();
- for(let i=0;i<3;i++){
-  const seed=Math.floor(Math.random()*2147483647),style=appearance(seed);
-  // Recruit choices should look distinct side by side, not merely be random
-  // with a chance of all three having the same silhouette or hiding their hair.
-  while(usedFaces.has(style.face))style.face=(style.face+1)%5;
-  while(usedStyles.has(style.hairstyle))style.hairstyle=(style.hairstyle+1)%6;
-  usedFaces.add(style.face);usedStyles.add(style.hairstyle);
-  style.portraitIndex=i; // three different illustrated faces per recruit set
-  if(i===0)style.headwear=2;
-  pool.push({style,attributes:rollAttributes(),id:seed});
- }
- return pool;
+ // Preview all defined characters, not three random names/stats.
+ return ROSTER.filter(p=>p.faction===selectFaction).map(p=>({
+  id:p.id,roster:p,style:{...appearance(p.portrait*47+9),portraitIndex:p.portrait%5},
+  attributes:{...p.attributes}
+ }));
 }
+let selectFaction=data?.profile?.faction==='Axis'?'Axis':'Allies';
 function candidatePicker(){
- return '<div class="candidate-grid">'+candidates.map((c,i)=>
-  '<button type="button" data-candidate="'+i+'" class="candidate-card" aria-label="Select pilot '+(i+1)+'">'+
-  '<div class="candidate-portrait">'+pilotPortrait(document.getElementById('career-faction')?.value||'Allies',c.style)+'</div>'+
-  '<strong>'+escape(recruitName(document.getElementById('career-faction')?.value||'Allies',c.id))+'</strong>'+
-  '<small>MANOEUVRABILITY '+c.attributes.manoeuvrability+'</small>'+
-  '<small>GUNNERY '+c.attributes.gunnery+'</small>'+
-  '<small>ENGINE '+c.attributes.engine+'</small>'+
-  '<span>SELECT PILOT</span></button>').join('')+'</div>';
+ return '<div class="character-roster">'+candidates.map((c,i)=>
+ '<button type="button" data-candidate="'+i+'" class="candidate-card" aria-label="Choose '+escape(c.roster.name)+'">'+
+ '<div class="candidate-portrait">'+pilotPortrait(c.roster.faction,{...c.style,rosterPortrait:c.roster.portrait})+'</div>'+
+ '<strong>'+escape(c.roster.name)+'</strong><small>'+escape(c.roster.archetype)+' · '+escape(aircraft[c.roster.plane])+'</small>'+
+ '<p class="character-bio">'+escape(c.roster.bio)+'</p>'+
+ '<small>TURN '+c.attributes.manoeuvrability+' · GUNS '+c.attributes.gunnery+' · ENGINE '+c.attributes.engine+'</small>'+
+ '<span>'+escape(PILOT_SKILLS.find(x=>x[0]===c.roster.signature)?.[1]||'SPECIAL')+'</span></button>').join('')+'</div>';
 }
 function createProfile(index){
  const chosen=candidates[index];if(!chosen)return;
  if(data&&!window.confirm('Create a new pilot? This replaces your current career and Road to Ace progress.'))return;
- const name=document.getElementById('career-name')?.value.trim().slice(0,30)||recruitName(document.getElementById('career-faction')?.value||'Allies',chosen.id);
- const faction=document.getElementById('career-faction')?.value==='Axis'?'Axis':'Allies';
+ const name=chosen.roster.name;
+ const faction=chosen.roster.faction;
  airframeOffers=[];
- data={profile:{name,faction,style:chosen.style,attributes:chosen.attributes,skill:selectedSkill},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
+ data={profile:{name,faction,rosterId:chosen.roster.id,plane:chosen.roster.plane,style:chosen.style,attributes:chosen.attributes,skill:chosen.roster.signature},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
  save();view='licence';render();
 }
 const BASE_AIRCRAFT={fighter:{speed:82,turn:3.15,hull:130,armour:40},heavy:{speed:75,turn:1.85,hull:160,armour:96},bomber:{speed:66,turn:1.30,hull:180,armour:147},bf109:{speed:84,turn:3.05,hull:125,armour:42},bf110:{speed:77,turn:1.78,hull:160,armour:90},he111:{speed:69,turn:1.35,hull:175,armour:135}};
@@ -258,16 +249,16 @@ function ladder(run){
  for(let rank=MAX_RANK;rank>=1;rank--){
   const current=rank===run.rank,cleared=rank<run.rank;
   const status=current?'current':cleared?'cleared':'locked';
-  const occupied=new Set();
   const options=[0,1,2].map((lane)=>{
    if(!current)return '<div class="route-node '+status+'" aria-label="Rank '+rank+' route '+(lane+1)+' '+status+'"><span class="route-node-symbol">'+(cleared?'✓':'◆')+'</span><small>'+(cleared?'CLEARED':'UNKNOWN ACE')+'</small></div>';
    const op=run.choices[lane],p=byId[op?.id],record=data.records[op?.id];
    if(!p)return '<div class="route-node locked">?</div>';
    const appearance={...p.appearance};
-   let portraitIndex=((Number(p.id.replace('pilot-',''))||0)*7)%5;
-   while(occupied.has(portraitIndex))portraitIndex=(portraitIndex+1)%5;
-   occupied.add(portraitIndex);appearance.portraitIndex=portraitIndex;
-   return '<button class="route-node route-opponent" data-choice="'+lane+'" aria-label="Challenge '+escape(p.name)+'"><span class="route-photo">'+pilotPortrait(p.faction,appearance)+'</span><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+'</small>'+(record?'<em>'+record.wins+'–'+record.losses+' RIVALRY</em>':'')+'<span class="route-cta">CHALLENGE →</span></button>';
+   const fixed=ROSTER.find(x=>x.id===p.rosterId);
+   // Identity remains stable wherever this pilot reappears in the tree.
+   if(fixed)appearance.rosterPortrait=fixed.portrait;
+   else appearance.portraitIndex=((Number(p.id.replace('pilot-',''))||0)*7)%5;
+   return '<button class="route-node route-opponent" data-choice="'+lane+'" aria-label="Challenge '+escape(p.name)+'"><span class="route-photo">'+pilotPortrait(p.faction,{...appearance,rosterPortrait:ROSTER.find(x=>x.id===p.rosterId)?.portrait??Number(p.id.replace('pilot-',''))})+'</span><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+'</small>'+(record?'<em>'+record.wins+'–'+record.losses+' RIVALRY</em>':'')+'<span class="route-cta">CHALLENGE →</span></button>';
   }).join('');
   rows.push('<section class="route-tier '+status+'" '+(current?'id="active-rung"':'')+'><div class="route-rank">'+(rank===MAX_RANK?'★ FINAL ACE':'RANK '+rank)+(current?' • CHOOSE A BRANCH':'')+'</div><div class="route-fork" aria-hidden="true"><span></span><span></span><span></span></div><div class="route-three">'+options+'</div><div class="route-join" aria-hidden="true"><span></span><span></span><span></span></div></section>');
  }
@@ -276,28 +267,25 @@ function ladder(run){
 function characterPicker(){
  if(!data?.profile)return '';
  const p=data.profile;
- const current=Number.isInteger(p.style?.portraitIndex)?p.style.portraitIndex:
-  (((Number(p.style?.face)||0)*3+(Number(p.style?.hair)||0))%5);
- const names=['THE VETERAN','THE AVIATOR','THE FLYBOY','THE ACE','THE COMMANDER'];
- return '<p class="career-muted">Choose your actual character and pilot name. Your rank, victories, aircraft and upgrades will not change.</p>'+
-  '<div class="character-portrait-grid" role="group" aria-label="Choose your character">'+
-  names.map((label,i)=>'<button type="button" class="character-portrait-choice '+(i===current?'selected':'')+'" data-portrait="'+i+'" aria-label="Choose '+label+'" aria-pressed="'+(i===current)+'">'+
-   '<span class="character-portrait-image">'+pilotPortrait(p.faction,{...p.style,portraitIndex:i})+'</span><strong>'+label+'</strong><small>'+(i===current?'CURRENT PILOT':'SELECT CHARACTER')+'</small></button>').join('')+'</div>'+
-  '<div class="character-name-row"><label for="character-name">PILOT NAME</label><input id="character-name" type="text" maxlength="30" value="'+escape(p.name)+'" aria-label="Pilot name" autocomplete="off"/>'+
-  '<button type="button" class="career-primary" data-action="save-character">SAVE CHARACTER</button></div>'+
-  '<p class="career-muted">Your character and name will be saved to the existing pilot licence.</p>'+
-  '<button type="button" data-action="licence">BACK TO LICENCE</button>';
+ const members=ROSTER.filter(x=>x.faction===p.faction);
+ return '<p class="career-muted">32 defined pilots across both squadrons. Switching an existing career changes identity and ability while retaining earned wins, rank and progression.</p>'+
+ '<div class="character-roster" role="group" aria-label="Choose your Wingman pilot">'+members.map(pilot=>{
+ const selected=data.profile.rosterId===pilot.id;
+ return '<button type="button" data-roster="'+pilot.id+'" class="candidate-card '+(selected?'selected':'')+'" aria-pressed="'+selected+'">'+
+ '<div class="candidate-portrait">'+pilotPortrait(pilot.faction,{...appearance(pilot.portrait*47+9),rosterPortrait:pilot.portrait})+'</div>'+
+ '<strong>'+escape(pilot.name)+'</strong><small>'+escape(pilot.archetype)+' · '+escape(aircraft[pilot.plane])+'</small>'+
+ '<p class="character-bio">'+escape(pilot.bio)+'</p><small>TURN '+pilot.attributes.manoeuvrability+' · GUNS '+pilot.attributes.gunnery+' · ENGINE '+pilot.attributes.engine+'</small>'+
+ '<span>'+escape(PILOT_SKILLS.find(x=>x[0]===pilot.signature)?.[1]||'SPECIAL')+'</span></button>';
+ }).join('')+'</div><button type="button" data-action="licence">BACK TO LICENCE</button>';
 }
 function render(){
  if(data&&view==='character'){panel('CHOOSE YOUR CHARACTER',characterPicker());return;}
  if(!data||view==='select'){
   if(!candidates.length)candidates=generateCandidates();
-  panel('CHOOSE YOUR PILOT',`<p class="career-muted">Choose a pilot for your career. Your existing progress is kept unless you confirm a replacement.</p>
-  <div class="candidate-identity"><label>OPTIONAL CUSTOM NAME <input id="career-name" maxlength="30" placeholder="Keep your recruit&#39;s name" autocomplete="off"></label>
-  <label>ALLEGIANCE <select id="career-faction"><option>Allies</option><option>Axis</option></select></label></div>
+  panel('SELECT YOUR ACE',`<p class="career-muted">Choose one of 32 predefined pilots. Each has a fixed identity, aircraft, stats and signature skill. The opposing squadron supplies your rivals.</p>
+  <div class="candidate-identity"><label>SQUADRON <select id="career-faction"><option value="Allies" ${selectFaction==='Allies'?'selected':''}>RAF — 20 PILOTS</option><option value="Axis" ${selectFaction==='Axis'?'selected':''}>LUFTWAFFE — 12 PILOTS</option></select></label></div>
   <div id="candidate-picker">${candidatePicker()}</div>
-  <label class="pilot-skill-picker">PILOT SKILL (Q)<select id="career-skill">${PILOT_SKILLS.map(([id,label])=>`<option value="${id}" ${id===selectedSkill?'selected':''}>${label}</option>`).join('')}</select></label>
-  <button data-action="reroll">GENERATE THREE NEW RECRUITS</button>${data?'<button data-action="licence">BACK TO CURRENT PILOT</button>':''}`);
+  ${data?'<button data-action="licence">BACK TO CURRENT PILOT</button>':''}`);
   return;
  }
  const p=data.profile,run=data.run,losses=data.losses,wins=data.wins,ratio=losses?(wins/losses).toFixed(2):wins?wins.toFixed(2):'0.00';
@@ -354,6 +342,18 @@ screen.addEventListener('click',e=>{
   if(name)data.profile.name=name.slice(0,30);
   save();view='licence';render();
  }
+ if(el.dataset.roster&&data?.profile){
+  const newPilot=ROSTER.find(p=>p.id===el.dataset.roster);
+  if(newPilot&&newPilot.faction===data.profile.faction){
+   // Existing career progress is retained; current sortie's chosen plane
+   // remains unchanged until the next run.
+   data.profile.rosterId=newPilot.id;data.profile.name=newPilot.name;
+   data.profile.plane=newPilot.plane;data.profile.skill=newPilot.signature;
+   data.profile.attributes={...newPilot.attributes};
+   data.profile.style={...appearance(newPilot.portrait*47+9),portraitIndex:newPilot.portrait%5,rosterPortrait:newPilot.portrait};
+   save();view='licence';render();
+  }
+ }
  if(el.dataset.candidate!==undefined)createProfile(Number(el.dataset.candidate));
  if(action==='ladder'){view=data?.run?'ladder':'licence';if(data&&!data.run)view='ladder';render();}
  if(action==='licence'){view='licence';render();}
@@ -368,7 +368,7 @@ screen.addEventListener('click',e=>{
 });
 screen.addEventListener('change',e=>{
  if(e.target.id==='career-skill'){selectedSkill=e.target.value;}
- if(e.target.id==='career-faction'&&!data){
+ if(e.target.id==='career-faction'){selectFaction=e.target.value;candidates=generateCandidates();
   const picker=document.getElementById('candidate-picker');
   if(picker)picker.innerHTML=candidatePicker();
  }
