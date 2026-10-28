@@ -17,10 +17,10 @@
   const SPITFIRE_BOOST_GAIN=1.25;
   const PLANES={
     fighter:{name:'SUPERMARINE SPITFIRE',speed:82,turn:3.15,hull:130,armour:40,radius:5.5,burst:10,interval:.055,cooldown:1.5,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'REVERSE'},
-    heavy:{name:'BRISTOL BEAUFIGHTER',speed:75,turn:1.85,hull:160,armour:96,radius:8,burst:5,interval:.19,cooldown:2.45,damage:16,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
+    heavy:{name:'BRISTOL BEAUFIGHTER',speed:75,turn:1.85,hull:160,armour:78,radius:8,burst:5,interval:.19,cooldown:2.45,damage:16,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
     bomber:{name:'AVRO LANCASTER',speed:66,turn:1.3,hull:180,armour:147,radius:9,burst:4,interval:.30,cooldown:2.85,damage:10,bulletSpeed:158,gunLife:1.22,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'},
     bf109:{name:'MESSERSCHMITT BF 109',class:'fighter',nation:'Germany',speed:84,turn:3.05,hull:125,armour:42,radius:5.5,burst:9,interval:.067,cooldown:1.48,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#afb89d',shade:'#647a74',accent:'#ecd06c',special:'REVERSE'},
-    bf110:{name:'MESSERSCHMITT BF 110',class:'heavy',nation:'Germany',speed:77,turn:1.78,hull:160,armour:90,radius:8,burst:5,interval:.20,cooldown:2.5,damage:17,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
+    bf110:{name:'MESSERSCHMITT BF 110',class:'heavy',nation:'Germany',speed:77,turn:1.78,hull:160,armour:75,radius:8,burst:5,interval:.20,cooldown:2.5,damage:17,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
     he111:{name:'HEINKEL HE 111',class:'bomber',nation:'Germany',speed:69,turn:1.35,hull:175,armour:135,radius:8.5,burst:4,interval:.32,cooldown:2.82,damage:10,bulletSpeed:162,gunLife:1.22,specialCd:10,color:'#a5ae9d',shade:'#576b61',accent:'#b4baca',special:'CLIMB'}
   };
   const state={
@@ -341,7 +341,7 @@ function plane(type,id,x,y,angle){
   function triggerPilotSkill(p){
     if(!p||!p.alive||p.skillCooldown>0||state.phase!=='playing'||state.paused)return;
     const kind=p.pilotSkill||'roll';
-    const durations={reverse:16,roll:14,smoke:20,harden:22,deadeye:17,cut:15,dive:16};
+    const durations={reverse:16,roll:7,smoke:20,harden:22,deadeye:17,cut:15,dive:16};
     if(kind==='roll'){triggerRoll(p);if(p.rollTime<=0)return;}
     else if(kind==='reverse'){
       const right=Math.cos(p.angle)>=0,up=p.y>H*.5;
@@ -358,7 +358,7 @@ function plane(type,id,x,y,angle){
   function triggerRoll(p){
     if(!p||!p.alive||state.phase!=='playing'||state.paused||p.rollTime>0||p.rollRecovery>0)return;
     p.rollTime=p.role==='fighter'?.5:p.role==='heavy'?.48:.45;
-    p.rollRecovery=1.35+(p.role==='bomber'?.35:0);
+    p.rollRecovery=(p.id===0?.70:1.35)+(p.role==='bomber'?.35:0);
     sound('special');
   }
   function crossTopEdge(p){
