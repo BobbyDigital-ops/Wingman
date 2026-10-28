@@ -328,3 +328,19 @@
 @media(prefers-reduced-motion:reduce){
  .control-layer .control-btn{transition:none!important}
 }
+
+/* Screen-state isolation: the flight-pad is a gameplay input, never menu chrome.
+   These sibling selectors work without JS state races during splash, briefing,
+   aircraft loadout, result, and transitions between those screens. */
+#menu:not(.hidden) ~ #touch-controls,
+#result:not(.hidden) ~ #touch-controls,
+body:has(#career-screen:not([hidden])) #touch-controls{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+/* Hidden flight pads must never trap taps over sortie and navigation buttons. */
+#menu:not(.hidden) ~ #touch-controls .control-btn,
+#result:not(.hidden) ~ #touch-controls .control-btn{
+  pointer-events:none!important;
+}
