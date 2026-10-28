@@ -62,6 +62,7 @@
     return {id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
       vy:Math.sin(angle)*d.speed*.8,health:d.hull,
       parts:{engine:100,nose:100,body:100,left:100,right:100},
+      detached:{left:false,right:false},critical:false,criticalCause:'',wreckTimer:0,
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boost:0,
       spawnSafe:1.0,smokeTimer:0,hitFlash:0,alive:true,aiThink:0,
       energy:85,rollTime:0,rollRecovery:0,stallTime:0,wallGrace:0,armourTime:0,bombCooldown:0,climbAssist:0,
@@ -210,15 +211,30 @@
     const ly=-(x-p.x)*sa+(y-p.y)*ca;
     let zone=zoneOverride;
     if(!zone){
-      if(lx>p.d.radius*.65)zone='engine';
-      else if(lx>p.d.radius*.22)zone='nose';
-      else if(ly< -p.d.radius*.35)zone='left';
-      else if(ly>p.d.radius*.35)zone='right';
+      // Wing projections are small in side-on view; target the upper/lower
+      // surfaces rather than requiring a huge hitbox at miniature scale.
+      if(ly<-1.65)zone='left';
+      else if(ly>1.65)zone='right';
+      else if(lx>p.d.radius*.47)zone='engine';
+      else if(lx>p.d.radius*.08)zone='nose';
       else zone='body';
     }
-    p.parts[zone]=Math.max(0,p.parts[zone]-amount*1.45*(p.armourTime>0?.4:1));
+    // Repeated accurate hits are intentionally effective. A component can fail
+    // while the main fuselage remains intact.
+    const multiplier=zone==='left'||zone==='right'?3.2:zone==='engine'?2.65:1.7;
+    p.parts[zone]=Math.max(0,p.parts[zone]-amount*multiplier*(p.armourTime>0?.4:1));
+    if((zone==='left'||zone==='right')&&p.parts[zone]<=0&&!p.detached[zone]){
+      p.detached[zone]=true;
+      p.critical=true;p.criticalCause='WING FAILURE';
+      emit(p.x,p.y,25,'#c6ad8b',38);
+      p.damageNotice=2;
+    }
+    if(zone==='engine'&&p.parts.engine<=0&&!p.critical){
+      p.critical=true;p.criticalCause='ENGINE FAILURE';
+      p.damageNotice=2;emit(p.x,p.y,18,'#77777b',24);
+    }
     const armourPenalty=1+(100-p.parts.body)/100*.25;
-    p.health-=amount*armourPenalty*(p.armourTime>0?.4:1);
+    p.health-=amount*armourPenalty*(p.armourTime>0?.4:1)*.46;
     p.hitFlash=.17;
     p.damageCause=cause;p.damageNotice=1.15;
     emit(x,y,p.role==='heavy'?11:7,'#ffe0a0',p.role==='heavy'?38:27);sound('hit');
@@ -257,7 +273,7 @@
       return;
     }
     const wing=steer<0?p.parts.left:p.parts.right;
-    const authority=.42+.58*wing/100;
+    const authority=(p.critical?.13:.42)+.58*wing/100;
     const sluggish=p.stallTime>0?.57:1;
     if(p.climbAssist>0){
       const direction=Math.cos(p.angle)<0?-1:1;
@@ -268,10 +284,15 @@
       const desired=steer*p.d.turn*authority*sluggish;
       p.turnVelocity+=(desired-p.turnVelocity)*Math.min(1,dt*10);
     }
+    if(p.detached.left||p.detached.right){
+      const direction=p.detached.left?-1:1;
+      p.turnVelocity+=direction*dt*2.7;
+      p.turnVelocity=clamp(p.turnVelocity,-2.8,2.8);
+    }
     p.angle+=p.turnVelocity*dt;
     if(p.angle>Math.PI)p.angle-=TAU;
     if(p.angle< -Math.PI)p.angle+=TAU;
-    const engine=.52+.48*p.parts.engine/100;
+    const engine=p.parts.engine<=0?.04:.52+.48*p.parts.engine/100;
     // Flight energy is a real store: climbing consumes it; diving restores it.
     const climb=Math.max(0,-Math.sin(p.angle));
     const dive=Math.max(0,Math.sin(p.angle));
@@ -286,6 +307,7 @@
     const follow=Math.min(1,dt*(p.role==='bomber'?8.5:p.role==='heavy'?9.5:10.5));
     p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
     p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
+    if(p.critical){p.vy+=dt*(p.detached.left||p.detached.right?69:45);p.speed=Math.max(5,p.speed-dt*13);}
     p.x+=p.vx*dt;p.y+=p.vy*dt;
     // A soft, continuous boundary recovery avoids frame-to-frame angle snaps.
     const margin=15;
@@ -376,7 +398,7 @@
       }
     }else p.gunCooldown=Math.max(0,p.gunCooldown-dt);
     p.smokeTimer-=dt;
-    if((p.parts.engine<60||p.health<p.d.hull*.35)&&p.smokeTimer<=0){
+    if((p.critical||p.parts.engine<60||p.health<p.d.hull*.35)&&p.smokeTimer<=0){
       p.smokeTimer=.09;
       const x=p.x-Math.cos(p.angle)*p.d.radius;
       const y=p.y-Math.sin(p.angle)*p.d.radius;
@@ -613,7 +635,7 @@
       c.strokeStyle='#b1ecf5c9';c.lineWidth=.75;c.stroke();
     }
     c.scale(.54,.54);
-    aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':'level');
+    aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':'level',p.detached);
     if(p.muzzleFlash>0){c.fillStyle='#fff4ad';c.fillRect(13,-1,7,2);}
     if(p.hitFlash>0){
       c.beginPath();c.ellipse(0,0,8,5,0,0,TAU);
@@ -645,6 +667,9 @@
     g.fillStyle='#f5e6c2';g.fillText(p?p.d.name:'WINGMAN',7,3);
     const en=e?e.d.name+(state.participants>2?' + '+(state.participants-2):''):'SELECT PLANE';
     g.fillText(en,W-7-g.measureText(en).width,3);
+    g.font='bold 5px monospace';g.fillStyle='#a7d8e8';
+    if(p)g.fillText(p.role==='heavy'?'HEAVY FIGHTER':p.role==='bomber'?(p.type==='he111'?'MEDIUM BOMBER':'HEAVY BOMBER'):'FIGHTER',7,9);
+    if(e){const cls=e.role==='heavy'?'HEAVY FIGHTER':e.role==='bomber'?(e.type==='he111'?'MEDIUM BOMBER':'HEAVY BOMBER'):'FIGHTER';g.fillText(cls,W-7-g.measureText(cls).width,9);}
     if(state.participants>2){
       for(const pilot of state.fliers){
         const ix=W/2-40+pilot.id*27;
@@ -694,6 +719,23 @@
     }
     g.fillStyle='#37546a';g.fillRect(0,30,W,1);
   }
+  function damageDiagram(){
+    // High-resolution miniature component schematic, overlaid on the HUD.
+    const p=state.fliers[0];if(!p)return;
+    const c=modelCtx,cx= W-62,cy=42;
+    c.save();c.fillStyle='#182b36d9';c.fillRect(cx-34,cy-5,67,35);
+    c.strokeStyle='#7c9ba7';c.lineWidth=.45;c.strokeRect(cx-34,cy-5,67,35);
+    c.font='bold 4.5px monospace';c.fillStyle='#f6e3ba';c.fillText('AIRFRAME',cx-30,cy-2);
+    const stages=[['E','engine',0],['L','left',1],['R','right',2],['T','body',3]];
+    for(let i=0;i<stages.length;i++){
+      const [symbol,key]=stages[i],value=p.parts[key],x=cx-30+i*16;
+      c.fillStyle=value>65?'#8dd5a0':value>30?'#f0bd75':'#ee7469';
+      c.fillRect(x,cy+7,13,11);
+      c.fillStyle='#172a35';c.font='bold 6px monospace';c.fillText(symbol,x+4,cy+9);
+      c.fillStyle='#f0e5d1';c.font='4px monospace';c.fillText(Math.round(value)+'%',x,cy+21);
+    }
+    c.restore();
+  }
   function draw(){
     g.drawImage(background,0,0);
     // Light under-aircraft shadows create altitude clues.
@@ -721,6 +763,7 @@
     }
     g.globalAlpha=1;
     drawHud();
+    damageDiagram();
     const pilot=state.fliers[0];
     if(pilot&&pilot.alive&&pilot.y>H-42){
       const danger=clamp((pilot.y-(H-42))/29,0,1);
@@ -730,6 +773,11 @@
       g.fillStyle='#fff0cc';g.textAlign='center';g.font='bold 7px monospace';
       g.fillText('PULL UP · GROUND',W/2,H-25);
       g.textAlign='left';g.globalAlpha=1;
+    }
+    if(pilot&&pilot.critical&&pilot.alive){
+      g.fillStyle='#6f2e2acb';g.fillRect(W*.5-60,38,120,14);
+      g.fillStyle='#ffdb9b';g.textAlign='center';g.font='bold 8px monospace';
+      g.fillText(pilot.criticalCause+' · PULL UP',W*.5,42);g.textAlign='left';
     }
     if(pilot&&pilot.damageNotice>0){
       g.font='bold 7px monospace';g.textAlign='center';

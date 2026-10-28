@@ -7,11 +7,11 @@
 'use strict';
 const models={
  fighter:{n:12,tail:12,fin:6,wing:10,canopy:5,engines:1,c:'#536e48',light:'#a9bb87',dark:'#324c3b',glass:'#9ad3e1',mark:'raf'},
- heavy:{n:15,tail:16,fin:6,wing:14,canopy:6,engines:2,c:'#677550',light:'#b2b797',dark:'#3b5144',glass:'#a0d2da',mark:'raf'},
- bomber:{n:22,tail:24,fin:8,wing:19,canopy:10,engines:4,c:'#626f51',light:'#afb497',dark:'#384d3b',glass:'#98c7d4',mark:'raf'},
+ heavy:{n:13,tail:14,fin:5.3,wing:12,canopy:6,engines:2,c:'#677550',light:'#b2b797',dark:'#3b5144',glass:'#a0d2da',mark:'raf'},
+ bomber:{n:17,tail:18,fin:6,wing:16,canopy:10,engines:4,c:'#626f51',light:'#afb497',dark:'#384d3b',glass:'#98c7d4',mark:'raf'},
  bf109:{n:13,tail:13,fin:5,wing:10,canopy:5,engines:1,c:'#85978d',light:'#c2c9bb',dark:'#536760',glass:'#9ecdda',mark:'german'},
- bf110:{n:16,tail:17,fin:6,wing:14,canopy:8,engines:2,c:'#7f9187',light:'#b9c7b6',dark:'#536a64',glass:'#9bc9d0',mark:'german'},
- he111:{n:21,tail:22,fin:7,wing:18,canopy:11,engines:2,c:'#819587',light:'#becbb8',dark:'#546b60',glass:'#a5d3dd',mark:'german'}
+ bf110:{n:14,tail:14,fin:5.5,wing:12,canopy:8,engines:2,c:'#7f9187',light:'#b9c7b6',dark:'#536a64',glass:'#9bc9d0',mark:'german'},
+ he111:{n:17,tail:18,fin:6,wing:16,canopy:11,engines:2,c:'#819587',light:'#becbb8',dark:'#546b60',glass:'#a5d3dd',mark:'german'}
 };
 function poly(g,pts,col,line='#26383d'){
  g.beginPath();g.moveTo(pts[0][0],pts[0][1]);
@@ -35,7 +35,7 @@ function mark(g,x,y,nation){
   g.fillRect(x-.25,y-1,.5,2);
  }
 }
-function draw(g,type,variant){
+function draw(g,type,variant,detached={}){
  const p=models[type];if(!p)return;
  const tail=-p.tail,nose=p.n,wide=p.engines>1;
  g.save();g.lineCap='round';g.lineJoin='round';
