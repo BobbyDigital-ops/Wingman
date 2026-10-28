@@ -21,7 +21,7 @@
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
     scores:[0,0],round:1,time:90,intermission:0,banner:'',bannerTime:0,paused:false,
-    impactLock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2
+    impactLock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2,teams:false
   };
   const controls={left:false,right:false};
   const ui={
@@ -59,7 +59,7 @@
   }
   function plane(type,id,x,y,angle){
     const d=PLANES[type];
-    return {id,type,role:d.class||type,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
+    return {id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
       vy:Math.sin(angle)*d.speed*.8,health:d.hull,
       parts:{engine:100,nose:100,body:100,left:100,right:100},
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boost:0,
@@ -93,6 +93,7 @@
     state.scores=[0,0];state.round=1;state.kills=0;
     state.mode=document.getElementById('mode-select')?.value||'duel';
     state.participants=Number(document.getElementById('pilots-select')?.value||2);
+    state.teams=state.participants===4&&document.getElementById('team-select')?.value==='teams';
     state.arena=Number(document.getElementById('arena-select')?.value||0);
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
     document.getElementById('bomb').hidden=!['bomber','he111'].includes(state.selected);
@@ -129,7 +130,7 @@
     if(!p||!p.alive||p.gunCooldown>0||p.burstLeft>0||p.rollTime>0||state.phase!=='playing'||state.paused)return;
     p.burstLeft=p.d.burst;p.shotTimer=0;
   }
-  function opponents(p){return state.fliers.filter(other=>other.alive&&other.id!==p.id);}
+  function opponents(p){return state.fliers.filter(other=>other.alive&&other.id!==p.id&&(!state.teams||other.team!==p.team));}
   function nearestEnemy(p){return opponents(p).sort((a,b)=>distance(p,a)-distance(p,b))[0];}
   function triggerSpecial(p){
     if(!p||!p.alive||p.specialCooldown>0||state.phase!=='playing'||state.paused)return;
@@ -224,7 +225,7 @@
       p.health=0;p.alive=false;
       emit(p.x,p.y,28,'#ffc47e',75);
       emit(p.x,p.y,16,'#625765',35);
-      if(state.participants===2||p.id===0||state.fliers.slice(1).every(other=>!other.alive))endRound(p.id===0?1:0);
+      if(state.participants===2||p.id===0||opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
     }
   }
   function triggerRoll(p){
@@ -294,7 +295,7 @@
     if(p.y<37){p.y=37;p.vy=Math.max(3,p.vy);p.angle+=clamp(angleDiff(.3,p.angle),-dt*3,dt*3);}
     // Floor is a deliberate lethal hazard, not a source of component damage.
     if(p.y>=H-13){p.y=H-13;p.health=0;p.alive=false;p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
-      if(p.id===0||state.participants===2||state.fliers.slice(1).every(other=>!other.alive))endRound(p.id===0?1:0);
+      if(p.id===0||state.participants===2||opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
     }
 
   }
@@ -383,7 +384,7 @@
   function explosion(x,y,r,owner,damage,cause='BOMB'){
     emit(x,y,22,'#ffc47b',52);emit(x,y,9,'#6b707b',30);sound('boom');
     for(const p of state.fliers){
-      if(!p.alive||p.id===owner)continue;
+      if(!p.alive||p.id===owner||(state.teams&&state.fliers[owner]?.team===p.team))continue;
       const d=Math.hypot(x-p.x,y-p.y);
       // Explosions must not masquerade as ramming damage when airframes touch.
       const source=state.fliers[owner];
@@ -396,7 +397,7 @@
       const b=state.bullets[i],px=b.x,py=b.y;
       b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;b.age=(b.age||0)+dt;
       const shooter=state.fliers[b.owner];
-      const targets=state.fliers.filter(p=>p.id!==b.owner&&p.alive);
+      const targets=state.fliers.filter(p=>p.id!==b.owner&&p.alive&&(!state.teams||p.team!==shooter?.team));
       // Neither a gun muzzle nor a bomber can inflict disguised impact damage
       // by touching another airframe: rounds must leave the collision envelope.
       let struck=false;
@@ -422,7 +423,7 @@
       if(b.delay>0)continue;
       b.age=(b.age||0)+dt;
       b.vy+=94*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
-      const target=state.fliers.find(p=>p.id!==b.owner&&p.alive&&distance(b,p)<p.d.radius+4);
+      const target=state.fliers.find(p=>p.id!==b.owner&&p.alive&&(!state.teams||p.team!==state.fliers[b.owner]?.team)&&distance(b,p)<p.d.radius+4);
       if(b.y>=H-8||(b.age>.24&&target)){
         explosion(b.x,Math.min(b.y,H-8),24,b.owner,55);
         state.bombs.splice(i,1);continue;
@@ -431,7 +432,7 @@
     }
     for(let i=state.mines.length-1;i>=0;i--){
       const m=state.mines[i];m.arm-=dt;m.life-=dt;m.phase+=dt*2;
-      const target=state.fliers.find(p=>p.id!==m.owner&&p.alive&&distance(m,p)<p.d.radius+6);
+      const target=state.fliers.find(p=>p.id!==m.owner&&p.alive&&(!state.teams||p.team!==state.fliers[m.owner]?.team)&&distance(m,p)<p.d.radius+6);
       if(m.arm<=0&&target&&target.alive&&distance(m,target)<target.d.radius+6){
         explosion(m.x,m.y,21,m.owner,54,'MINE');state.mines.splice(i,1);continue;
       }
@@ -459,7 +460,7 @@
       const enemies=state.fliers.slice(1);
       if(state.participants>2){
         if(!user.alive)endRound(1);
-        else if(enemies.every(p=>!p.alive))endRound(0);
+        else if(opponents(user).every(p=>!p.alive))endRound(0);
         else if(state.time<=0)endRound(1);
       }else if(state.time<=0){
         const enemy=enemies[0],a=user.health/user.d.hull,b=enemy.health/enemy.d.hull;
@@ -619,8 +620,8 @@
     c.restore();
     c.fillStyle='#1e3341d9';c.fillRect(p.x-7,p.y-14,14,5.5);
     c.font='bold 5px sans-serif';c.textAlign='center';c.textBaseline='top';
-    c.fillStyle=p.id===0?'#ffe7b4':'#ffc2b8';
-    c.fillText(p.id===0?'P1':'AI',p.x,p.y-13.6);
+    c.fillStyle=p.id===0?'#ffe7b4':p.team===0?'#a6d5fa':p.id===1?'#ffc2b8':'#ffc989';
+    c.fillText(p.id===0?'P1':'AI'+p.id,p.x,p.y-13.6);
   }
   function drawModels(){
     if(!modelCanvas.width||!modelCanvas.height)return;
@@ -642,8 +643,20 @@
     g.fillStyle='#f5e6c2';g.fillText(p?p.d.name:'WINGMAN',7,3);
     const en=e?e.d.name+(state.participants>2?' + '+(state.participants-2):''):'SELECT PLANE';
     g.fillText(en,W-7-g.measureText(en).width,3);
+    if(state.participants>2){
+      for(const pilot of state.fliers){
+        const ix=W/2-40+pilot.id*27;
+        g.fillStyle=pilot.id===0?'#b1eea6':pilot.team===0?'#9ad5ec':'#e4aaa3';
+        g.fillRect(ix,24,23,3);
+        g.fillStyle=pilot.alive?'#f1e3c2':'#778594';
+        g.font='5px monospace';g.fillText(pilot.id===0?'YOU':'AI'+pilot.id,ix,19);
+        g.fillStyle='#293d45';g.fillRect(ix,28,23,2);
+        g.fillStyle=pilot.alive?'#e4bf81':'#8a9294';
+        g.fillRect(ix,28,Math.round(23*clamp(pilot.health/pilot.d.hull,0,1)),2);
+      }
+    }
     g.font='bold 8px monospace';g.textAlign='center';
-    g.fillText(state.mode==='survival'?'WAVE '+state.round:state.scores[0]+' : '+state.scores[1],W/2,3);
+    g.fillText(state.participants>2?(state.teams?'2v2 TEAMS':'FREE FOR ALL'):state.mode==='survival'?'WAVE '+state.round:state.scores[0]+' : '+state.scores[1],W/2,3);
     g.font='6px monospace';g.fillStyle='#bed5dc';
     g.fillText(Math.max(0,Math.ceil(state.time))+'s '+ARENAS[state.arena],W/2,15);g.textAlign='left';
     if(p&&e){
