@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#172939">
   <meta name="description" content="Wingman — WWII fighter dogfighting, four dramatic battlefields, and tactical aerial combat.">
   <title>Wingman · Pixel Dogfights</title>
-  <link rel="stylesheet" href="./styles.css?v=20261028phase8bfix1">
+  <link rel="stylesheet" href="./styles.css?v=20261028phase8c">
   <link rel="stylesheet" href="./career.css?v=20261028phase5wind4">
 </head>
 <body>
@@ -18,24 +18,58 @@
     <main class="game-frame" id="frame"><button id="menu-return" type="button" aria-label="Return to game menu" title="Return to menu" hidden>MENU</button><button id="fullscreen-toggle" type="button" aria-label="Enter full screen" title="Full screen">⛶</button>
       <canvas id="game" width="320" height="180" role="img" aria-label="Side-on aerial duel with fighter aircraft"></canvas>
       <canvas id="aircraft-layer" class="aircraft-layer" width="320" height="180" aria-hidden="true"></canvas>
-      <div class="overlay" id="menu">
-        <div class="menu-card">
-          <p class="eyebrow">ONE SCREEN · ONE RIVAL · ONE PERFECT BURST</p>
-          <h1>WINGMAN</h1>
-          <p class="intro">Pick your aircraft. Out-turn your rival. Time every shot.</p>
-          <div class="plane-picker" role="group" aria-label="Choose aircraft">
-            <button class="plane-choice selected" type="button" data-plane="fighter" aria-pressed="true"><b>SPITFIRE</b><small>Fighter · Overdrive</small></button>
-            <button class="plane-choice" type="button" data-plane="heavy" aria-pressed="false"><b>BEAUFIGHTER</b><small>Heavy Fighter</small></button>
-            <button class="plane-choice" type="button" data-plane="bomber" aria-pressed="false"><b>LANCASTER</b><small>Heavy Bomber</small></button>
-            <button class="plane-choice" type="button" data-plane="bf109" aria-pressed="false"><b>BF 109</b><small>Fighter · Overdrive</small></button>
-            <button class="plane-choice" type="button" data-plane="bf110" aria-pressed="false"><b>BF 110</b><small>Heavy Fighter</small></button>
-            <button class="plane-choice" type="button" data-plane="he111" aria-pressed="false"><b>HE 111</b><small>Medium Bomber</small></button>
+      <div class="overlay wingman-front" id="menu">
+        <section class="front-panel splash-panel" id="splash-panel" aria-label="Wingman title screen">
+          <div class="splash-topline">1940 — THE SKIES ARE YOURS</div>
+          <div class="splash-mark"><span class="wing-rule"></span><span class="wing-emblem">✦</span><span class="wing-rule"></span></div>
+          <h1 class="splash-title">WINGMAN</h1>
+          <div class="splash-subtitle">THE DOGFIGHTING ARCADE</div>
+          <canvas id="splash-aircraft" width="550" height="90" aria-hidden="true"></canvas>
+          <p class="splash-tagline">ONE PILOT. ONE SKY. NO SECOND CHANCES.</p>
+          <button type="button" class="front-action" id="splash-continue">TAKE TO THE SKIES <span aria-hidden="true">▶</span></button>
+          <button type="button" class="front-secondary" id="career-open-mobile">ROAD TO ACE · PILOT CAREER</button>
+          <div class="splash-foot">RAF & LUFTWAFFE · SIX AIRCRAFT · FOUR THEATRES</div>
+        </section>
+        <section class="front-panel flow-panel" id="mode-panel" hidden aria-label="Choose game mode">
+          <p class="flow-step">01 / SELECT OPERATION</p><h2>CHOOSE YOUR FIGHT</h2>
+          <p class="flow-copy">Every mission is an aerial dogfight. How many opponents do you want?</p>
+          <div class="mode-cards" role="group" aria-label="Choose dogfighting mode">
+            <button type="button" class="mode-choice selected" data-mode-choice="duel" aria-pressed="true"><strong>1 VS 1</strong><span>Classic Duel</span><small>ONE RIVAL · BEST OF THREE</small></button>
+            <button type="button" class="mode-choice" data-mode-choice="survival" aria-pressed="false"><strong>SURVIVAL</strong><span>Endless Aces</span><small>FIGHT UNTIL YOU FALL</small></button>
+            <button type="button" class="mode-choice" data-mode-choice="triple" aria-pressed="false"><strong>FREE FOR ALL</strong><span>Three Aircraft</span><small>EVERY PILOT FOR THEMSELVES</small></button>
+            <button type="button" class="mode-choice" data-mode-choice="teams" aria-pressed="false"><strong>2 VS 2</strong><span>Wingmen</span><small>FIGHT ALONGSIDE A FRIENDLY AI</small></button>
           </div>
-          <button class="start-button" id="start" type="button">START DOGFIGHT <span aria-hidden="true">▶</span></button>
-          <button class="career-entry" id="career-open-mobile" type="button">ROAD TO ACE · CHOOSE PILOT</button>
-          <div class="mode-row"><label>OPPONENTS <select id="pilots-select"><option value="2">1 AI · DUEL</option><option value="3">2 AI · TRIPLE</option><option value="4">3 AI · FOUR-PLANE</option></select></label><label>AI <select id="difficulty-select"><option value="rookie">ROOKIE</option><option value="standard" selected>STANDARD</option><option value="ace">ACE</option></select></label><label>BATTLE <select id="team-select"><option value="ffa">FREE FOR ALL</option><option value="teams">2v2 TEAMS (4 PLANES)</option></select></label><label>MODE <select id="mode-select"><option value="duel">DUEL</option><option value="survival">SURVIVAL</option></select></label><label>HUD <select id="hud-style"><option value="arcade">MINIMAL ARCADE</option><option value="cockpit">WW2 INSTRUMENTS</option><option value="competitive">COMPETITIVE</option></select></label><label>ARENA <select id="arena-select"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">HOME FRONT (STORM)</option></select></label></div>
-          <p class="tip">A/D turn · Space fire · E aircraft ability · Q pilot skill. Crosswind is an occasional battle hazard.</p>
-        </div>
+          <div class="flow-actions"><button type="button" class="front-secondary" id="mode-back">BACK</button><button type="button" class="front-action" id="mode-next">CONTINUE ▶</button></div>
+        </section>
+        <section class="front-panel setup-panel" id="options-panel" hidden aria-label="Choose aircraft and battle options">
+          <p class="flow-step">02 / PREPARE YOUR SORTIE</p><h2>READY THE AIRCRAFT</h2>
+          <div class="setup-columns">
+            <div>
+              <p class="setup-label">SELECT AIRCRAFT</p>
+              <div class="plane-picker" role="group" aria-label="Choose aircraft">
+                <button class="plane-choice selected" type="button" data-plane="fighter" aria-pressed="true"><b>SPITFIRE</b><small>Agile fighter · Overdrive</small></button>
+                <button class="plane-choice" type="button" data-plane="heavy" aria-pressed="false"><b>BEAUFIGHTER</b><small>Heavy fighter · Shield</small></button>
+                <button class="plane-choice" type="button" data-plane="bomber" aria-pressed="false"><b>LANCASTER</b><small>Bomber · Defensive gunners</small></button>
+                <button class="plane-choice" type="button" data-plane="bf109" aria-pressed="false"><b>BF 109</b><small>Agile fighter · Overdrive</small></button>
+                <button class="plane-choice" type="button" data-plane="bf110" aria-pressed="false"><b>BF 110</b><small>Heavy fighter · Shield</small></button>
+                <button class="plane-choice" type="button" data-plane="he111" aria-pressed="false"><b>HE 111</b><small>Bomber · Defensive gunners</small></button>
+              </div>
+            </div>
+            <div class="setup-controls">
+              <p class="setup-label">FLIGHT CONDITIONS</p>
+              <div class="mode-row">
+                <label>AI DIFFICULTY <select id="difficulty-select"><option value="rookie">ROOKIE</option><option value="standard" selected>STANDARD</option><option value="ace">ACE</option></select></label>
+                <label>THEATRE <select id="arena-select"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">HOME FRONT (STORM)</option></select></label>
+                <label>HUD <select id="hud-style"><option value="arcade">COMBAT HUD</option><option value="cockpit">PILOT INSTRUMENTS</option><option value="competitive">COMPETITIVE</option></select></label>
+                <label class="flow-advanced" hidden>OPPONENTS <select id="pilots-select"><option value="2">1 AI · DUEL</option><option value="3">2 AI · TRIPLE</option><option value="4">3 AI · FOUR-PLANE</option></select></label>
+                <label class="flow-advanced" hidden>BATTLE <select id="team-select"><option value="ffa">FREE FOR ALL</option><option value="teams">2v2 TEAMS</option></select></label>
+                <label class="flow-advanced" hidden>MODE <select id="mode-select"><option value="duel">DUEL</option><option value="survival">SURVIVAL</option></select></label>
+              </div>
+              <p class="setup-hint">A / D STEER · SPACE FIRE · E ABILITY · Q SKILL</p>
+            </div>
+          </div>
+          <div class="flow-actions"><button type="button" class="front-secondary" id="options-back">BACK</button><button class="front-action" id="start" type="button">LAUNCH SORTIE ▶</button></div>
+        </section>
       </div>
       <div class="overlay hidden" id="result" aria-live="polite">
         <div class="menu-card result-card">
@@ -54,8 +88,7 @@
         </div>
         <div class="control-cluster attack">
           <button id="roll" type="button" class="control-btn roll" aria-label="Use pilot skill">SKILL</button>
-          <button id="bomb" type="button" class="control-btn bomb" aria-label="Unused bomb control" hidden>BOMB</button>
-          <button id="special" type="button" class="control-btn special" aria-label="Activate special weapon">★</button>
+          <button id="special" type="button" class="control-btn special" aria-label="Activate aircraft ability">BOOST</button>
           <button id="fire" type="button" class="control-btn fire" aria-label="Fire a committed burst">FIRE</button>
         </div>
       </div>
@@ -71,7 +104,9 @@
   </div>
   <script src="./src/art/aircraft.js?v=20261028phase8bfix1" defer></script>
   <script src="./src/art/scenery.js?v=20261028phase8bfix1" defer></script>
-  <script src="./game.js?v=20261028phase8bfix1" defer></script>
+  <script src="./game.js?v=20261028phase8c" defer></script>
   <script src="./career.js?v=20261028phase5wind4" defer></script>
+  <script src="./src/ui/flow.js?v=20261028phase8c" defer></script>
+  <link rel="stylesheet" href="./src/ui/interface.css?v=20261028phase8c">
 </body>
 </html>
