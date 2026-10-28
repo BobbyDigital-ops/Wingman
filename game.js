@@ -809,7 +809,7 @@ function plane(type,id,x,y,angle){
     // Class must appear on the top line: the previous labels at y=9
     // were painted over by the armour and hull meters.
     const className=q=>q.role==='heavy'?'HEAVY FIGHTER':q.role==='bomber'?'BOMBER':'FIGHTER';
-    const own=p?className(p)+' · '+p.d.name:'WINGMAN';
+    const own=p?p.d.name+' · '+className(p):'WINGMAN';
     const opponent=e?className(e)+' · '+e.d.name+(state.participants>2?' +'+(state.participants-2):''):'SELECT PLANE';
     g.fillStyle=hud.gold;g.fillText(own,7,3);
     g.fillText(opponent,W-7-g.measureText(opponent).width,3);
