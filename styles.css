@@ -81,3 +81,10 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
  pointer-events:none;touch-action:none;
  image-rendering:auto;object-fit:fill;
 }
+
+/* Use more of the desktop viewport: arena is no longer letterboxed into a small card. */
+@media (pointer:fine) and (min-width:850px){
+ .app{padding:8px;gap:7px}
+ .game-frame{width:min(98vw,calc((100dvh - 80px)*16/9));max-height:calc(100dvh - 80px)}
+ .site-header,.site-footer{width:min(98vw,1600px)}
+}
