@@ -1,4 +1,4 @@
-/* Wingman v0.5: six ORIGINAL side-on miniature aircraft.
+/* Wingman v0.8: six ORIGINAL side-on miniature aircraft.
  * Drawn in vector/pixel hybrid on the game's high-DPI overlay.
  * Based on the user's side-profile Spitfire reference, but less cartoonish.
  * All six have separate fuselage, wing, tail and cockpit geometries.
@@ -6,12 +6,12 @@
 (function(){
 'use strict';
 const models={
- fighter:{n:12,tail:12,fin:6,wing:10,canopy:5,engines:1,c:'#536e48',light:'#a9bb87',dark:'#324c3b',glass:'#9ad3e1',mark:'raf'},
- heavy:{n:13,tail:14,fin:5.3,wing:12,canopy:6,engines:2,c:'#677550',light:'#b2b797',dark:'#3b5144',glass:'#a0d2da',mark:'raf'},
- bomber:{n:17,tail:18,fin:6,wing:16,canopy:10,engines:4,c:'#626f51',light:'#afb497',dark:'#384d3b',glass:'#98c7d4',mark:'raf'},
- bf109:{n:13,tail:13,fin:5,wing:10,canopy:5,engines:1,c:'#85978d',light:'#c2c9bb',dark:'#536760',glass:'#9ecdda',mark:'german'},
- bf110:{n:14,tail:14,fin:5.5,wing:12,canopy:8,engines:2,c:'#7f9187',light:'#b9c7b6',dark:'#536a64',glass:'#9bc9d0',mark:'german'},
- he111:{n:17,tail:18,fin:6,wing:16,canopy:11,engines:2,c:'#819587',light:'#becbb8',dark:'#546b60',glass:'#a5d3dd',mark:'german'}
+ fighter:{n:15,tail:15,fin:5.5,wing:10,canopy:5,engines:1,c:'#52654e',light:'#a7aa91',dark:'#383f39',glass:'#9ad3e1',mark:'raf'},
+ heavy:{n:17,tail:17,fin:5.1,wing:13,canopy:6,engines:2,c:'#565d4c',light:'#a2a28d',dark:'#353e3c',glass:'#a0d2da',mark:'raf'},
+ bomber:{n:21,tail:22,fin:6.3,wing:17,canopy:10,engines:4,c:'#565e49',light:'#9da18a',dark:'#323b35',glass:'#98c7d4',mark:'raf'},
+ bf109:{n:16,tail:15,fin:5,wing:10,canopy:5,engines:1,c:'#6d796e',light:'#b4b9ab',dark:'#44564e',glass:'#9ecdda',mark:'german'},
+ bf110:{n:18,tail:18,fin:5.1,wing:13,canopy:8,engines:2,c:'#748274',light:'#b6bcae',dark:'#45574f',glass:'#9bc9d0',mark:'german'},
+ he111:{n:22,tail:21,fin:5.6,wing:16,canopy:11,engines:2,c:'#788475',light:'#b6beb0',dark:'#455b50',glass:'#a5d3dd',mark:'german'}
 };
 function poly(g,pts,col,line='#26383d'){
  g.beginPath();g.moveTo(pts[0][0],pts[0][1]);
@@ -44,9 +44,9 @@ function draw(g,type,variant,detached={}){
  poly(g,[[tail-2,1],[tail,-p.fin],[tail+1,-p.fin+1],[tail+2,1]],p.dark,null);
  poly(g,[[tail-1,2],[tail+7,2],[tail+10,3],[tail+1,4]],p.dark);
  // Fuselage with subtly shaded underside; long RAF bomber and slab-sided He 111.
- const top=wide?-2.55:-2.05,bottom=wide?3.35:2.5;
- poly(g,[[tail,0],[tail+4,top],[nose-6,top-.2],[nose-1,top+1],
-         [nose,0],[nose-1,bottom-1],[nose-5,bottom],[tail+3,bottom-.4]],p.c);
+ const top=wide?-2.30:-1.85,bottom=wide?3.05:2.30;
+ poly(g,[[tail,0],[tail+6,top],[nose-7,top-.2],[nose-1,top+1],
+         [nose,0],[nose-1,bottom-1],[nose-6,bottom],[tail+5,bottom-.4]],p.c);
  poly(g,[[tail+4,top+.2],[nose-7,top-.3],[nose-3,top+.7],[tail+5,top+1]],p.light,null);
  poly(g,[[tail+3,bottom-1],[nose-3,bottom-1],[nose-5,bottom],[tail+4,bottom-.2]],p.dark,null);
  // Leading wing appears angled down and toward viewer — not overhead.

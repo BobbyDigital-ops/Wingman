@@ -748,8 +748,18 @@
       g.fillStyle='#f0d8a2';g.fillText(p.d.special+' '+sc,77,19);
       bar(77,27,39,p.specialCooldown>0?1-p.specialCooldown/p.d.specialCd:1,
         1,'#c4b6df');
+      // CLIMB warns about altitude gained quickly, not height above ground.
       g.fillStyle='#e6d3a0';g.fillText('BOOST',123,19);
       bar(123,27,48,p.boostCharge,100,p.boosting?'#f4d07c':'#9bd4ad');
+      const risk=clamp(p.flightRisk||0,0,1);
+      g.fillStyle='#d8e9d8';g.font='bold 5px monospace';g.fillText('CLIMB',W/2-13,35);
+      // Clear tricolour risk scale: safe green → warning amber → stall red.
+      const meterX=W/2-13,meterY=43,meterW=40;
+      g.fillStyle='#29434a';g.fillRect(meterX-1,meterY-1,meterW+2,6);
+      g.fillStyle='#83c495';g.fillRect(meterX,meterY,13,4);
+      g.fillStyle='#e5c16d';g.fillRect(meterX+13,meterY,13,4);
+      g.fillStyle='#de806e';g.fillRect(meterX+26,meterY,14,4);
+      g.fillStyle='#f6f5e6';g.fillRect(meterX+Math.min(38,Math.round(risk*38)),meterY-2,2,8);
       g.fillStyle=p.rollTime>0?'#f8e4a2':'#c0d9df';
       g.fillText(p.rollTime>0?'ROLLING':p.rollRecovery>0?'ROLL '+p.rollRecovery.toFixed(1):'ROLL READY',181,19);
       if(p.role==='bomber'){
@@ -891,7 +901,17 @@
   bindButton('special',null,()=>triggerSpecial(state.fliers[0]));
   bindButton('roll',null,()=>triggerRoll(state.fliers[0]));
   bindButton('bomb',null,()=>triggerBomb(state.fliers[0]));
-  const preventKeys=new Set(['ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyA','KeyD','KeyW','ArrowUp','KeyK','KeyL','KeyB']);
+  // On touchscreen, double-tap either turn direction for defensive roll.
+  // Ignore held touches: only two separate presses within the short window.
+  for(const id of ['left','right']){
+    let lastTap=0;
+    document.getElementById(id).addEventListener('pointerdown',()=>{
+      const now=Date.now();
+      if(now-lastTap>70&&now-lastTap<270)triggerRoll(state.fliers[0]);
+      lastTap=now;
+    });
+  }
+  const preventKeys=new Set(['ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyA','KeyD','KeyW','ArrowUp','KeyE','KeyK','KeyL','KeyQ','KeyB']);
   document.addEventListener('keydown',e=>{
     if(preventKeys.has(e.code))e.preventDefault();
     if(e.code==='KeyA'||e.code==='ArrowLeft')controls.left=true;
@@ -899,8 +919,8 @@
     if(e.code==='KeyW'||e.code==='ArrowUp')controls.boost=true;
     if(e.repeat)return;
     if(e.code==='Space'){audioUnlock();triggerBurst(state.fliers[0]);}
-    if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyK'){audioUnlock();triggerSpecial(state.fliers[0]);}
-    if(e.code==='KeyL'){audioUnlock();triggerRoll(state.fliers[0]);}
+    if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyK'||e.code==='KeyE'){audioUnlock();triggerSpecial(state.fliers[0]);}
+    if(e.code==='KeyL'||e.code==='KeyQ'){audioUnlock();triggerRoll(state.fliers[0]);}
     if(e.code==='KeyB'){audioUnlock();triggerBomb(state.fliers[0]);}
     if(e.code==='KeyP'&&state.phase==='playing')state.paused=!state.paused;
   });

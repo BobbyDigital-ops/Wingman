@@ -6,12 +6,12 @@
   <meta name="theme-color" content="#172939">
   <meta name="description" content="Wingman — a tiny, tactical, single-screen aerial dogfighting game.">
   <title>Wingman · Pixel Dogfights</title>
-  <link rel="stylesheet" href="./styles.css?v=20261028v08p1tune">
+  <link rel="stylesheet" href="./styles.css?v=20261028v08phase2">
 </head>
 <body>
   <div class="app">
     <header class="site-header">
-      <strong>WINGMAN</strong><span>PIXEL DOGFIGHTS · v0.8 · PHASE 1</span>
+      <strong>WINGMAN</strong><span>PIXEL DOGFIGHTS · v0.8 · PHASE 2</span>
     </header>
     <main class="game-frame" id="frame">
       <canvas id="game" width="320" height="180" role="img" aria-label="Side-on aerial duel with fighter aircraft"></canvas>
@@ -31,7 +31,7 @@
           </div>
           <button class="start-button" id="start" type="button">START DOGFIGHT <span aria-hidden="true">▶</span></button>
           <div class="mode-row"><label>OPPONENTS <select id="pilots-select"><option value="2">1 AI · DUEL</option><option value="3">2 AI · TRIPLE</option><option value="4">3 AI · FOUR-PLANE</option></select></label><label>AI <select id="difficulty-select"><option value="rookie">ROOKIE</option><option value="standard" selected>STANDARD</option><option value="ace">ACE</option></select></label><label>BATTLE <select id="team-select"><option value="ffa">FREE FOR ALL</option><option value="teams">2v2 TEAMS (4 PLANES)</option></select></label><label>MODE <select id="mode-select"><option value="duel">DUEL</option><option value="survival">SURVIVAL</option></select></label><label>ARENA <select id="arena-select"><option value="0">ALPINE</option><option value="1">COAST</option><option value="2">DESERT</option><option value="3">STORM</option></select></label></div>
-          <p class="tip">Every gun burst commits. Miss, and you're exposed during cooldown.</p>
+          <p class="tip">A/D turn · W boost · Space fire · E special · Q roll · B bomb. On touch: double-tap turn to roll.</p>
         </div>
       </div>
       <div class="overlay hidden" id="result" aria-live="polite">
@@ -61,11 +61,11 @@
     <footer class="site-footer">
       <span><b>A / D</b> turn · <b>W</b> boost</span>
       <span><b>SPACE</b> burst</span>
-      <span><b>SHIFT / K</b> special · <b>L</b> roll · <b>B</b> bomb</span>
+      <span><b>E</b> special · <b>Q</b> roll · <b>B</b> bomb</span>
       <span><b>P</b> pause</span>
     </footer>
   </div>
-  <script src="./src/art/aircraft.js?v=20261028v08p1tune" defer></script>
-  <script src="./game.js?v=20261028v08p1tune" defer></script>
+  <script src="./src/art/aircraft.js?v=20261028v08phase2" defer></script>
+  <script src="./game.js?v=20261028v08phase2" defer></script>
 </body>
 </html>

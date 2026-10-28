@@ -98,3 +98,8 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
 /* v0.8 Phase 1: boost is next to steering, leaving combat buttons unchanged. */
 .control-btn.boost{font-size:10px;background:#376c6599;border-color:#b9e7ccbd}
 @media(pointer:coarse) and (orientation:landscape){.control-cluster.steer{gap:clamp(3px,.8vw,8px)}}
+
+/* Phase 2: mobile rolls are triggered by double tapping a steering direction.
+   Retain the normal roll control on non-touch devices for accessibility. */
+@media(pointer:coarse){.control-btn.roll{display:none!important}}
+@media(pointer:coarse) and (orientation:landscape){.control-cluster.attack{gap:clamp(6px,1vw,12px)}}

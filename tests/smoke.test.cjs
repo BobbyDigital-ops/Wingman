@@ -381,3 +381,16 @@ test('gentle tail assist only engages when lined up behind an opponent',()=>{
  enemy.angle=Math.PI;
  assert.equal(game.internals.tailMagnet(p,0),0,'head-on planes do not magnetise');
 });
+
+test('keyboard special is reachable with E and roll with Q',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0];
+ game.listeners.get('document:keydown')({code:'KeyE',repeat:false,preventDefault(){}});
+ assert.ok(p.specialCooldown>0);
+ game.listeners.get('document:keydown')({code:'KeyQ',repeat:false,preventDefault(){}});
+ assert.ok(p.rollTime>0);
+});
+test('all three aircraft component readings remain available',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ assert.deepEqual(Object.keys(game.internals.state.fliers[0].parts).sort(),['body','engine','tail']);
+});
