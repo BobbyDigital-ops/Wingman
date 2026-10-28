@@ -138,6 +138,8 @@
     if(!p||!p.alive||p.specialCooldown>0||state.phase!=='playing'||state.paused)return;
     p.specialCooldown=p.d.specialCd;
     if(p.role==='fighter'){
+      // The start of the repositioning loop briefly dodges gunfire.
+      p.evasiveTime=.38;
       // A physically continuous high yo-yo: follow a single smooth arc
       // through the upper air, then descend toward the rival's predicted tail.
       // Its destination is captured at launch, so accurate timing matters.
@@ -149,8 +151,8 @@
         y:rival.y+rival.vy*.29-Math.sin(rival.angle)*20
       }:{x:p.x+heading.x*65,y:p.y};
       const p3={
-        x:clamp(predicted.x,p.x-82,p.x+82),
-        y:clamp(predicted.y,p.y-52,p.y+52)
+        x:clamp(predicted.x,p.x-97,p.x+97),
+        y:clamp(predicted.y,p.y-56,p.y+56)
       };
       p3.x=clamp(p3.x,17,W-17);p3.y=clamp(p3.y,43,H-24);
       const p1={
@@ -247,71 +249,68 @@
       const a=p.swoop;
       a.elapsed=Math.min(a.duration,a.elapsed+dt);
       const t=a.elapsed/a.duration,u=1-t;
-      const bez=(key)=>
-        u*u*u*a.p0[key]+3*u*u*t*a.p1[key]+3*u*t*t*a.p2[key]+t*t*t*a.p3[key];
+      const bez=(key)=>u*u*u*a.p0[key]+3*u*u*t*a.p1[key]+3*u*t*t*a.p2[key]+t*t*t*a.p3[key];
       const deriv=(key)=>
         (3*u*u*(a.p1[key]-a.p0[key])+6*u*t*(a.p2[key]-a.p1[key])+
-          3*t*t*(a.p3[key]-a.p2[key]))/a.duration;
+         3*t*t*(a.p3[key]-a.p2[key]))/a.duration;
       const x=bez('x'),y=bez('y'),vx=deriv('x'),vy=deriv('y');
       p.x=x;p.y=y;p.vx=vx;p.vy=vy;p.speed=Math.hypot(vx,vy);
       if(p.x<-p.d.radius)p.x+=W+2*p.d.radius;
       if(p.x>W+p.d.radius)p.x-=W+2*p.d.radius;
       p.y=Math.max(37,p.y);
       if(p.speed>3)p.angle=Math.atan2(vy,vx);
-      p.energy=Math.max(10,p.energy-dt*6);
+      p.energy=Math.max(10,p.energy-dt*5);
       p.swoopTime=Math.max(0,a.duration-a.elapsed);
-      if(a.elapsed>=a.duration){p.swoop=null;p.turnVelocity=0;}
+      if(a.elapsed>=a.duration){
+        p.swoop=null;p.turnVelocity=0;
+        const cap=p.d.speed*1.28;
+        p.speed=Math.min(p.speed,cap);
+        p.vx=Math.cos(p.angle)*p.speed;p.vy=Math.sin(p.angle)*p.speed;
+      }
       return;
     }
-    const wing=steer<0?p.parts.left:p.parts.right;
-    const authority=(p.critical?.13:.42)+.58*wing/100;
-    const sluggish=p.stallTime>0?.57:1;
-    if(p.climbAssist>0){
-      const direction=Math.cos(p.angle)<0?-1:1;
-      const climbHeading=Math.atan2(-43,direction*20);
-      const desired=clamp(angleDiff(climbHeading,p.angle)*2.8,-p.d.turn,p.d.turn);
-      p.turnVelocity+=(desired-p.turnVelocity)*Math.min(1,dt*8.8);
-    }else{
-      const desired=steer*p.d.turn*authority*sluggish;
-      p.turnVelocity+=(desired-p.turnVelocity)*Math.min(1,dt*10);
-    }
-    if(p.detached.left||p.detached.right){
-      const direction=p.detached.left?-1:1;
-      p.turnVelocity+=direction*dt*2.7;
-      p.turnVelocity=clamp(p.turnVelocity,-2.8,2.8);
-    }
+    const engine=p.parts.engine/100,tail=p.parts.tail/100;
+    const climb=Math.max(0,-Math.sin(p.angle));
+    const dive=Math.max(0,Math.sin(p.angle));
+    // Airspeed and altitude trade off naturally; diving stores useful speed.
+    p.energy=clamp(p.energy+dt*(19*dive-16*climb+4*(1-climb)),0,100);
+    const lowEnergy=climb>.55&&p.energy<19;
+    p.stallTime=lowEnergy?Math.min(.55,p.stallTime+dt):Math.max(0,p.stallTime-dt*1.6);
+    p.flightRisk=clamp((29-p.energy)/29,0,1)*(climb>.25?1:.3);
+    // Even a broken tail retains enough authority for a skilful recovery.
+    const authority=.54+.46*tail;
+    const desired=p.climbAssist>0
+      ?clamp(angleDiff(Math.atan2(-43,Math.cos(p.angle)<0?-20:20),p.angle)*2,-p.d.turn,p.d.turn)
+      :steer*p.d.turn*authority*(1-p.flightRisk*.17)+p.stallTime*.15;
+    p.turnVelocity+=(desired-p.turnVelocity)*Math.min(1,dt*(p.role==='bomber'?6:7.5));
     p.angle+=p.turnVelocity*dt;
     if(p.angle>Math.PI)p.angle-=TAU;
     if(p.angle< -Math.PI)p.angle+=TAU;
-    const engine=p.parts.engine<=0?.04:.52+.48*p.parts.engine/100;
-    // Flight energy is a real store: climbing consumes it; diving restores it.
-    const climb=Math.max(0,-Math.sin(p.angle));
-    const dive=Math.max(0,Math.sin(p.angle));
-    p.energy=clamp(p.energy+dt*(24*dive-27*climb+6*(1-climb)),0,100);
-    const energyFactor=.75+.25*(p.energy/100);
-    const wanted=p.d.speed*engine*energyFactor*(1+Math.min(.32,dive*.25))*
-      (p.swoopTime>0?1.14:1)*(p.climbAssist>0?1.25:1);
-    p.stallTime=p.energy<9?Math.max(p.stallTime,.2):Math.max(0,p.stallTime-dt);
-    // Low energy lowers turn authority and speed, but never disables steering.
-    const speedTarget=p.stallTime>0?wanted*.68:wanted;
-    p.speed+=(speedTarget-p.speed)*Math.min(1,dt*4.6);
-    const follow=Math.min(1,dt*(p.role==='bomber'?8.5:p.role==='heavy'?9.5:10.5));
+    const power=.25+.75*engine;
+    const wanted=p.d.speed*power*(.87+.13*p.energy/100)*(p.boosting?1.27:1)*(p.climbAssist>0?1.16:1);
+    // Fighters retain less momentum than big, heavier aircraft.
+    const drag=p.role==='fighter'?1.55:p.role==='heavy'?1.2:.98;
+    const accel=p.role==='fighter'?2.1:p.role==='heavy'?1.65:1.25;
+    p.speed+=(wanted-p.speed)*Math.min(1,dt*(p.speed>wanted?drag:accel));
+    p.speed+=dt*(15*dive-9*climb);
+    p.speed=clamp(p.speed,8,p.d.speed*(p.boosting?1.48:1.36));
+    // The velocity vector gently follows the fuselage, rather than snapping.
+    const follow=Math.min(1,dt*(p.role==='bomber'?3.2:p.role==='heavy'?4:5.1));
     p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
     p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
-    if(p.critical){p.vy+=dt*(p.detached.left||p.detached.right?145:115);p.speed=Math.max(5,p.speed-dt*13);}
+    // Engine failure causes a controlled glide instead of instant forced death.
+    if(p.parts.engine<=0)p.vy+=dt*13;
+    if(p.parts.tail<=0)p.vy+=dt*3.5;
+    if(p.stallTime>0)p.vy+=dt*5;
     p.x+=p.vx*dt;p.y+=p.vy*dt;
-    // A soft, continuous boundary recovery avoids frame-to-frame angle snaps.
-    const margin=15;
-    // Wrap horizontally, conserving momentum and direction.
     if(p.x<-p.d.radius)p.x+=W+2*p.d.radius;
     else if(p.x>W+p.d.radius)p.x-=W+2*p.d.radius;
-    // Soft ceiling: deflect upward velocity rather than teleporting or damaging.
-    if(p.y<37){p.y=37;p.vy=Math.max(3,p.vy);p.angle+=clamp(angleDiff(.3,p.angle),-dt*3,dt*3);}
-    // Floor is a deliberate lethal hazard, not a source of component damage.
-    if(p.y>=H-13){p.y=H-13;p.health=0;p.alive=false;p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
+    if(p.y<37){p.y=37;p.vy=Math.max(3,p.vy);p.angle+=clamp(angleDiff(.3,p.angle),-dt*2,dt*2);}
+    if(p.y>=H-13){
+      p.y=H-13;p.health=0;p.parts.body=0;p.alive=false;
+      p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
       if(p.id===0||state.participants===2||opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
     }
-
   }
   // Tactical AI: state changes prevent indefinite tail-chasing and combat orbits.
   function aiInput(p,target){
@@ -345,6 +344,9 @@
       tx=target.x+target.vx*lead;ty=target.y+target.vy*lead;
       if(p.energy<38)ty=Math.max(70,ty);
     }
+    // The AI can spend limited boost to intercept or extend out of danger.
+    p.aiBoost=(p.aiMode==='intercept'&&range>130||
+      p.aiMode==='extend'&&p.y>70)&&p.boostCharge>30&&p.parts.engine>25;
     // Bombers seek the high ground and track crossing opportunities.
     if(p.role==='bomber'&&p.aiMode!=='recover'){
       tx=target.x+target.vx*.3;
@@ -389,7 +391,7 @@
       }
     }else p.gunCooldown=Math.max(0,p.gunCooldown-dt);
     p.smokeTimer-=dt;
-    if((p.critical||p.parts.engine<60||p.health<p.d.hull*.35)&&p.smokeTimer<=0){
+    if((p.parts.engine<48||p.health<p.d.hull*.35)&&p.smokeTimer<=0){
       p.smokeTimer=.09;
       const x=p.x-Math.cos(p.angle)*p.d.radius;
       const y=p.y-Math.sin(p.angle)*p.d.radius;
@@ -418,7 +420,7 @@
       let struck=false;
       for(const target of targets){
         const clear=shooter&&distance(target,shooter)>target.d.radius+shooter.d.radius+3;
-        if(!clear||target.rollTime>0||b.age<=.035)continue;
+        if(!clear||target.rollTime>0||target.evasiveTime>0||b.age<=.035)continue;
         const vx=b.x-px,vy=b.y-py,denom=vx*vx+vy*vy;
         const t=denom>0?clamp(((target.x-px)*vx+(target.y-py)*vy)/denom,0,1):0;
         const nx=px+t*vx,ny=py+t*vy;
