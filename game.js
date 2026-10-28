@@ -659,8 +659,8 @@ function plane(type,id,x,y,angle){
         return along< -11&&range<155&&lateral<Math.min(65,range*.70);
       }).sort((a,b)=>combatDistance(p,a)-combatDistance(p,b));
       if(threats.length){
-        p.rearShots=9;p.rearShotTime=0;p.rearTarget=threats[0].id;
-        p.rearCooldown=1.55;
+        p.rearShots=7;p.rearShotTime=0;p.rearTarget=threats[0].id;
+        p.rearCooldown=1.85;
       }
     }
     if(p.role==='bomber'&&p.rearShots>0){
@@ -674,7 +674,7 @@ function plane(type,id,x,y,angle){
           const lateral=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
           if(along< -9&&range<165&&lateral<Math.min(70,range*.76)){
             // Lead the target using relative airspeed and preserve real bullet
-            // collisions. Nine 7-damage rounds approach fighter cadence,
+            // collisions. Seven 6-damage rounds offer a deterrent without fighter-level punishment,
             // but never match the fighter's 10 x 11 primary gun damage.
             const speed=221;
             const lead=clamp(range/speed,.05,.78);
@@ -688,7 +688,7 @@ function plane(type,id,x,y,angle){
               x:muzzleX,y:muzzleY,
               vx:Math.cos(aim)*speed+p.vx*.32,
               vy:Math.sin(aim)*speed+p.vy*.32,
-              owner:p.id,damage:7,life:1.0,age:0,rearGun:true
+              owner:p.id,damage:6,life:1.0,age:0,rearGun:true
             });
             p.turretFlash=.12;
           }
