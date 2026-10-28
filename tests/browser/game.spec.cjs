@@ -1,5 +1,15 @@
 const { test, expect } = require('@playwright/test');
 
+async function openCareer(page){
+  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+  else await page.locator('#career-open-mobile').click();
+}
+async function openLicence(page){
+  if(await page.locator('#career-license').isVisible())await page.locator('#career-license').click();
+  else {await openCareer(page);await page.locator('[data-action="licence"]').click();}
+}
+
+
 test('launches and draws the game without uncaught browser exceptions', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -67,7 +77,7 @@ test('reverse manoeuvre and wind boost run without browser errors',async ({page}
 test('Road to Ace creates a pilot licence and persists it across reloads',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/');
- await page.locator('#career-open').click();
+ await openCareer(page);
  await expect(page.getByRole('heading',{name:'CHOOSE YOUR PILOT'})).toBeVisible();
  await page.locator('#career-name').fill('Test Squadron');
  await page.locator('#career-faction').selectOption('Axis');
@@ -76,14 +86,14 @@ test('Road to Ace creates a pilot licence and persists it across reloads',async(
  await expect(page.getByText('Test Squadron',{exact:true})).toBeVisible();
  await expect(page.getByText('AXIS · ACTIVE SERVICE')).toBeVisible();
  await page.reload();
- await page.locator('#career-license').click();
+ await openLicence(page);
  await expect(page.getByText('Test Squadron',{exact:true})).toBeVisible();
  expect(errors).toEqual([]);
 });
 test('Road to Ace starts and saves a locked-aircraft three-life run',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/');
- await page.locator('#career-open').click();
+ await openCareer(page);
  await page.locator('#career-name').fill('Flight Leader');
  await page.locator('[data-candidate="0"]').click();
  await page.getByRole('button',{name:'ROAD TO ACE'}).last().click();
@@ -94,14 +104,14 @@ test('Road to Ace starts and saves a locked-aircraft three-life run',async({page
  await expect(page.locator('#career-screen')).toBeHidden();
  await expect(page.locator('#menu')).toHaveClass(/hidden/);
  await page.reload();
- await page.locator('#career-open').click();
+ await openCareer(page);
  await expect(page.getByText('RANK 1/8')).toBeVisible();
  expect(errors).toEqual([]);
 });
 
 test('pilot offers random recruits and retains the chosen flight attributes',async({page})=>{
  await page.goto('/');
- await page.locator('#career-open').click();
+ await openCareer(page);
  await expect(page.locator('[data-candidate]')).toHaveCount(3);
  const before=await page.locator('.candidate-grid').innerText();
  await page.getByRole('button',{name:'GENERATE THREE NEW RECRUITS'}).click();
@@ -110,11 +120,11 @@ test('pilot offers random recruits and retains the chosen flight attributes',asy
  await page.locator('#career-name').fill('Sky Captain');
  await page.locator('[data-candidate="0"]').click();
  await expect(page.getByText('MANOEUVRABILITY')).toBeVisible();
- await page.reload();await page.locator('#career-license').click();
+ await page.reload();await openLicence(page);
  await expect(page.getByText('Sky Captain',{exact:true})).toBeVisible();
 });
 
-test('rolled airframe is saved and locked for the run',async({page})=>{await page.goto('/');await page.locator('#career-open').click();await page.locator('[data-candidate="0"]').click();await page.getByRole('button',{name:'ROAD TO ACE'}).last().click();await expect(page.locator('.airframe-card')).toHaveCount(3);await page.locator('[data-aircraft="fighter"]').click();const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')).run);expect(result.airframe.type).toBe('fighter');expect(result.airframe.stats.speed).toBeGreaterThan(0);await page.reload();await page.locator('#career-open').click();await expect(page.getByText('RANK 1/8')).toBeVisible();});
+test('rolled airframe is saved and locked for the run',async({page})=>{await page.goto('/');await openCareer(page);await page.locator('[data-candidate="0"]').click();await page.getByRole('button',{name:'ROAD TO ACE'}).last().click();await expect(page.locator('.airframe-card')).toHaveCount(3);await page.locator('[data-aircraft="fighter"]').click();const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')).run);expect(result.airframe.type).toBe('fighter');expect(result.airframe.stats.speed).toBeGreaterThan(0);await page.reload();await openCareer(page);await expect(page.getByText('RANK 1/8')).toBeVisible();});
 
 
 test('mobile landscape controls stay onscreen, hold steering and render at increased resolution',async({page})=>{
