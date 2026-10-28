@@ -17,7 +17,7 @@ const CATALOG=[
  ['Charles "Last Light" Morgan','fighter','ace'],['Wilhelm "The Baron" Adler','bf109','ace'],
  ['Hugh "Raven" Doyle','fighter','ace'],['Max "Nightwatch" Beck','bf109','ace']
 ].map((x,i)=>({id:'pilot-'+i,name:x[0],plane:x[1],skill:x[2],faction:AXIS.includes(x[1])?'Axis':'Allies'}));
-const byId=Object.fromEntries(CATALOG.map(p=>[p.id,p]));
+const byId=Object.fromEntries(CATALOG.map((p,i)=>[p.id,{...p,appearance:appearance(i*47+9)}]));
 const aircraft={fighter:'Spitfire',heavy:'Beaufighter',bomber:'Lancaster',bf109:'Bf 109',bf110:'Bf 110',he111:'He 111'};
 const screen=document.getElementById('career-screen'),menu=document.getElementById('menu'),result=document.getElementById('result');
 const nav=document.getElementById('career-open'),licenceBtn=document.getElementById('career-license');
@@ -25,18 +25,43 @@ function load(){try{const o=JSON.parse(localStorage.getItem(STORE)||'null');retu
 let data=load(),active=null,showing=false,view='ladder';
 function save(){try{localStorage.setItem(STORE,JSON.stringify(data));}catch{}}
 function escape(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function pilotPortrait(faction,style=0){
- const axis=faction==='Axis',coat=axis?'#63766b':'#706e54',trim=axis?'#a9b6a5':'#c2b496';
- return `<svg class="pilot-avatar" viewBox="0 0 110 130" role="img" aria-label="${faction} pilot in uniform">
- <rect width="110" height="130" fill="#33434a"/><path d="M0 108Q28 79 55 83Q83 78 110 108V130H0Z" fill="${coat}"/>
- <path d="M24 94L41 81L55 112L67 81L88 96L76 130H33Z" fill="#354941" stroke="${trim}" stroke-width="2"/>
- <path d="M44 81V66H68V82L56 96Z" fill="#c59b7e"/>
- <ellipse cx="56" cy="49" rx="25" ry="33" fill="#d2ab8d"/><path d="M31 46Q28 18 44 15Q66 9 79 27L81 43Q75 29 67 29Q47 34 31 46Z" fill="${style%2?'#43382c':'#514638'}"/>
- <path d="M36 50h13m15 0h13" stroke="#38372f" stroke-width="2"/><path d="M53 65q4 4 9 0" fill="none" stroke="#8b6355"/>
- <path d="M27 34Q26 8 55 8Q85 8 84 35L71 30L39 30Z" fill="${coat}" stroke="${trim}" stroke-width="2"/>
- <path d="M38 27H75" stroke="${trim}" stroke-width="2"/>
- <path d="M45 18h20l-10 7Z" fill="${trim}"/>
- <path d="M75 105l5 4m-5 3l5 4" stroke="${trim}" stroke-width="2"/>
+function appearance(seed=0){
+ const n=Number(seed)||0;
+ return {face:n%5,skin:Math.floor(n/3)%5,hair:Math.floor(n/2)%6,
+ headwear:Math.floor(n/5)%4,goggles:Math.floor(n/7)%3,scarf:Math.floor(n/11)%4,
+ moustache:Math.floor(n/13)%3,monocle:Math.floor(n/17)%3,nose:Math.floor(n/19)%4};
+}
+function pilotPortrait(faction,look=0){
+ const opt=typeof look==='object'?look:appearance(look);
+ const axis=faction==='Axis';
+ const skins=['#e9bf9b','#cfa384','#af795d','#845640','#f4d0ac'];
+ const hairs=['#392e27','#8b6244','#b99353','#c5b58a','#322c2d','#6d4735'];
+ const skin=skins[opt.skin%skins.length],hair=hairs[opt.hair%hairs.length];
+ const coat=axis?'#546b65':'#656b53',trim=axis?'#bdc6b5':'#cbb887';
+ const caps=['#','cap','helmet','none','beret'][opt.headwear%4+1]||'cap';
+ const nose=[2,3,4,2.6][opt.nose%4],face=[24,22,26,23,25][opt.face%5];
+ return `<svg class="pilot-avatar" viewBox="0 0 120 144" role="img" aria-label="${faction} pilot wearing a customised uniform">
+ <defs><linearGradient id="bg${opt.face}${opt.skin}" x2=".8" y2="1"><stop stop-color="#758b8a"/><stop offset="1" stop-color="#273d43"/></linearGradient></defs>
+ <rect width="120" height="144" fill="#364c50"/><path d="M3 0H117V144H3Z" fill="none" stroke="#d5c8a3" stroke-width="2"/>
+ <path d="M0 127Q10 94 41 90L79 90Q111 95 120 128V144H0Z" fill="${coat}" stroke="#253637" stroke-width="2"/>
+ <path d="M38 93L59 131L77 93L87 102L76 144H43L31 103Z" fill="${axis?'#414d4a':'#4e564a'}" stroke="${trim}" stroke-width="1.5"/>
+ <path d="M49 93L59 109L70 93" fill="#e2c7a4" stroke="#bca482"/><path d="M51 91V75H70V91L60 101Z" fill="${skin}"/>
+ <ellipse cx="60" cy="56" rx="${face}" ry="34" fill="${skin}" stroke="#764e3f" stroke-width=".7"/>
+ <path d="M36 50Q33 18 59 16Q83 19 83 49Q75 32 61 32Q46 42 36 50" fill="${hair}"/>
+ <path d="M40 58q7 -4 15 0m13 0q7 -4 13 0" fill="none" stroke="#40382f" stroke-width="2.2" stroke-linecap="round"/>
+ <circle cx="48" cy="58" r="1.6" fill="#283735"/><circle cx="74" cy="58" r="1.6" fill="#283735"/>
+ <path d="M60 56l${nose} 10l-4 1" fill="none" stroke="#a97159" stroke-width="1.4"/>
+ <path d="M53 78q7 2 14-1" fill="none" stroke="#77483e" stroke-width="1.2"/>
+ ${opt.moustache%3?'<path d="M58 72q-6 -4 -12 1q7 3 13 0q7 3 14-1q-7 -4 -13 0" fill="'+hair+'"/>':''}
+ ${opt.monocle%3===1?'<circle cx="74" cy="57" r="10" stroke="#d9c593" stroke-width="2" fill="none"/><path d="M84 62Q88 83 85 101" stroke="#d9c593" fill="none"/>':''}
+ ${opt.goggles%3===1?'<path d="M32 56H86" stroke="#534a3e" stroke-width="3"/><rect x="38" y="50" width="19" height="13" rx="4" fill="#98b8ba88" stroke="#c2ad84" stroke-width="2"/><rect x="64" y="50" width="19" height="13" rx="4" fill="#98b8ba88" stroke="#c2ad84" stroke-width="2"/>':''}
+ ${opt.scarf%4?'<path d="M41 93Q59 107 77 91L83 98Q58 117 38 101Z" fill="'+(['#ac443e','#e3d2ae','#485f7e','#7d8f75'][opt.scarf%4])+'"/><path d="M72 101L83 130L72 128L62 104Z" fill="'+(['#ac443e','#e3d2ae','#485f7e','#7d8f75'][opt.scarf%4])+'"/>':''}
+ ${caps==='cap'?'<path d="M30 41Q29 14 60 13Q90 14 89 42L77 35H40Z" fill="'+coat+'" stroke="'+trim+'" stroke-width="2"/><path d="M38 37Q62 32 88 37Q74 46 40 43Z" fill="'+coat+'" stroke="'+trim+'"/>':
+ caps==='helmet'?'<path d="M31 48Q26 13 60 10Q94 13 89 48L81 62L77 34Q60 27 41 36L39 64Z" fill="#634d3b" stroke="'+trim+'" stroke-width="1.6"/><path d="M37 35L83 35" stroke="'+trim+'" stroke-width="3"/>':
+ caps==='beret'?'<path d="M29 35Q20 17 57 12Q95 9 91 29L84 39Q62 33 31 41Z" fill="'+coat+'" stroke="'+trim+'" stroke-width="2"/>':''}
+ ${opt.goggles%3===2?'<rect x="37" y="29" width="21" height="12" rx="5" fill="#8db3b8" stroke="#c8b893" stroke-width="3"/><rect x="63" y="29" width="21" height="12" rx="5" fill="#8db3b8" stroke="#c8b893" stroke-width="3"/>':''}
+ <path d="M93 108l9 5m-9 2l9 5" stroke="${trim}" stroke-width="2"/>
+ <path d="M15 130H105" stroke="#cfb98d" opacity=".5"/>
  </svg>`;
 }
 function makeChoices(run){
@@ -63,7 +88,9 @@ function close(){showing=false;screen.hidden=true;window.WingmanGame?.showMenu()
 function createProfile(){
  const name=document.getElementById('career-name')?.value.trim().slice(0,30)||'Unknown Pilot';
  const faction=document.getElementById('career-faction')?.value==='Axis'?'Axis':'Allies';
- const style=Number(document.getElementById('career-portrait')?.value||0);
+ const style={};
+ for(const feature of ['face','skin','hair','headwear','goggles','scarf','moustache','monocle','nose'])
+  style[feature]=Number(document.getElementById('career-'+feature)?.value||0);
  data={profile:{name,faction,style},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
  save();view='licence';render();
 }
@@ -98,12 +125,32 @@ function renderOutcome(won,encounter){
  <div class="career-stats"><span>${data?.run?'RANK '+data.run.rank:'RUN FINISHED'}</span><span>${data?.run?'♥ '+data.run.lives+' LIVES':'START AGAIN'}</span></div>
  <button class="career-primary" data-action="ladder">${data?.run?'CONTINUE LADDER':'VIEW PILOT LICENCE'}</button>`);
 }
+function appearanceControls(){
+ const options={face:['Oval','Narrow','Broad','Angular','Round'],skin:['Fair','Warm','Tan','Deep','Pale'],
+ hair:['Dark brown','Chestnut','Blond','Ash blond','Black','Auburn'],headwear:['Officer cap','Flying helmet','Bare head','Beret'],
+ goggles:['None','Worn','On helmet'],scarf:['None','Red','Cream','Blue'],moustache:['Clean-shaven','Moustache','Moustache'],
+ monocle:['None','Monocle','None'],nose:['Straight','Sharp','Broad','Small']};
+ return '<div class="portrait-options">'+Object.entries(options).map(([k,arr])=>
+  '<label>'+k.toUpperCase()+'<select id="career-'+k+'">'+arr.map((x,i)=>'<option value="'+i+'">'+x+'</option>').join('')+'</select></label>').join('')+'</div>';
+}
+function ladder(run){
+ const rows=[];
+ for(let rank=MAX_RANK;rank>=1;rank--){
+  if(rank===run.rank){
+    rows.push('<div class="ladder-rung current" id="active-rung"><div class="ladder-rank">RANK '+rank+' · YOUR NEXT CHALLENGE</div><div class="career-options">'+run.choices.map((op,i)=>{
+      const p=byId[op.id],record=data.records[op.id];
+      return '<button class="career-opponent" data-choice="'+i+'"><div class="career-small-photo">'+pilotPortrait(p.faction,p.appearance)+'</div><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+' · '+op.difficulty.toUpperCase()+'</small>'+(op.types.length>1?'<em>1 VS 2</em>':'')+(record?'<em>'+record.wins+'–'+record.losses+(record.losses>record.wins?' · GRUDGE':'')+'</em>':'')+'<span>CHALLENGE →</span></button>';
+    }).join('')+'</div></div>');
+  }else rows.push('<div class="ladder-rung '+(rank<run.rank?'cleared':'locked')+'"><div class="ladder-rank">'+(rank===MAX_RANK?'★ ACE SHOWDOWN':'RANK '+rank)+'</div><span>'+(rank<run.rank?'CLEARED':'LOCKED')+'</span></div>');
+ }
+ return '<div class="ladder-scroll" role="region" aria-label="Full pilot ladder" tabindex="0">'+rows.join('')+'</div>';
+}
 function render(){
  if(!data){
-  panel('CREATE YOUR PILOT',`<div class="career-layout"><div class="career-photo" id="career-photo">${pilotPortrait('Allies')}</div><div class="career-form">
+  panel('CREATE YOUR PILOT',`<div class="career-layout"><div class="career-photo" id="career-photo">${pilotPortrait('Allies',appearance())}</div><div class="career-form">
    <label>PILOT NAME<input id="career-name" maxlength="30" placeholder="Your name or callsign" autocomplete="off"></label>
    <label>ALLEGIANCE<select id="career-faction"><option>Allies</option><option>Axis</option></select></label>
-   <label>PORTRAIT<select id="career-portrait"><option value="0">Pilot A</option><option value="1">Pilot B</option></select></label>
+   ${appearanceControls()}
    <p class="career-muted">Your uniform, aircraft selection and opponents will reflect your allegiance.</p>
    <button class="career-primary" data-action="create">ISSUE PILOT LICENCE</button></div></div>`);
   return;
@@ -127,16 +174,11 @@ function render(){
   <button data-action="licence">VIEW PILOT LICENCE</button>`);
   return;
  }
- const choices=run.choices||[];
  panel('ROAD TO ACE',`<div class="career-stats"><span>${escape(p.name)} · ${aircraft[run.aircraft]}</span><span>RANK ${run.rank}/${MAX_RANK}</span><span>${'♥'.repeat(run.lives)}${'♡'.repeat(3-run.lives)}</span></div>
- <p class="career-muted">${run.rank===MAX_RANK?'FINAL APPROACH — defeat the elite to earn your wings.':'Choose your next opponent. Every victory climbs a rank; defeat loses a life and one rank.'}</p>
- <div class="career-options">${choices.map((op,i)=>{const rival=byId[op.id],r=data.records[op.id];return `<button class="career-opponent" data-choice="${i}">
-  <div class="career-small-photo">${pilotPortrait(rival.faction,i)}</div>
-  <strong>${escape(rival.name)}</strong><small>${escape(op.types.map(t=>aircraft[t]).join(' + '))} · ${op.difficulty.toUpperCase()}</small>
-  ${op.types.length>1?'<em>1 vs 2 — DOUBLE THREAT</em>':''}
-  ${r?`<em>${r.wins} WINS · ${r.losses} LOSSES ${r.losses>r.wins?'· GRUDGE':''}</em>`:''}
-  <span>CHALLENGE PILOT →</span></button>`}).join('')}</div>
- <button data-action="licence">VIEW PILOT LICENCE</button>`);
+ <p class="career-muted">Climb the full ladder. Three opponents at your current rank; earlier ranks remain visible below.</p>
+ ${ladder(run)}<button data-action="licence">VIEW PILOT LICENCE</button>`);
+ const marker=screen.querySelector('#active-rung');if(marker)marker.scrollIntoView({block:'center'});
+
 }
 screen.addEventListener('click',e=>{
  const el=e.target.closest('button');if(!el)return;
@@ -149,9 +191,10 @@ screen.addEventListener('click',e=>{
  if(el.dataset.choice!==undefined)fight(Number(el.dataset.choice));
 });
 screen.addEventListener('change',e=>{
- if(['career-faction','career-portrait'].includes(e.target.id)){
+ if(e.target.id==='career-faction'||e.target.id.startsWith('career-')){
   const f=document.getElementById('career-faction').value;
-  document.getElementById('career-photo').innerHTML=pilotPortrait(f,Number(document.getElementById('career-portrait').value));
+  const look={};for(const k of ['face','skin','hair','headwear','goggles','scarf','moustache','monocle','nose'])look[k]=Number(document.getElementById('career-'+k)?.value||0);
+  document.getElementById('career-photo').innerHTML=pilotPortrait(f,look);
  }
 });
 nav.addEventListener('click',()=>show('ladder'));licenceBtn.addEventListener('click',()=>show('licence'));
