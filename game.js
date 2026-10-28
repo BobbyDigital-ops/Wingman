@@ -1066,72 +1066,75 @@ function plane(type,id,x,y,angle){
     g.fillStyle=color;g.fillRect(x,y,Math.ceil(w*clamp(value/max,0,1)),4);
   }
   function drawHud(){
-    // Wingman combat flight strip: one restrained enamel instrument row,
-    // prominent theatre and score, airspeed as the only live needle gauge.
-    // The climb/stall simulation remains passive, never a HUD dial.
-    const p=state.fliers[0],enemy=state.fliers[1],mid=W/2;
-    const cream='#eee1c4',brass='#cbaa72',fog='#adc1bb';
+    // Minimal cinema-frame combat overlay, not a dashboard: the aircraft and sky
+    // own the screen. Vital data appears as small edge markings and typography.
+    const p=state.fliers[0],e=state.fliers[1],cx=W*.5;
     const names={fighter:'SPITFIRE',heavy:'BEAUFIGHTER',bomber:'LANCASTER',
       bf109:'BF 109',bf110:'BF 110',he111:'HE 111'};
-    const name=q=>names[q?.type]||'UNKNOWN';
-    const plateW=clamp(W*.28,111,160);
-    g.save();g.textBaseline='middle';
-    function faction(q){return q?.d.nation==='Germany'?'LUFTWAFFE':'ROYAL AIR FORCE';}
-    function craft(q,x,right){
-      const w=plateW,edge=right?-1:1;
-      g.fillStyle='#111b1de8';g.beginPath();
-      if(right){g.moveTo(x+9,0);g.lineTo(x+w,0);g.lineTo(x+w,35);g.lineTo(x+5,35);g.lineTo(x,29);}
-      else{g.moveTo(x,0);g.lineTo(x+w-9,0);g.lineTo(x+w,29);g.lineTo(x+w-5,35);g.lineTo(x,35);}
-      g.closePath();g.fill();g.strokeStyle='#a78e60';g.lineWidth=.8;g.stroke();
-      const tx=right?x+w-9:x+9;g.textAlign=right?'right':'left';
-      g.fillStyle=brass;g.font='bold 5px monospace';
-      g.fillText((right?'ENEMY • ':'PILOT • ')+faction(q),tx,7,w-15);
-      g.fillStyle=cream;g.font='bold 11px Georgia,serif';
-      g.fillText(name(q),tx,18,w-17);
-      const bx=x+9,bw=w-18;
-      g.fillStyle='#3b4540';g.fillRect(bx,27,bw,3.5);
-      g.fillStyle=right?'#c47862':'#aabe8f';
-      g.fillRect(bx,27,bw*clamp((q?.health||0)/(q?.d.hull||1),0,1),3.5);
-      g.fillStyle='#78acb1';g.fillRect(bx,32,bw*clamp((q?.armour||0)/(q?.d.armour||1),0,1),1.5);
-      g.textAlign='left';
+    const short=q=>names[q?.type]||'AIRCRAFT';
+    const white='#f0e6ce',gold='#e2bf82',dim='#b9b8a9';
+    g.save();g.textBaseline='middle';g.lineCap='round';
+    // A gently shaded cinema matte occupies just 23 logical pixels,
+    // rather than three bulky top-mounted information cards.
+    const shade=g.createLinearGradient(0,0,0,32);
+    shade.addColorStop(0,'#08151de8');shade.addColorStop(.75,'#0b1d24a0');
+    shade.addColorStop(1,'#10232a00');
+    g.fillStyle=shade;g.fillRect(0,0,W,32);
+    g.strokeStyle='#ddc39670';g.lineWidth=.55;
+    g.beginPath();g.moveTo(0,1);g.lineTo(W,1);g.stroke();
+    function identification(q,right){
+      const x=right?W-9:9;
+      g.textAlign=right?'right':'left';
+      g.fillStyle=right?'#e9b09c':gold;g.font='bold 5.3px monospace';
+      g.fillText(right?'HOSTILE AIRCRAFT':'YOUR AIRCRAFT',x,6);
+      g.fillStyle=white;g.font='bold 10px Georgia,serif';
+      g.fillText(short(q),x,17,Math.min(W*.32,143));
+      const width=Math.min(W*.24,105),start=right?x-width:x;
+      const health=Math.max(0,(q?.health||0)/(q?.d.hull||1));
+      const armour=Math.max(0,(q?.armour||0)/(q?.d.armour||1));
+      // Fine calibration marks and segmented gauges replace solid panels.
+      g.fillStyle='#e8e4d334';g.fillRect(start,24,width,2.2);
+      g.fillStyle=right?'#e19580':'#bcd6ab';
+      g.fillRect(start,24,width*clamp(health,0,1),2.2);
+      g.fillStyle='#a3c3c9';g.fillRect(start,28,width*clamp(armour,0,1),1);
+      for(let i=1;i<10;i++){
+        const xx=start+width*i/10;
+        g.fillStyle='#14252bbd';g.fillRect(xx,24,.55,2.2);
+      }
     }
-    craft(p,0,false);craft(enemy,W-plateW,true);
-    // Medal-like score plaque rather than UI panels.
-    const sw=clamp(W-plateW*2-14,70,125);
-    g.fillStyle='#19272be9';g.fillRect(mid-sw/2,0,sw,35);
-    g.strokeStyle='#b89963';g.lineWidth=.8;g.strokeRect(mid-sw/2+.5,.5,sw-1,34);
-    g.fillStyle=brass;g.fillRect(mid-sw/2+5,3,sw-10,1);
-    g.textAlign='center';g.fillStyle='#c5b48c';g.font='bold 5.5px monospace';
-    g.fillText(state.mode==='survival'?'SURVIVAL':state.teams?'SQUADRON':'DOGFIGHT',mid,9,sw-6);
+    identification(p,false);identification(e,true);
+    // Score painted as unobtrusive typographic overlay.
     const score=state.mode==='survival'?'WAVE '+state.round:
-      state.participants>2?(state.teams?'2 V 2':state.participants+' AIRCRAFT'):
-      state.scores[0]+'  —  '+state.scores[1];
-    g.fillStyle=cream;g.font='bold 13px Georgia,serif';g.fillText(score,mid,23,sw-7);
-    // Small clock-and-airspeed combination, leaving most of the sky clear.
-    const ty=42;
-    g.fillStyle='#101b20d9';g.beginPath();g.roundRect?.(mid-56,ty,112,16,5);
-    if(g.roundRect)g.fill();else g.fillRect(mid-56,ty,112,16);
-    g.strokeStyle='#ab946b';g.lineWidth=.65;g.strokeRect(mid-56,ty,112,16);
-    g.font='bold 7px monospace';g.textAlign='left';g.fillStyle='#e4d1aa';
-    g.fillText('SPD '+Math.round(p?.speed||0),mid-50,ty+8);
-    g.textAlign='right';g.fillText(Math.max(0,Math.ceil(state.time))+' SEC',mid+49,ty+8);
-    g.textAlign='center';g.font='bold 5.5px monospace';g.fillStyle='#b6b29a';
-    g.fillText(ARENAS[state.arena]||'ALPINE',mid,ty+8,32);
-    if(state.wind?.active){
-      g.fillStyle='#122329d8';g.fillRect(mid-36,65,72,12);
-      g.strokeStyle='#baa271';g.strokeRect(mid-36,65,72,12);
-      g.fillStyle=cream;g.font='bold 6px monospace';
-      g.fillText((state.wind.current>0?'WIND → ':'← WIND ')+Math.round(Math.abs(state.wind.current)),mid,71,69);
+      state.participants>2?(state.teams?'2 v 2':state.participants+' ACES'):
+      state.scores[0]+' : '+state.scores[1];
+    g.textAlign='center';g.fillStyle=gold;g.font='bold 5.4px monospace';
+    g.fillText('W I N G M A N',cx,6);
+    g.fillStyle=white;g.font='bold 12px Georgia,serif';
+    g.fillText(score,cx,17,Math.max(52,W*.20));
+    g.fillStyle='#d4c4a6';g.font='bold 5.8px monospace';
+    g.fillText(Math.max(0,Math.ceil(state.time))+'s  /  '+(ARENAS[state.arena]||'ALPINE'),cx,27);
+    // A narrow, unboxed airspeed scale sits centrally near the ground.
+    // It stays clear of the thumb controls at either side.
+    if(p){
+      const base=p.d.speed||82,limit=base*(p.type==='fighter'?1.9:1.6);
+      const sx=cx-31,sy=H-12,progress=clamp(p.speed/limit,0,1);
+      g.fillStyle='#0c1925a8';g.fillRect(sx-4,sy-13,70,22);
+      g.textAlign='left';g.fillStyle='#eee1c8';g.font='bold 7px monospace';
+      g.fillText('IAS '+Math.round(p.speed),sx,sy-7);
+      g.fillStyle='#a5b6b45c';g.fillRect(sx,sy,62,1.8);
+      g.fillStyle=progress>.75?'#f1bc83':'#b2d0bd';g.fillRect(sx,sy,62*progress,1.8);
     }
-    if(p&&enemy?.role==='bomber'&&enemy.alive){
-      const dx=wrappedDelta(enemy.x,p.x),dy=p.y-enemy.y;
-      const along=dx*Math.cos(enemy.angle)+dy*Math.sin(enemy.angle);
-      const lateral=Math.abs(-dx*Math.sin(enemy.angle)+dy*Math.cos(enemy.angle));
+    if(state.wind?.active){
+      g.textAlign='center';g.font='bold 6px monospace';g.fillStyle='#ffe0ae';
+      g.fillText((state.wind.current>0?'CROSSWIND → ':'← CROSSWIND ')+Math.round(Math.abs(state.wind.current)),cx,42);
+    }
+    if(p&&e?.role==='bomber'&&e.alive){
+      const dx=wrappedDelta(e.x,p.x),dy=p.y-e.y;
+      const along=dx*Math.cos(e.angle)+dy*Math.sin(e.angle);
+      const lateral=Math.abs(-dx*Math.sin(e.angle)+dy*Math.cos(e.angle));
       if(along< -11&&Math.hypot(dx,dy)<155&&lateral<65){
-        g.fillStyle='#642d28e8';g.fillRect(mid-38,83,76,14);
-        g.strokeStyle='#d9aa82';g.strokeRect(mid-38,83,76,14);
-        g.fillStyle='#f9dec1';g.font='bold 7px monospace';
-        g.fillText('TAIL GUNS!',mid,90,73);
+        g.fillStyle='#ffb49b';g.font='bold 8px monospace';g.textAlign='center';
+        g.fillText('⚠ TAIL GUNS',cx,58);
       }
     }
     g.restore();
