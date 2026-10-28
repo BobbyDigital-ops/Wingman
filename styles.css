@@ -94,3 +94,10 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
 /* Six selectable RAF/Luftwaffe aircraft without shrinking the control buttons. */
 .plane-picker{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.plane-choice{min-width:0}.plane-choice b{font-size:clamp(8px,1vw,12px);overflow-wrap:anywhere}.plane-choice small{font-size:9px}
 @media(max-height:500px){.plane-choice{padding:3px 2px}.plane-choice small{font-size:8px}.mode-row{margin-top:5px}}
+
+/* Mobile steering is a held game input, never selectable text or a long-press menu. */
+.control-layer,.control-cluster,.control-btn{
+  -webkit-user-select:none!important;user-select:none!important;
+  -webkit-touch-callout:none;touch-action:none;
+  -webkit-tap-highlight-color:transparent;
+}
