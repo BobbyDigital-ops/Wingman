@@ -334,17 +334,16 @@ test('German aircraft display recognisable identities with accurate original des
  }
 });
 
-test('defined pilot character portraits use vector art, not repeated tiny atlas crops',async({page})=>{
+test('fixed roster uses painted portraits instead of displaying the old SVG model',async({page})=>{
  await page.goto('/');
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
  else await page.locator('#career-open-mobile').click();
- await expect(page.locator('.pilot-avatar')).toHaveCount(20);
- await expect(page.locator('.pilot-avatar .painted-pilot-portrait')).toHaveCount(0);
- const variety=await page.locator('.pilot-avatar').evaluateAll(els=>new Set(els.map(el=>
-  (el.querySelector('.pilot-face-shape')?.getAttribute('d')||'')+'|'+
-  (el.querySelector('.pilot-hair-style')?.getAttribute('data-hair-style')||'')
- )).size);
- expect(variety).toBeGreaterThanOrEqual(20);
+ await expect(page.locator('[data-candidate]')).toHaveCount(20);
+ await expect(page.locator('.candidate-portrait .painted-pilot-portrait')).toHaveCount(20);
+ await page.locator('[data-candidate="2"]').click();
+ await expect(page.locator('.career-photo .painted-pilot-portrait')).toHaveCount(1);
+ await page.locator('[data-action="character"]').click();
+ await expect(page.locator('.character-roster .painted-pilot-portrait')).toHaveCount(20);
 });
 test('active rivals use stable defined identities, separate from historic records',async({page})=>{
  await page.goto('/');
