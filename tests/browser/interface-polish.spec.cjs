@@ -419,11 +419,13 @@ test('every roster name has a portrait-matched gender and no new pilot is presel
    uniquePortraits:new Set(rs.map(p=>p.portrait)).size,
    errors:rs.flatMap((p,i)=>[
      p.gender!==(female.includes(i)?'female':'male')?'gender '+i:null,
-     p.portrait!==i?'portrait '+i:null,
+     (p.portrait<0||p.portrait>=32)?'portrait '+i:null,
      !(p.name.includes('"'))?'name '+i:null
    ].filter(Boolean))};
  });
  expect(result).toEqual({length:32,uniqueIds:32,uniquePortraits:32,errors:[]});
+ const chocsSlot=await page.evaluate(()=>window.WingmanRoster.find(p=>p.name.includes('Chocs'))?.portrait);
+ expect(chocsSlot).toBe(0);
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
  else await page.locator('#career-open-mobile').click();
  await expect(page.locator('[data-candidate]')).toHaveCount(20);
