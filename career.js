@@ -96,6 +96,12 @@ function pilotPortrait(faction,look=0){
  const hairStyle=Number.isInteger(opt.hairstyle)?((opt.hairstyle%6)+6)%6:
    ((Number(opt.hair)||0)*3+(Number(opt.face)||0)*2+(Number(opt.headwear)||0))%6;
  const hairParts=buildPortraitHair(hairStyle,hair);
+ // Painted source artwork is independent of old procedural SVG features.
+ // Legacy SVG stays as a no-network fallback and preserves saved appearances.
+ const artIndex=axis?[0,2,4][((Number(opt.face)||0)+(Number(opt.hair)||0))%3]:
+   ((Number(opt.face)||0)*3+(Number(opt.hair)||0))%5;
+ const paintedArt=window.WingmanPaintedAtlas?
+  `<image class="painted-pilot-portrait" href="${window.WingmanPaintedAtlas}" x="${-artIndex*120}" y="0" width="774" height="247" preserveAspectRatio="none"/>`:'';
  return `<svg class="pilot-avatar" viewBox="0 0 120 144" role="img" aria-label="${faction} pilot wearing a customised uniform">
  <defs><linearGradient id="${bgId}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${bg[0]}"/><stop offset="1" stop-color="${bg[1]}"/></linearGradient><linearGradient id="${bgId}-skin" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="${skin}"/><stop offset=".73" stop-color="${skin}"/><stop offset="1" stop-color="#754545"/></linearGradient><linearGradient id="${bgId}-coat" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="${axis?'#8ca894':'#61a1bd'}"/><stop offset="1" stop-color="${axis?'#253e42':'#183c5b'}"/></linearGradient></defs>
  <rect width="120" height="144" fill="url(#${bgId})"/><circle cx="24" cy="19" r="66" fill="#ffdf9d" opacity=".16"/><path d="M0 36L120 0V23L0 58Z" fill="#ffffff" opacity=".09"/><path d="M8 9H24M8 9V26M96 134H111V119" stroke="#e9f0d2" stroke-width="1.5" opacity=".6" fill="none"/>
@@ -120,6 +126,7 @@ function pilotPortrait(faction,look=0){
  ${opt.goggles%3===2?'<rect x="37" y="29" width="21" height="12" rx="5" fill="#8db3b8" stroke="#c8b893" stroke-width="3"/><rect x="63" y="29" width="21" height="12" rx="5" fill="#8db3b8" stroke="#c8b893" stroke-width="3"/>':''}
  <path d="M93 108l9 5m-9 2l9 5" stroke="${trim}" stroke-width="2"/>
  <path d="M4 140H116" stroke="#e9e1c4" opacity=".42"/><path d="M104 17l6 8m-6 0l6-8" stroke="#fff" opacity=".20" stroke-width="1.4"/>
+ ${paintedArt}
  </svg>`;
 }
 function makeChoices(run){

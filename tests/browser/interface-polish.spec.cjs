@@ -363,3 +363,36 @@ test('German aircraft display recognisable identities with accurate original des
   await expect(page.locator('#wm-featured-description')).toContainText(model);
  }
 });
+
+test('illustrated pilot and aircraft atlas decodes as a real raster image',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ const decoded=await page.evaluate(async()=>{
+  const src=window.WingmanPaintedAtlas;
+  if(!src?.startsWith('data:image/webp;base64,'))return null;
+  const img=new Image();img.src=src;
+  await img.decode();
+  return {width:img.naturalWidth,height:img.naturalHeight};
+ });
+ expect(decoded).toEqual({width:516,height:144});
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ const painted=page.locator('.pilot-avatar .painted-pilot-portrait');
+ await expect(painted.first()).toBeAttached();
+ expect(await painted.first().getAttribute('href')).toContain('data:image/webp;base64,');
+ expect(errors).toEqual([]);
+});
+
+test('aircraft selection paints new artwork rather than old outline-only sprites',async({page})=>{
+ await page.goto('/');
+ await page.locator('#splash-continue').click();
+ await page.locator('#mode-next').click();
+ const preview=page.locator('[data-aircraft-art="fighter"]');
+ await expect.poll(async()=>preview.evaluate(c=>{
+  const rgba=c.getContext('2d').getImageData(Math.floor(c.width/2),5,1,1).data;
+  // The old model drawing leaves the upper-left tile completely transparent.
+  return rgba[3];
+ })).toBeGreaterThan(100);
+ await page.locator('[data-plane="bf109"]').click();
+ await expect(page.locator('#wm-featured-name')).toHaveText('EMIL');
+});
