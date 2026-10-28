@@ -30,9 +30,56 @@ function escape(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt
 function appearance(seed=0){
  const n=Number(seed)||0;
  return {face:n%5,skin:Math.floor(n/3)%5,hair:Math.floor(n/2)%6,
- headwear:Math.floor(n/5)%4,goggles:Math.floor(n/7)%3,scarf:Math.floor(n/11)%4,
+ headwear:[2,0,2,1,3][Math.floor(n/5)%5],hairstyle:Math.floor(n/23)%6,
+ goggles:Math.floor(n/7)%3,scarf:Math.floor(n/11)%4,
  moustache:Math.floor(n/13)%3,monocle:Math.floor(n/17)%3,nose:Math.floor(n/19)%4};
 }
+// Distinct facial silhouettes and sculpted hair. Every portrait uses the same
+// light-weight SVG renderer, so existing pilot profiles and saves still work.
+const FACE_SILHOUETTES=[
+ 'M37 48C35 30 45 23 60 23C76 22 86 32 83 50L81 69Q76 86 62 92Q47 89 40 76Z',
+ 'M42 47C40 29 48 20 60 19C74 20 81 30 80 47L77 74Q72 90 61 98Q48 94 44 76Z',
+ 'M33 45Q32 23 59 23Q86 22 88 45L89 73L80 90L44 90L32 75Z',
+ 'M37 47Q34 28 57 21Q84 24 85 46L80 73Q73 88 60 98Q46 87 39 72Z',
+ 'M36 49C34 32 44 27 59 27C79 26 87 37 85 51Q88 76 74 87Q60 95 46 86Q33 77 36 49Z'
+];
+const HAIR_SILHOUETTES=[
+ {name:'short textured crop',
+  back:'M34 52Q30 33 37 20Q40 10 49 13Q57 4 65 12Q76 8 81 18Q91 23 87 49L81 53Q72 37 62 38Q46 36 39 54Z',
+  front:'M36 47L40 34Q49 39 54 30Q65 38 71 31Q80 34 84 43Q72 42 64 44Q48 39 36 49Z',
+  light:'M38 27Q47 17 54 20M58 16Q67 13 75 22'},
+ {name:'high pompadour',
+  back:'M32 54Q28 36 34 24Q36 4 51 6Q60 -2 70 3Q88 2 91 22L89 55L80 52Q78 36 60 36Q45 36 39 57Z',
+  front:'M32 42Q38 24 47 24Q58 25 63 16Q70 8 79 15Q91 24 87 40Q79 34 70 35Q56 49 41 43L35 56Z',
+  light:'M42 22Q47 14 59 16M67 11Q78 9 82 23'},
+ {name:'loose curls',
+  back:'M30 54Q23 46 30 36Q24 27 35 24Q30 14 43 14Q46 4 55 9Q61 0 70 9Q80 5 85 17Q96 19 90 29Q99 38 89 51L82 59Q77 41 61 40Q45 40 38 57Z',
+  front:'M32 45Q24 35 39 33Q32 23 46 27Q50 16 60 26Q69 16 74 29Q91 22 87 38Q96 42 82 48Q74 41 66 49Q57 41 48 47Q40 42 32 51Z',
+  light:'M32 31Q39 25 46 33M52 18Q60 13 65 24M74 25Q85 25 83 35'},
+ {name:'windswept side part',
+  back:'M32 62Q27 34 41 17Q49 9 60 12Q74 7 84 21Q94 34 88 62L80 70L79 42Q53 33 40 52L38 72Z',
+  front:'M29 48Q41 19 68 15Q84 15 89 30Q78 25 68 33Q55 43 41 44L35 61Z',
+  light:'M39 28Q56 15 70 21M53 32Q67 25 79 29'},
+ {name:'dramatic spiky quiff',
+  back:'M33 60L29 34L37 38L36 16L48 26L55 4L64 22L78 3L80 28L92 20L88 58L80 60Q74 40 60 38Q46 40 39 60Z',
+  front:'M34 50L37 30L49 39L55 15L64 36L79 18L78 39L88 34L83 51Q68 42 61 49Q48 41 37 57Z',
+  light:'M43 28L48 35M57 19L62 33M78 24L74 36'},
+ {name:'long wavy side locks',
+  back:'M31 57Q25 32 37 17Q48 8 59 11Q81 6 89 28Q97 49 91 72L87 86L77 78L79 45Q65 30 49 41L42 53L42 88L30 79Z',
+  front:'M32 47Q32 22 49 22Q66 7 82 20Q93 30 86 48Q78 39 66 37Q56 47 45 42Q43 52 35 67Z',
+  light:'M39 30Q47 16 60 20M70 19Q81 20 83 33M34 62Q30 72 35 80'}
+];
+function buildPortraitHair(style,colour){
+ const part=HAIR_SILHOUETTES[style];
+ return {
+  back:'<path class="hair-back" d="'+part.back+'" fill="'+colour+'" stroke="#192838" stroke-width="2.6" stroke-linejoin="round"/>',
+  front:'<path class="hair-front" d="'+part.front+'" fill="'+colour+'" stroke="#192838" stroke-width="1.6" stroke-linejoin="round"/><path d="'+part.light+'" stroke="#fff2d2" stroke-opacity=".31" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
+  side: style===5?'<path d="M36 43Q32 64 36 78M85 43Q89 64 85 78" stroke="'+colour+'" stroke-width="7" fill="none" stroke-linecap="round"/>':
+    style===3?'<path d="M36 42Q32 57 36 64" stroke="'+colour+'" stroke-width="5.5" fill="none" stroke-linecap="round"/>':
+    style===2?'<circle cx="35" cy="47" r="5.5" fill="'+colour+'"/><circle cx="86" cy="46" r="5" fill="'+colour+'"/>':''
+ };
+}
+
 function pilotPortrait(faction,look=0){
  const opt=typeof look==='object'?look:appearance(look);
  const axis=faction==='Axis';
@@ -44,15 +91,20 @@ function pilotPortrait(faction,look=0){
  const bg=backdrops[(opt.face*3+opt.hair+(axis?2:0))%backdrops.length];
  const bgId='portrait-'+[axis?1:0,opt.face,opt.skin,opt.hair,opt.headwear,opt.goggles].join('-');
  const caps=['#','cap','helmet','none','beret'][opt.headwear%4+1]||'cap';
- const nose=[2,3,4,2.6][opt.nose%4],face=[24,22,26,23,25][opt.face%5];
+ const nose=[2,3,4,2.6][opt.nose%4],face=[24,21,28,24,26][opt.face%5];
+ const faceShape=((Number(opt.face)||0)%5+5)%5;
+ const hairStyle=Number.isInteger(opt.hairstyle)?((opt.hairstyle%6)+6)%6:
+   ((Number(opt.hair)||0)*3+(Number(opt.face)||0)*2+(Number(opt.headwear)||0))%6;
+ const hairParts=buildPortraitHair(hairStyle,hair);
  return `<svg class="pilot-avatar" viewBox="0 0 120 144" role="img" aria-label="${faction} pilot wearing a customised uniform">
  <defs><linearGradient id="${bgId}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${bg[0]}"/><stop offset="1" stop-color="${bg[1]}"/></linearGradient><linearGradient id="${bgId}-skin" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="${skin}"/><stop offset=".73" stop-color="${skin}"/><stop offset="1" stop-color="#754545"/></linearGradient><linearGradient id="${bgId}-coat" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="${axis?'#8ca894':'#61a1bd'}"/><stop offset="1" stop-color="${axis?'#253e42':'#183c5b'}"/></linearGradient></defs>
  <rect width="120" height="144" fill="url(#${bgId})"/><circle cx="24" cy="19" r="66" fill="#ffdf9d" opacity=".16"/><path d="M0 36L120 0V23L0 58Z" fill="#ffffff" opacity=".09"/><path d="M8 9H24M8 9V26M96 134H111V119" stroke="#e9f0d2" stroke-width="1.5" opacity=".6" fill="none"/>
  <path d="M-4 145V126Q8 95 40 90L79 90Q111 96 124 127V145Z" fill="url(#${bgId}-coat)" stroke="#172d3a" stroke-width="3"/><path d="M0 137Q16 105 35 103L43 144H0Z" fill="#11243d" opacity=".33"/><path d="M120 137Q107 103 85 103L78 144H120Z" fill="#fff" opacity=".13"/>
  <path d="M38 93L59 131L77 93L87 102L76 144H43L31 103Z" fill="${axis?'#273f40':'#1a415b'}" stroke="${trim}" stroke-width="1.9"/><path d="M43 104L59 131L75 103" stroke="#fff3da" stroke-width="1.3" opacity=".7" fill="none"/>
  <path d="M49 93L59 109L70 93" fill="#e2c7a4" stroke="#bca482"/><path d="M51 91V75H70V91L60 101Z" fill="${skin}"/>
- <ellipse cx="${60-face}" cy="61" rx="4" ry="9" fill="${skin}" stroke="#764e3f" stroke-width="1.5"/><ellipse cx="${60+face}" cy="61" rx="4" ry="9" fill="${skin}" stroke="#764e3f" stroke-width="1.5"/><ellipse cx="60" cy="56" rx="${face}" ry="34" fill="url(#${bgId}-skin)" stroke="#764e3f" stroke-width="1.4"/><path d="M39 67Q42 83 59 89Q46 86 40 77Z" fill="#74413d" opacity=".25"/><path d="M68 39Q81 43 78 66" stroke="#fff0d6" stroke-opacity=".28" stroke-width="3" fill="none"/>
- <path d="M36 50Q33 18 59 16Q83 19 83 49Q75 32 61 32Q46 42 36 50" fill="${hair}"/>
+ ${hairParts.back}
+ <ellipse cx="${60-face}" cy="61" rx="4" ry="9" fill="${skin}" stroke="#764e3f" stroke-width="1.5"/><ellipse cx="${60+face}" cy="61" rx="4" ry="9" fill="${skin}" stroke="#764e3f" stroke-width="1.5"/><path class="pilot-face-shape" data-face-shape="${faceShape}" d="${FACE_SILHOUETTES[faceShape]}" fill="url(#${bgId}-skin)" stroke="#764e3f" stroke-width="1.4"/><path d="M40 67Q42 83 59 89Q46 86 40 77Z" fill="#74413d" opacity=".23"/><path d="M68 40Q81 43 78 66" stroke="#fff0d6" stroke-opacity=".28" stroke-width="3" fill="none"/>
+ <g class="pilot-hair-style" data-hair-style="${hairStyle}" aria-label="${HAIR_SILHOUETTES[hairStyle].name}">${hairParts.front}</g>
  <path d="M40 54q7 -5 15-1m13 0q7 -4 13 1" fill="none" stroke="${hair}" stroke-width="2.8" stroke-linecap="round"/><ellipse cx="48" cy="61" rx="6" ry="3.3" fill="#f7f0e3"/><ellipse cx="74" cy="61" rx="6" ry="3.3" fill="#f7f0e3"/>
  <circle cx="${47+(opt.face%3)}" cy="61" r="2.5" fill="#315765"/><circle cx="${73+(opt.face%2)}" cy="61" r="2.5" fill="#315765"/><circle cx="48" cy="60" r=".9" fill="#fff"/><circle cx="74" cy="60" r=".9" fill="#fff"/>
  <path d="M60 56l${nose} 10l-4 1" fill="none" stroke="#a97159" stroke-width="1.4"/>
@@ -64,6 +116,7 @@ function pilotPortrait(faction,look=0){
  ${caps==='cap'?'<path d="M30 41Q29 14 60 13Q90 14 89 42L77 35H40Z" fill="'+coat+'" stroke="'+trim+'" stroke-width="2"/><path d="M38 37Q62 32 88 37Q74 46 40 43Z" fill="'+coat+'" stroke="'+trim+'"/>':
  caps==='helmet'?'<path d="M31 48Q26 13 60 10Q94 13 89 48L81 62L77 34Q60 27 41 36L39 64Z" fill="#634d3b" stroke="'+trim+'" stroke-width="1.6"/><path d="M37 35L83 35" stroke="'+trim+'" stroke-width="3"/>':
  caps==='beret'?'<path d="M29 35Q20 17 57 12Q95 9 91 29L84 39Q62 33 31 41Z" fill="'+coat+'" stroke="'+trim+'" stroke-width="2"/>':''}
+ ${hairParts.side}
  ${opt.goggles%3===2?'<rect x="37" y="29" width="21" height="12" rx="5" fill="#8db3b8" stroke="#c8b893" stroke-width="3"/><rect x="63" y="29" width="21" height="12" rx="5" fill="#8db3b8" stroke="#c8b893" stroke-width="3"/>':''}
  <path d="M93 108l9 5m-9 2l9 5" stroke="${trim}" stroke-width="2"/>
  <path d="M4 140H116" stroke="#e9e1c4" opacity=".42"/><path d="M104 17l6 8m-6 0l6-8" stroke="#fff" opacity=".20" stroke-width="1.4"/>
