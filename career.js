@@ -327,7 +327,8 @@ screen.addEventListener('click',e=>{
  if(action==='licence'){view='licence';render();}
  if(action==='portrait'&&data?.profile){
   const style=data.profile.style||(data.profile.style=appearance(0));
-  style.portraitIndex=((Number.isInteger(style.portraitIndex)?style.portraitIndex:-1)+1)%5;
+  const originalArt=((Number(style.face)||0)*3+(Number(style.hair)||0))%5;
+  style.portraitIndex=((Number.isInteger(style.portraitIndex)?style.portraitIndex:originalArt)+1)%5;
   save();view='licence';render();
  }
  if(el.dataset.aircraft)startRun(el.dataset.aircraft);
