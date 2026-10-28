@@ -23,7 +23,7 @@
     scores:[0,0],round:1,time:90,intermission:0,banner:'',bannerTime:0,paused:false,
     impactLock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2,teams:false,difficulty:'standard'
   };
-  const controls={left:false,right:false};
+  const controls={left:false,right:false,boost:false};
   const ui={
     menu:document.getElementById('menu'),result:document.getElementById('result'),
     resultTitle:document.getElementById('result-title'),resultDetail:document.getElementById('result-detail'),
@@ -85,7 +85,7 @@
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.time=state.mode==='survival'?70:90;state.impactLock=0;state.phase='playing';state.paused=false;
     state.banner='ROUND '+state.round;state.bannerTime=1.5;
-    controls.left=false;controls.right=false;
+    controls.left=false;controls.right=false;controls.boost=false;
   }
   function startMatch(){
     audioUnlock();
@@ -102,7 +102,7 @@
     background=makeBackground();newRound();
   }
   function showMenu(){
-    state.phase='menu';state.paused=false;controls.left=false;controls.right=false;
+    state.phase='menu';state.paused=false;controls.left=false;controls.right=false;controls.boost=false;
     ui.result.classList.add('hidden');ui.menu.classList.remove('hidden');
     document.getElementById('bomb').hidden=true;
   }
@@ -370,7 +370,7 @@
     }
     return turn;
   }
-  function updatePlane(p,dt,steer){
+  function updatePlane(p,dt,steer,wantsBoost=false){
     if(!p.alive)return;
     p.spawnSafe=Math.max(0,p.spawnSafe-dt);
     p.hitFlash=Math.max(0,p.hitFlash-dt);p.muzzleFlash=Math.max(0,p.muzzleFlash-dt);
@@ -379,7 +379,9 @@
     p.armourTime=Math.max(0,p.armourTime-dt);
     p.climbAssist=Math.max(0,p.climbAssist-dt);
     p.bombCooldown=Math.max(0,p.bombCooldown-dt);
-    p.boost=Math.max(0,p.boost-dt);
+    p.evasiveTime=Math.max(0,(p.evasiveTime||0)-dt);
+    p.boosting=!!(wantsBoost&&p.boostCharge>0&&p.parts.engine>10&&!p.swoop);
+    p.boostCharge=clamp(p.boostCharge+dt*(p.boosting?-29:9),0,100);
     p.rollTime=Math.max(0,p.rollTime-dt);
     p.rollRecovery=Math.max(0,p.rollRecovery-dt);
     steerPlane(p,steer,dt);
@@ -468,9 +470,9 @@
       state.time-=dt;
       if(state.mode==='survival'&&state.time<=0){endRound(1);return;}
       const user=state.fliers[0];
-      updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0));
+      updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);
       for(const p of state.fliers.slice(1)){
-        if(p.alive){const target=nearestEnemy(p);updatePlane(p,dt,target?aiInput(p,target):0);}
+        if(p.alive){const target=nearestEnemy(p);const steer=target?aiInput(p,target):0;updatePlane(p,dt,steer,p.aiBoost);}
       }
       projectiles(dt);
       // Airframes may overlap without dealing damage. No ramming penalty.
@@ -629,6 +631,9 @@
     }
     c.scale(.54,.54);
     aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':'level');
+    if(p.boosting){
+      c.fillStyle='#ffdb91a8';c.beginPath();c.ellipse(-19,0,5,1.5,0,0,TAU);c.fill();
+    }
     if(p.muzzleFlash>0){c.fillStyle='#fff4ad';c.fillRect(13,-1,7,2);}
     if(p.hitFlash>0){
       c.beginPath();c.ellipse(0,0,8,5,0,0,TAU);
@@ -693,8 +698,8 @@
       g.fillStyle='#f0d8a2';g.fillText(p.d.special+' '+sc,77,19);
       bar(77,27,39,p.specialCooldown>0?1-p.specialCooldown/p.d.specialCd:1,
         1,'#c4b6df');
-      g.fillStyle='#e6d3a0';g.fillText('ENERGY',123,19);
-      bar(123,27,48,p.energy,100,p.energy<20?'#db8369':'#9bbfd0');
+      g.fillStyle='#e6d3a0';g.fillText('BOOST',123,19);
+      bar(123,27,48,p.boostCharge,100,p.boosting?'#f4d07c':'#9bd4ad');
       g.fillStyle=p.rollTime>0?'#f8e4a2':'#c0d9df';
       g.fillText(p.rollTime>0?'ROLLING':p.rollRecovery>0?'ROLL '+p.rollRecovery.toFixed(1):'ROLL READY',181,19);
       if(p.role==='bomber'){
@@ -826,15 +831,17 @@
   }
   bindButton('left','left');
   bindButton('right','right');
+  bindButton('boost','boost');
   bindButton('fire',null,()=>triggerBurst(state.fliers[0]));
   bindButton('special',null,()=>triggerSpecial(state.fliers[0]));
   bindButton('roll',null,()=>triggerRoll(state.fliers[0]));
   bindButton('bomb',null,()=>triggerBomb(state.fliers[0]));
-  const preventKeys=new Set(['ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyA','KeyD','KeyK','KeyL','KeyB']);
+  const preventKeys=new Set(['ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyA','KeyD','KeyW','ArrowUp','KeyK','KeyL','KeyB']);
   document.addEventListener('keydown',e=>{
     if(preventKeys.has(e.code))e.preventDefault();
     if(e.code==='KeyA'||e.code==='ArrowLeft')controls.left=true;
     if(e.code==='KeyD'||e.code==='ArrowRight')controls.right=true;
+    if(e.code==='KeyW'||e.code==='ArrowUp')controls.boost=true;
     if(e.repeat)return;
     if(e.code==='Space'){audioUnlock();triggerBurst(state.fliers[0]);}
     if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyK'){audioUnlock();triggerSpecial(state.fliers[0]);}
@@ -845,15 +852,16 @@
   document.addEventListener('keyup',e=>{
     if(e.code==='KeyA'||e.code==='ArrowLeft')controls.left=false;
     if(e.code==='KeyD'||e.code==='ArrowRight')controls.right=false;
+    if(e.code==='KeyW'||e.code==='ArrowUp')controls.boost=false;
   });
   // Mobile browsers can briefly blur the page when touch controls, browser
   // chrome or audio focus change. Never pause gameplay merely on window blur:
   // it made FIRE appear to pause the game and left no touch way to resume.
   window.addEventListener('blur',()=>{
-    controls.left=false;controls.right=false;
+    controls.left=false;controls.right=false;controls.boost=false;
   });
   document.addEventListener('visibilitychange',()=>{
-    if(document.hidden){controls.left=false;controls.right=false;}
+    if(document.hidden){controls.left=false;controls.right=false;controls.boost=false;}
   });
   for(const btn of document.querySelectorAll('[data-plane]')){
     btn.addEventListener('click',()=>{
