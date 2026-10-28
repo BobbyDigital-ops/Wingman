@@ -84,9 +84,9 @@ function pilotPortrait(faction,look=0){
  const skins=['#f9bc93','#df9e78','#b97957','#895b4c','#f8d2ac'];
  const hairs=['#202a34','#71463b','#d39c5c','#efbf77','#151c2b','#a64f3c'];
  const skin=skins[opt.skin%skins.length],hair=hairs[opt.hair%hairs.length];
- const coat=axis?'#547568':'#2b6382',trim=axis?'#e5d3a3':'#e8ca8e';
+ const coat=axis?'#5a645a':'#2b6382',trim=axis?'#bdc5b4':'#e8ca8e';
  const backdrops=[['#63bac4','#1c456d'],['#ba7770','#4b3b62'],['#539e8e','#233b56'],['#8799c7','#2d355c'],['#d39a59','#514058'],['#4688b8','#143e5c']];
- const bg=backdrops[(opt.face*3+opt.hair+(axis?2:0))%backdrops.length];
+ const bg=axis?['#8e9b8b','#394c51']:backdrops[(opt.face*3+opt.hair)%backdrops.length];
  const bgId='portrait-'+[axis?1:0,opt.face,opt.skin,opt.hair,opt.headwear,opt.goggles].join('-');
  const caps=['#','cap','helmet','none','beret'][opt.headwear%4+1]||'cap';
  const nose=[2,3,4,2.6][opt.nose%4],face=[24,21,28,24,26][opt.face%5];
@@ -200,7 +200,7 @@ function createProfile(index){
  data={profile:{name,faction,rosterId:chosen.roster.id,plane:chosen.roster.plane,style:chosen.style,attributes:chosen.attributes,skill:chosen.roster.signature,characterConfirmed:true,gender:chosen.roster.gender},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
  save();view='licence';render();
 }
-const BASE_AIRCRAFT={fighter:{speed:82,turn:3.15,hull:130,armour:40},heavy:{speed:75,turn:1.85,hull:160,armour:96},bomber:{speed:66,turn:1.30,hull:180,armour:147},bf109:{speed:84,turn:3.05,hull:125,armour:42},bf110:{speed:77,turn:1.78,hull:160,armour:90},he111:{speed:69,turn:1.35,hull:175,armour:135}};
+const BASE_AIRCRAFT={fighter:{speed:82,turn:3.15,hull:130,armour:40},heavy:{speed:75,turn:1.85,hull:160,armour:96},bomber:{speed:66,turn:1.30,hull:180,armour:147},bf109:{speed:87,turn:2.94,hull:125,armour:42},bf110:{speed:78,turn:1.70,hull:160,armour:90},he111:{speed:69,turn:1.35,hull:175,armour:135}};
 function rollAirframe(type){
  const b=BASE_AIRCRAFT[type];if(!b)return null;
  const trade=[-1,0,1].sort(()=>Math.random()-.5);
