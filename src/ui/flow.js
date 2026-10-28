@@ -34,8 +34,8 @@ function requestImmersive(){
  }catch(_){}
 }
 $('splash-continue')?.addEventListener('click',()=>{
- // Fullscreen requires a user activation. Do this synchronously in the tap.
- requestImmersive();
+ // Keep briefings free of the browser's fullscreen instructional toast.
+ // Enter immersive mode only as the player launches a sortie.
  show('mode');
 });
 $('mode-back')?.addEventListener('click',()=>show('splash'));
