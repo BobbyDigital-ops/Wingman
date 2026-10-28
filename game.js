@@ -1098,8 +1098,8 @@ function plane(type,id,x,y,angle){
       if(p.role==='bomber'&&p.bombQueue>0){
         g.fillStyle='#ffd9a2';g.fillText('BOMBS AWAY',W*.50,33);
       }
-      g.fillStyle='#9ed2e8';g.font='bold 6px monospace';g.fillText('ARM '+Math.round(p.armour),W-100,24);
-      g.fillStyle='#bce3b4';g.fillText('HULL '+Math.round(p.health),W-100,33);
+      g.fillStyle='#9ed2e8';g.font='bold 6px monospace';g.fillText('ARM '+Math.round(e.armour),W-100,24);
+      g.fillStyle='#bce3b4';g.fillText('HULL '+Math.round(e.health),W-100,33);
     }
     if(state.wind?.active){
       const label=state.wind.current>0?'WIND →':'← WIND';
@@ -1113,7 +1113,7 @@ function plane(type,id,x,y,angle){
   }
   function damageDiagram(){
     const p=state.fliers[0];if(!p)return;
-    const c=modelCtx,x=W-78,y=47;
+    const c=modelCtx,x=W-78,y=82;
     c.save();c.fillStyle='#152b3de0';c.fillRect(x,y,71,31);
     c.strokeStyle='#7d9cac';c.lineWidth=.6;c.strokeRect(x,y,71,31);
     c.font='bold 6px monospace';c.fillStyle='#a9d8ed';c.fillText('ARMOUR',x+5,y+3);
@@ -1180,7 +1180,9 @@ function plane(type,id,x,y,angle){
     // sharp glyphs instead of stretching the logical 250px canvas.
     const lowRes=g;g=modelCtx;
     try{drawHud();}finally{g=lowRes;}
-    damageDiagram();
+    // Arcade HUD already carries both hull and armour. Keep the extra
+    // damage instrument only in cockpit mode, away from MENU controls.
+    if(document.getElementById('hud-style')?.value==='cockpit')damageDiagram();
     const pilot=state.fliers[0];
     if(pilot&&pilot.alive&&pilot.y>H-42){
       const danger=clamp((pilot.y-(H-42))/29,0,1);
