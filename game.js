@@ -112,8 +112,13 @@ function plane(type,id,x,y,angle){
     }
     state.fliers[0].attributes=pilotAttributes(readPilotAttributes());
     state.fliers[0].pilotSkill=readPilotSkill();
-    if(state.mode==='campaign'&&state.campaignEncounter?.attributes)
-      for(const foe of state.fliers.slice(1))foe.attributes=pilotAttributes(state.campaignEncounter.attributes);
+    if(state.mode==='campaign'&&state.campaignEncounter){
+      const enc=state.campaignEncounter;
+      for(const [i,foe] of state.fliers.slice(1).entries()){
+        if(enc.attributes)foe.attributes=pilotAttributes(enc.attributes);
+        assignCampaignAI(foe,enc,i);
+      }
+    }
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.time=state.mode==='survival'?70:state.mode==='campaign'?120:90;state.impactLock=0;state.phase='playing';state.paused=false;
     state.banner='ROUND '+state.round;state.bannerTime=1.5;
@@ -417,8 +422,24 @@ function plane(type,id,x,y,angle){
     return p.tailAssist;
   }
   // Tactical AI: state changes prevent indefinite tail-chasing and combat orbits.
+
+  // Rank changes decision-making only, never the aircraft damage or durability.
+  const AI_STYLES=['hunter','duellist','cautious','opportunist'];
+  function assignCampaignAI(p,encounter,offset=0){
+    const rank=clamp(Number(encounter.rank)||1,1,8);
+    const key=String(encounter.id||encounter.label||'rival');
+    let hash=0;for(const char of key)hash=(hash*31+char.charCodeAt(0))>>>0;
+    p.aiRank=rank;
+    p.aiStyle=AI_STYLES[(hash+offset)%AI_STYLES.length];
+    p.aiSkillLevel=clamp((rank-1)/7,0,1);
+    p.aiMistake=0;
+    p.pilotSkill=['roll','reverse','smoke','harden','deadeye','cut','dive'][(hash+offset*3)%7];
+  }
   function aiInput(p,target){
     p.aiThink=Math.max(0,p.aiThink-STEP);
+    const rankAI=state.mode==='campaign'&&p.id>0;
+    const talent=rankAI?(p.aiSkillLevel||0):state.difficulty==='ace'?1:state.difficulty==='rookie'?0:.55;
+    const style=rankAI?p.aiStyle:'hunter';
     const range=distance(p,target);
     const targetAngle=Math.atan2(target.y-p.y,target.x-p.x);
     const facing=Math.abs(angleDiff(targetAngle,p.angle));
@@ -444,14 +465,22 @@ function plane(type,id,x,y,angle){
     }
     if(p.aiThink<=0){
       if(p.y<46) p.aiMode='recover';
-      else if(target.burstLeft>0&&range<95) p.aiMode='evade';
-      else if(enemyBehind&&range<80) p.aiMode='break';
+      else if(target.burstLeft>0&&range<(rankAI?65+talent*52:95)) p.aiMode='evade';
+      else if(enemyBehind&&range<(rankAI?54+talent*40:80)) p.aiMode='break';
       else if(p.gunCooldown>0&&range<110) p.aiMode='extend';
       else if(range>150) p.aiMode='intercept';
       else p.aiMode='attack';
-      p.aiThink=(state.difficulty==='rookie'?.68:state.difficulty==='ace'?.23:.35)+Math.random()*.22;
+      if(rankAI&&style==='cautious'&&range<100&&p.health<p.d.hull*.65)p.aiMode='extend';
+      if(rankAI&&style==='opportunist'&&target.gunCooldown>0&&range<145)p.aiMode='attack';
+      if(rankAI&&talent<.58&&Math.random()<(1-talent)*.16)p.aiMistake=.3+(1-talent)*.35;
+      p.aiThink=rankAI?.75-talent*.53+Math.random()*(.29-talent*.12):(state.difficulty==='rookie'?.68:state.difficulty==='ace'?.23:.35)+Math.random()*.22;
     }
     let tx=target.x+target.vx*.36,ty=target.y+target.vy*.36;
+    if(rankAI){const lead=.13+talent*.54;tx=target.x+target.vx*lead;ty=target.y+target.vy*lead;
+      if(style==='duellist'&&range<110)ty-=18;
+      if(style==='hunter'&&range<125)tx+=target.vx*.13;
+      if(p.aiMistake>0){p.aiMistake=Math.max(0,p.aiMistake-STEP);ty+=25*(1-talent);}}
+
     if(p.aiMode==='recover'){tx=p.x+Math.cos(p.angle)*25;ty=H*.43;}
     if(p.aiMode==='extend'){
       tx=p.x+Math.cos(p.angle)*125;ty=p.y+Math.sin(p.angle)*85;
@@ -463,7 +492,7 @@ function plane(type,id,x,y,angle){
       if(p.rollRecovery<=0&&range<75)triggerRoll(p);
     }
     if(p.aiMode==='intercept'){
-      const lead=state.difficulty==='ace'?.69:state.difficulty==='rookie'?.24:.55;
+      const lead=rankAI?.16+talent*.55:state.difficulty==='ace'?.69:state.difficulty==='rookie'?.24:.55;
       tx=target.x+target.vx*lead;ty=target.y+target.vy*lead;
       if(p.energy<38)ty=Math.max(70,ty);
     }
@@ -484,11 +513,20 @@ function plane(type,id,x,y,angle){
     const goal=Math.atan2(ty-p.y,wrapDx);
     const error=angleDiff(goal,p.angle);
     const turn=Math.abs(error)<.085?0:Math.sign(error);
-    if(p.aiMode==='attack'&&range<165&&facing<(state.difficulty==='rookie'?.13:state.difficulty==='ace'?.22:.18)&&p.gunCooldown<=0&&p.burstLeft===0&&
+    if(p.aiMode==='attack'&&range<(rankAI?115+talent*65:165)&&facing<(rankAI?.11+talent*.14:state.difficulty==='rookie'?.13:state.difficulty==='ace'?.22:.18)&&p.gunCooldown<=0&&p.burstLeft===0&&
       (p.role!=='bomber'||range<65&&Math.random()<.12))triggerBurst(p);
     if(p.specialCooldown<=0){
       if(p.role==='heavy'&&range<100&&(p.health<p.d.hull*.7||target.burstLeft>0))triggerSpecial(p);
       if(p.role==='fighter'&&(p.aiMode==='intercept'||p.aiMode==='extend')&&range>75)triggerSpecial(p);
+    }
+    // Veteran enemies deliberately use their own pilot skill; rookies
+    // largely rely on elementary manoeuvres and are slower to react.
+    if(rankAI&&p.skillCooldown<=0&&talent>.22){
+      if((p.aiMode==='evade'||p.aiMode==='break')&&range<100&&
+         ['roll','reverse','smoke','harden','cut','dive'].includes(p.pilotSkill))
+        triggerPilotSkill(p);
+      else if(p.aiMode==='attack'&&range<90&&facing<.25&&p.pilotSkill==='deadeye')
+        triggerPilotSkill(p);
     }
     return turn;
   }

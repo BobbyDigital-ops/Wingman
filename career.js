@@ -77,6 +77,7 @@ function makeChoices(run){
  for(const p of shuffled)if(picked.length<3&&!picked.some(q=>q.id===p.id))picked.push(p);
  return picked.map((p,i)=>({
   id:p.id,
+  rank:run.rank,
   types:(run.rank>=3&&run.rank<MAX_RANK&&i===2&&run.rank%2===1)?[p.plane,shuffled.find(x=>x.id!==p.id&&x.plane!==p.plane)?.plane||p.plane]:[p.plane],
   difficulty:run.rank<2?'rookie':run.rank<5?'standard':'ace',
   arena:(run.rank+i)%4,
@@ -187,7 +188,7 @@ function ladder(run){
    if(current){
      contents='<div class="career-options tree-choices">'+run.choices.map((op,i)=>{
        const p=byId[op.id],record=data.records[op.id];
-       return '<button class="career-opponent tree-node" data-choice="'+i+'"><div class="career-small-photo">'+pilotPortrait(p.faction,p.appearance)+'</div><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+' · '+op.difficulty.toUpperCase()+'</small>'+(op.types.length>1?'<em>1 VS 2</em>':'')+(record?'<em>'+record.wins+'–'+record.losses+(record.losses>record.wins?' · GRUDGE':'')+'</em>':'')+'<span>CHALLENGE →</span></button>';
+       return '<button class="career-opponent tree-node" data-choice="'+i+'"><div class="career-small-photo">'+pilotPortrait(p.faction,p.appearance)+'</div><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+' · '+(op.rank<=2?'ROOKIE':op.rank<=4?'REGULAR':op.rank<=6?'VETERAN':'ACE')+'</small>'+(op.types.length>1?'<em>1 VS 2</em>':'')+(record?'<em>'+record.wins+'–'+record.losses+(record.losses>record.wins?' · GRUDGE':'')+'</em>':'')+'<span>CHALLENGE →</span></button>';
      }).join('')+'</div>';
    }else contents='<div class="tree-rank-state">'+(rank<run.rank?'✓ CLEARED':'🔒 LOCKED')+'</div>';
    rows.push('<section class="ladder-rung tree-tier '+(current?'current':rank<run.rank?'cleared':'locked')+'" '+(current?'id="active-rung"':'')+'><div class="ladder-rank">'+(rank===MAX_RANK?'★ FINAL ACE':'RANK '+rank)+(current?' · CHOOSE YOUR RIVAL':'')+'</div>'+contents+'</section>');
