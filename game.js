@@ -728,120 +728,144 @@ function plane(type,id,x,y,angle){
   // Cached, deterministic low-resolution 16-bit inspired alpine landscape.
   // There are no image downloads and no per-frame scenery allocations.
   function makeBackground(){
-    const c=document.createElement('canvas');c.width=Math.round(W*renderScale);c.height=Math.round(H*renderScale);
-    const ctx=c.getContext('2d');ctx.setTransform(c.width/W,0,0,c.height/H,0,0);ctx.imageSmoothingEnabled=renderScale>1;
+    // Four distinct 1940s aviation-theatre landscapes, pre-rendered once.
+    // No mountains or medieval castles transplanted into desert/coast scenes.
+    const c=document.createElement('canvas');
+    c.width=Math.round(W*renderScale);c.height=Math.round(H*renderScale);
+    const ctx=c.getContext('2d');
+    ctx.setTransform(c.width/W,0,0,c.height/H,0,0);
+    ctx.imageSmoothingEnabled=renderScale>1;
     const scene=ARENAS[state.arena]||'ALPINE';
-    ctx.fillStyle={ALPINE:'#73adcf',COAST:'#6ebccc',DESERT:'#d6aa73',STORM:'#506b80'}[scene];ctx.fillRect(0,0,W,H);
-    ctx.save();ctx.translate(0,H-180);
-    // A few solid sky bands, rather than an expensive per-frame gradient.
-    const skies=scene==='DESERT'?['#669bb7','#80adc0','#a4c5c8','#c8d6cd','#e0d4b8']:scene==='STORM'?['#506780','#637789','#788b97','#98a5a6','#b4bcb1']:scene==='COAST'?['#6caabf','#83bfd0','#a1cccf','#bfdbd1','#d9e1d1']:['#6fa9cf','#80b6d4','#92c3d9','#a9d0da','#bfd9d8'];
-    skies.forEach((v,i)=>{ctx.fillStyle=v;ctx.fillRect(0,30+i*18,W,19);});
-    ctx.fillStyle=scene==='DESERT'?'#d4cbb4':'#c3d9d5';ctx.fillRect(0,120,W,60);
-    let seed=1337;
+    const palettes={
+      ALPINE:['#789eb6','#9bb9c9','#b8cbd1','#748c99','#596c74','#334c52'],
+      COAST:['#8bb5c5','#a4c9d0','#c3d6d0','#6c9fac','#5e8692','#324d57'],
+      DESERT:['#8eaeb9','#adc5c4','#d5d0ba','#c0ab80','#9e845c','#645747'],
+      STORM:['#4d6376','#667b8a','#8a9799','#6a7b77','#46595b','#293f48']
+    };
+    const p=palettes[scene];
+    let seed=1918+state.arena*733;
     const rnd=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
-    function rect(x,y,w,h,color){
-      ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));
+    function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(x,y,w,h);}
+    function shape(points,color){poly(ctx,points,color);}
+    function line(x,y,x2,y2,color,width=1){
+      ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x2,y2);ctx.stroke();
     }
-    function chunkCloud(x,y,scale){
-      ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.scale(scale,scale);
-      rect(3,3,24,7,'#d5e4dd');rect(7,0,12,6,'#eceddc');
-      rect(11,-3,12,5,'#f3f0dd');rect(22,2,12,5,'#eeeedd');
-      rect(0,6,36,4,'#eff0de');rect(5,10,28,3,'#c2d5d9');
-      rect(12,13,16,2,'#a9cbd5');
-      ctx.restore();
+    function ellipse(x,y,rx,ry,color){
+      ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();
     }
-    chunkCloud(W*.09,44,1);chunkCloud(W*.38,59,.75);
-    chunkCloud(W*.68,42,1.1);chunkCloud(W*.91,56,.7);
-    // Mountain faces with sharp, distinct light and dark slopes and snow.
-    function peak(cx,yTop,spread,base,colors){
-      const l=cx-spread,r=cx+spread;
-      poly(ctx,[[l,base],[cx,yTop],[r,base]],colors[0]);
-      poly(ctx,[[cx,yTop],[cx+spread*.18,yTop+spread*.23],[r,base],[cx+spread*.16,base]],colors[1]);
-      poly(ctx,[[cx,yTop],[cx-spread*.25,yTop+spread*.36],[cx-spread*.46,yTop+spread*.58],
-        [cx-spread*.18,yTop+spread*.49],[cx,yTop+spread*.35],
-        [cx+spread*.18,yTop+spread*.56],[cx+spread*.3,yTop+spread*.45]],colors[2]);
-      poly(ctx,[[cx,yTop+spread*.34],[cx-spread*.13,yTop+spread*.61],
-        [cx-spread*.25,yTop+spread*.85],[cx-spread*.13,yTop+spread*.71],
-        [cx+spread*.05,yTop+spread*.9],[cx+spread*.2,yTop+spread*.69]],colors[3]);
-      // Pixel-textured stone scatter clipped to the mountain.
-      ctx.save();
-      ctx.beginPath();ctx.moveTo(l,base);ctx.lineTo(cx,yTop);ctx.lineTo(r,base);ctx.closePath();ctx.clip();
-      for(let i=0;i<Math.floor(spread*4);i++){
-        const x=Math.floor(l+rnd()*spread*2),y=Math.floor(yTop+rnd()*(base-yTop));
-        rect(x,y,rnd()>.75?2:1,1,colors[rnd()>.5?1:0]);
+    rect(0,0,W,H,p[0]);
+    for(let i=0;i<8;i++)rect(0,28+i*21,W,22,p[i<2?0:i<4?1:2]);
+    // Soft sky strata and cloud wisps. Kept subtle so aircraft stay readable.
+    for(let i=0;i<5;i++){
+      const x=((W*.13+i*W*.21)%(W+45))-20,y=64+i%3*20;
+      ellipse(x,y,24+(i%3)*10,4.7,scene==='STORM'?'#8a999d70':'#e2e5db66');
+      ellipse(x+16,y-5,21,4,scene==='STORM'?'#9da8a477':'#ecede277');
+      line(x-20,y+5,x+33,y+5,scene==='STORM'?'#73868b70':'#b2cbd077',1.4);
+    }
+    // Terrain must correspond to its arena, not be the same mountain tinted differently.
+    if(scene==='ALPINE'){
+      for(let x=-95,i=0;x<W+115;x+=98,i++){
+        const tip=140+(i%3)*13;
+        shape([[x,210],[x+59,tip],[x+118,212]],'#91a2ad');
+        shape([[x+59,tip],[x+118,212],[x+78,207]],'#607b8b');
+        shape([[x+59,tip],[x+46,tip+23],[x+56,tip+16],[x+62,tip+31],[x+70,tip+24]],'#e8e7de');
       }
-      ctx.restore();
-    }
-    const far=['#8daec3','#7197b4','#e5e8dc','#b9d4db'];
-    const mid=['#729bad','#5c829b','#e6eadf','#b0cad1'];
-    for(let x=-70,i=0;x<W+105;x+=107,i++){
-      peak(x+30,91+(i*13)%13,79,145,far);
-    }
-    for(let x=-85,i=0;x<W+100;x+=163,i++){
-      peak(x+58,109+(i*11)%13,95,160,mid);
-    }
-    // Lower ravine, slopes and a distant stone bridge across the lake.
-    poly(ctx,[[0,157],[W*.12,145],[W*.25,156],[W*.43,147],[W*.59,158],[W*.81,144],[W,155],[W,180],[0,180]],'#658f8e');
-    poly(ctx,[[0,164],[W*.12,155],[W*.24,164],[W*.38,153],[W*.53,165],[W*.7,156],[W*.87,164],[W,158],[W,180],[0,180]],'#4c7474');
-    // Lake glint: horizontally banded to avoid shader/per-pixel work.
-    rect(0,158,W,22,'#568698');
-    rect(0,163,W,17,'#47788a');
-    for(let y=160;y<179;y+=3)
-      for(let x=(y*13)%23;x<W;x+=20+Math.floor(rnd()*16))
-        rect(x,y,4+Math.floor(rnd()*11),1,y%2?'#729eaa':'#93b5b4');
-    // Tiny distant bridge with arches and buttresses.
-    const bridgeStart=W*.49,bridgeY=150,bridgeLength=W*.27;
-    rect(bridgeStart,bridgeY,bridgeLength,3,'#657e81');
-    rect(bridgeStart,bridgeY-2,bridgeLength,1,'#a9ada6');
-    for(let j=0;j<5;j++){
-      const x=bridgeStart+j*bridgeLength/5;
-      rect(x,bridgeY+3,3,11,'#738c86');
-      rect(x+1,bridgeY+3,1,8,'#4d777d');
-    }
-    // Fortress and evergreen ridge on the left, discreet watchtower on right.
-    function tower(x,y,w,h,roof){
-      rect(x,y-h,w,h,'#647b7c');rect(x+2,y-h+3,w-5,h-4,'#81928a');
-      for(let k=0;k<w;k+=5)rect(x+k,y-h-4,3,4,'#5a7278');
-      if(roof){
-        poly(ctx,[[x-2,y-h-5],[x+w/2,y-h-13],[x+w+2,y-h-5]],'#955f58');
-        rect(x-2,y-h-5,w+4,2,'#775451');
+      shape([[0,211],[W*.24,196],[W*.41,211],[W*.67,191],[W,213],[W,H],[0,H]],'#687e7d');
+      shape([[0,226],[W*.25,217],[W*.55,229],[W*.78,213],[W,226],[W,H],[0,H]],'#465f63');
+      // Remote alpine wartime landing strip, wind marker and concrete flak emplacement.
+      rect(W*.25,223,W*.48,2,'#bac2b7');
+      rect(W*.25,226,W*.48,3,'#637879');
+      for(let i=0;i<7;i++)rect(W*.28+i*W*.065,226,8,1,'#c8c6b5');
+      hangar(W*.08,214,30);hangar(W*.79,210,38);
+      flak(W*.63,218);
+      flag(W*.18,212);
+    }else if(scene==='COAST'){
+      rect(0,192,W,H-192,'#6f9dab');
+      rect(0,209,W,H-209,'#547d92');
+      for(let i=0;i<25;i++){const x=rnd()*W,y=197+rnd()*40;line(x,y,x+6+rnd()*16,y,'#bbd2ce6b',.6);}
+      // White chalk cliffs and grassy headland beyond an English Channel convoy.
+      shape([[0,181],[W*.07,177],[W*.17,180],[W*.22,209],[W*.18,231],[0,224]],'#e1ddd1');
+      shape([[0,174],[W*.12,171],[W*.19,187],[W*.13,188],[0,185]],'#6d8875');
+      shape([[W*.81,209],[W*.87,185],[W*.95,181],[W,178],[W,242],[W*.79,227]],'#d7d7c6');
+      shape([[W*.87,183],[W*.94,176],[W,179],[W,190]],'#7e9280');
+      radar(W*.13,172,24);
+      ship(W*.37,204,55);ship(W*.65,209,40);
+      balloon(W*.50,124,191);balloon(W*.77,138,195);
+    }else if(scene==='DESERT'){
+      shape([[0,182],[W*.14,172],[W*.31,185],[W*.5,169],[W*.69,189],[W,178],[W,H],[0,H]],'#d5be94');
+      shape([[0,210],[W*.2,195],[W*.38,213],[W*.62,196],[W*.83,209],[W,199],[W,H],[0,H]],'#bba077');
+      shape([[0,232],[W*.15,219],[W*.41,232],[W*.7,215],[W,229],[W,H],[0,H]],'#947f63');
+      for(let i=0;i<75;i++){const x=rnd()*W,y=194+rnd()*50;rect(x,y,rnd()*5+1,.6,rnd()>.5?'#d9c394':'#84755a');}
+      // RAF desert forward strip: canvas hangars, supply trucks, radio mast.
+      rect(W*.21,216,W*.55,3,'#d5c7a7');
+      tent(W*.15,212,28);tent(W*.76,209,35);
+      truck(W*.43,217);truck(W*.59,220);
+      flak(W*.9,208);radar(W*.06,197,15);
+    }else{
+      // The wartime British home front in poor weather: fields, radar,
+      // hangars and barrage balloons under a darkening sky.
+      shape([[0,199],[W*.2,185],[W*.42,196],[W*.64,188],[W,202],[W,H],[0,H]],'#667d78');
+      shape([[0,217],[W*.15,209],[W*.35,222],[W*.57,202],[W*.83,218],[W,207],[W,H],[0,H]],'#40595a');
+      for(let i=0;i<32;i++){
+        const x=i*W/32,y=207+(i*13)%9;
+        rect(x,y,7,10+(i*7)%12,'#334850');
+        if(i%3===0)rect(x+2,y+4,1,2,'#d4ac77');
       }
-      for(let k=0;k<2;k++)rect(x+4+k*9,y-h+7,2,5,'#324d5c');
-      rect(x+w/2-2,y-9,4,9,'#3e5965');
+      hangar(W*.11,212,44);hangar(W*.69,209,55);
+      radar(W*.32,190,32);radar(W*.52,194,28);
+      balloon(W*.20,119,201);balloon(W*.82,128,196);
+      for(let i=0;i<18;i++){const x=rnd()*W,y=92+rnd()*115;line(x,y,x+3,y+10,'#aebdc05a',.7);}
     }
-    // Cliffs are behind the aircraft and never block direct input.
-    poly(ctx,[[0,135],[12,137],[24,148],[53,147],[67,164],[62,180],[0,180]],'#657274');
-    poly(ctx,[[0,145],[9,144],[19,159],[31,165],[31,180],[0,180]],'#445f69');
-    poly(ctx,[[W-42,165],[W-27,147],[W-11,151],[W,141],[W,180],[W-48,180]],'#6b7b78');
-    rect(0,143,38,2,'#d7d9d0');rect(W-27,149,27,2,'#d7d9d0');
-    tower(6,141,14,25,true);tower(23,141,10,18,false);
-    rect(0,141,39,5,'#516f70');
-    for(let k=0;k<37;k+=5)rect(k,137,3,4,'#516f70');
-    tower(W-25,145,13,24,true);
-    // Sparse spruce trees with two-shade pixel foliage.
-    function tree(x,y,size){
-      rect(x-1,y-3,2,6,'#3b5552');
-      poly(ctx,[[x,y-size],[x-size*.29,y-size*.27],[x-size*.15,y-size*.27],
-        [x-size*.4,y],[x+size*.4,y],[x+size*.15,y-size*.27],
-        [x+size*.29,y-size*.27]],'#315d5c');
-      rect(x-2,y-size*.55,2,4,'#498073');
-    }
-    for(let x=3;x<W;x+=8+rnd()*12){
-      const yy=144+rnd()*18;
-      if((x<40&&yy<146)||(x>W-29&&yy<147))continue;
-      tree(x,yy,7+rnd()*8);
-    }
-    // Quiet foreground flecks, kept low to preserve gameplay contrast.
-    for(let i=0;i<W*.85;i++){
-      const x=rnd()*W,y=162+rnd()*18;
-      rect(x,y,rnd()>.65?2:1,1,rnd()>.5?'#7eaaa5':'#436a74');
-    }
-    ctx.restore();
-    if(scene!=='ALPINE'){
-      ctx.fillStyle=scene==='COAST'?'#397ca01a':scene==='DESERT'?'#ad7b471c':'#182c4540';
-      ctx.fillRect(0,120,W,H-120);
+    // Fixed distant speckle adds texture without expensive per-frame noise.
+    for(let i=0;i<120;i++){
+      const x=rnd()*W,y=192+rnd()*57;
+      rect(x,y,.8+rnd()*1.6,.7,rnd()>.5?'#d8d1bf3c':'#293f493d');
     }
     return c;
+    function hangar(x,y,w){
+      rect(x,y-11,w,11,'#596e72');
+      shape([[x-3,y-11],[x+w*.23,y-21],[x+w*.8,y-21],[x+w+3,y-11]],'#9d9c93');
+      rect(x+w*.28,y-8,w*.46,8,'#314b51');
+      line(x+1,y-11,x+w-1,y-11,'#d5d1c1');
+    }
+    function radar(x,y,h){
+      rect(x-1,y-h,3,h,'#5b7379');line(x-7,y-h,x+8,y-h,'#d8d5c9',1.3);
+      line(x-7,y-h,x-5,y-h-9,'#c8cfc9');line(x+8,y-h,x+6,y-h-9,'#c8cfc9');
+      line(x-5,y-h-9,x+6,y-h-9,'#d6d7ca');
+      line(x-1,y-h+2,x-9,y,'#8b9e9f');line(x+2,y-h+2,x+9,y,'#80969a');
+      rect(x-4,y-2,9,4,'#617d7a');
+    }
+    function ship(x,y,w){
+      shape([[x,y],[x+w,y],[x+w-9,y+7],[x+11,y+7]],'#344f61');
+      rect(x+w*.35,y-10,w*.25,10,'#61757d');
+      rect(x+w*.5,y-16,2,16,'#3e5860');
+      rect(x+w*.15,y-7,w*.15,7,'#526975');
+      line(x+3,y+8,x+w-5,y+8,'#afc4c2',.8);
+    }
+    function balloon(x,y,anchorY){
+      ellipse(x,y,13,5.4,'#a8b7ad');
+      ellipse(x-3,y-1,7.6,2.5,'#d6d5c6');
+      shape([[x+12,y-2],[x+18,y-6],[x+16,y+5]],'#9baaa5');
+      line(x,y+5,x+2,anchorY,'#819399b8',.7);
+    }
+    function tent(x,y,w){
+      shape([[x,y],[x+w*.46,y-17],[x+w,y]],'#e2d3ae');
+      shape([[x+w*.46,y-17],[x+w,y],[x+w*.53,y]],'#a79877');
+      line(x,y,x+w,y,'#77694e');
+    }
+    function truck(x,y){
+      rect(x,y-8,19,8,'#5d6656');rect(x+15,y-12,9,12,'#6d745d');
+      ellipse(x+5,y,3,3,'#293d45');ellipse(x+20,y,3,3,'#293d45');
+      rect(x+19,y-10,3,3,'#9ba6a1');
+    }
+    function flak(x,y){
+      rect(x-8,y-3,20,4,'#516260');
+      rect(x,y-10,4,8,'#414f54');
+      line(x+1,y-9,x+18,y-16,'#37474d',2.2);
+    }
+    function flag(x,y){
+      line(x,y-21,x,y,'#c0b6a4');shape([[x,y-20],[x+13,y-18],[x,y-15]],'#af7771');
+    }
   }
   let background=makeBackground();
   // Small, readable aircraft silhouettes. Their proportions are deliberately
