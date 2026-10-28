@@ -241,7 +241,8 @@ test('older saved pilot portraits without hairstyle still render on licence',asy
 
 test('saved pilot can reopen selection safely and keep their career on cancel',async({page})=>{
  await page.goto('/');
- await page.locator('#career-open').click();
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
  await page.locator('[data-candidate="0"]').click();
  const original=await page.evaluate(()=>localStorage.getItem('wingman-road-to-ace-v1'));
  await page.getByRole('button',{name:'CHOOSE A DIFFERENT PILOT'}).click();
@@ -255,7 +256,8 @@ test('saved pilot can reopen selection safely and keep their career on cancel',a
 
 test('rank map has eight three-way branching tiers and an active challenge lane',async({page})=>{
  await page.goto('/');
- await page.locator('#career-open').click();
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
  await page.locator('[data-candidate="0"]').click();
  await page.getByRole('button',{name:'ROAD TO ACE'}).last().click();
  await page.locator('[data-aircraft="fighter"]').click();
