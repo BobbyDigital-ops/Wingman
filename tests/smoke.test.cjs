@@ -102,7 +102,7 @@ test('extra-wide landscape viewport expands logical width without distorting pix
   game.listeners.get('start:click')();
   game.advance(400,1200);
   game.setViewport(960,540);
-  assert.equal(game.canvas.width,520);
+  assert.equal(game.canvas.width,Math.round(250*960/540));
   game.advance(30,10000);
 });
 
@@ -256,7 +256,7 @@ test('ceiling allows exit then re-enters with reversed horizontal heading and no
  p.y=-p.d.radius-1;
  game.internals.steerPlane(p,0,1/60);
  assert.ok(p.alive);assert.equal(p.health,hp);
- assert.ok(p.y<=0&&p.y>=-p.d.radius-0.1,'aircraft turns around at precisely its offscreen boundary');
+ assert.ok(p.y>=39+p.d.radius,'aircraft returns visibly below the HUD');
  assert.ok(p.vx<0,'horizontal direction reverses');
  assert.ok(p.vy>0,'aircraft flies back into arena');
  assert.equal(p.flightRisk,0);
@@ -267,7 +267,7 @@ test('ceiling re-entry works during a special reversal too',()=>{
  game.internals.triggerSpecial(p);
  p.y=-p.d.radius-2;
  game.internals.steerPlane(p,0,1/60);
- assert.ok(p.y<=0&&p.y>=-p.d.radius-.1&&p.vy>0);
+ assert.ok(p.y>=39+p.d.radius&&p.vy>0);
  assert.ok(p.alive);
 });
 
