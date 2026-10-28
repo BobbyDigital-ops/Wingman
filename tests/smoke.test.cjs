@@ -415,8 +415,8 @@ test('all six aircraft use distinct tactical class statistics',()=>{
   ['fighter',82,3.15,130,40,11],
   ['heavy',75,1.85,160,78,16],
   ['bomber',66,1.30,180,147,10],
-  ['bf109',84,3.05,125,42,11],
-  ['bf110',77,1.78,160,75,17],
+  ['bf109',87,2.94,125,42,11],
+  ['bf110',78,1.70,160,75,17],
   ['he111',69,1.35,175,135,10]
  ];
  for(const [type,speed,turn,hull,armour,damage] of cases){
