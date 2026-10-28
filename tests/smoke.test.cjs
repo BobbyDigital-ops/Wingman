@@ -42,7 +42,7 @@ function launch(){
     console
   };
   const instrumented=code.replace('  // All scenery is painted once;',
-    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,hit,steerPlane,updatePlane,controls,aiInput,tailMagnet};\n  // All scenery is painted once;');
+    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,hit,steerPlane,updatePlane,controls,aiInput,tailMagnet,shoot,PLANES};\n  // All scenery is painted once;');
   const artCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/aircraft.js'),'utf8');
   vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
   vm.runInNewContext(instrumented,sandbox,{timeout:3000,filename:'game.js'});
@@ -176,8 +176,8 @@ test('Spitfire has effective guns while remaining controllable',()=>{
  const game=launch();
  game.listeners.get('start:click')();
  const s=game.internals.state.fliers[0];
- assert.equal(s.d.speed,83);
- assert.equal(s.d.damage,9);
+ assert.equal(s.d.speed,88);
+ assert.equal(s.d.damage,11);
  assert.equal(s.d.burst,10);
  assert.ok(s.d.turn>3);
 });
@@ -306,7 +306,7 @@ test('armour absorbs hits before the hull is damaged',()=>{
 test('all classes have their intended simple armour and health',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];
- assert.equal(p.d.hull,80);assert.equal(p.d.armour,20);
+ assert.equal(p.d.hull,100);assert.equal(p.d.armour,30);
  assert.equal(p.d.burst,10);
 });
 test('damaged aircraft still turn and are not component-disabled',()=>{
@@ -398,4 +398,66 @@ test('HUD styles all have the same playable game state',()=>{
  game.listeners.get('start:click')();
  game.advance(25,1000);
  assert.equal(game.internals.state.fliers.length,2);
+});
+
+test('all six aircraft use distinct tactical class statistics',()=>{
+ const game=launch(),planes=game.internals.PLANES;
+ const cases=[
+  ['fighter',88,3.15,100,30,11],
+  ['heavy',80,1.85,125,75,16],
+  ['bomber',70,1.30,140,115,10],
+  ['bf109',90,3.05,96,32,11],
+  ['bf110',82,1.78,125,70,17],
+  ['he111',73,1.35,136,105,10]
+ ];
+ for(const [type,speed,turn,hull,armour,damage] of cases){
+  const p=planes[type];assert.equal(p.speed,speed);assert.equal(p.turn,turn);
+  assert.equal(p.hull,hull);assert.equal(p.armour,armour);assert.equal(p.damage,damage);
+ }
+ assert.ok(planes.fighter.turn>planes.heavy.turn&&planes.heavy.turn>planes.bomber.turn);
+ assert.ok(planes.fighter.speed>planes.heavy.speed&&planes.heavy.speed>planes.bomber.speed);
+});
+test('bullet lifetime extends effective range and keeps deliberate class differences',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const [fighter,heavy]=game.internals.state.fliers;
+ game.internals.shoot(fighter);game.internals.shoot(heavy);
+ const [f,h]=game.internals.state.bullets;
+ assert.equal(f.life,1.28);assert.equal(h.life,1.25);
+ assert.ok(f.life>=.9*1.35,'fighter range is at least 35 percent longer');
+ assert.ok(h.life>=.9*1.35,'heavy range is at least 35 percent longer');
+ assert.ok(f.life>h.life);
+ assert.ok(f.vx>0&&h.vx<0);
+ const bomber=game.internals.PLANES.bomber;
+ assert.ok(bomber.gunLife>=.9*1.35);
+ assert.ok(bomber.gunLife<h.life);
+});
+test('bomber rear gunner triggers automatically on a pursuer behind it',()=>{
+ const game=launch();game.listeners.get('bomber:click')();
+ game.listeners.get('start:click')();
+ const [bomber,pursuer]=game.internals.state.fliers;
+ bomber.x=220;bomber.y=130;bomber.angle=0;bomber.spawnSafe=0;
+ pursuer.x=170;pursuer.y=130;pursuer.alive=true;
+ assert.equal(bomber.rearCooldown,0);
+ game.internals.updatePlane(bomber,1/60,0);
+ assert.ok(bomber.rearCooldown>2);
+ assert.ok(game.internals.state.bullets.some(b=>b.owner===0&&b.damage===5.5));
+});
+test('depleted armour reduces hull; shield only protects and never recharges armour',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0];p.spawnSafe=0;
+ game.internals.hit(p,30,p.x,p.y);
+ assert.equal(p.armour,0);assert.equal(p.health,p.d.hull);
+ p.armourTime=5;
+ game.internals.hit(p,40,p.x,p.y);
+ assert.equal(p.armour,0);assert.equal(p.health,p.d.hull-18);
+});
+test('low-health performance loss stays mild and flight controls survive',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0];
+ p.health=p.d.hull*.2;p.armour=0;
+ p.angle=0;p.y=120;p.climbLoad=0;p.speed=p.d.speed;
+ const old=p.angle;
+ game.internals.steerPlane(p,1,1/60);
+ assert.ok(p.alive);assert.notEqual(p.angle,old);
+ assert.ok(p.speed>p.d.speed*.9,'no abrupt speed collapse from low health');
 });
