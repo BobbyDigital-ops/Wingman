@@ -277,7 +277,7 @@ function createProfile(index){
  data={profile:{name,faction,rosterId:chosen.roster.id,plane:chosen.roster.plane,style:chosen.style,attributes:chosen.attributes,skill:chosen.roster.signature,characterConfirmed:true,gender:chosen.roster.gender},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
  save();view='licence';render();
 }
-const BASE_AIRCRAFT={fighter:{speed:82,turn:3.15,hull:130,armour:40},heavy:{speed:75,turn:1.85,hull:160,armour:96},bomber:{speed:66,turn:1.30,hull:180,armour:147},bf109:{speed:87,turn:2.94,hull:125,armour:42},bf110:{speed:78,turn:1.70,hull:160,armour:90},he111:{speed:69,turn:1.35,hull:175,armour:135}};
+const BASE_AIRCRAFT={fighter:{speed:82,turn:3.15,hull:130,armour:40},heavy:{speed:75,turn:1.85,hull:160,armour:78},bomber:{speed:66,turn:1.30,hull:180,armour:147},bf109:{speed:87,turn:2.94,hull:125,armour:42},bf110:{speed:78,turn:1.70,hull:160,armour:75},he111:{speed:69,turn:1.35,hull:175,armour:135}};
 function rollAirframe(type){
  const b=BASE_AIRCRAFT[type];if(!b)return null;
  const trade=[-1,0,1].sort(()=>Math.random()-.5);
