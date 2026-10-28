@@ -75,6 +75,44 @@ function paintIntro(){
  g.save();g.translate(w*.76,h*.34);g.rotate(Math.PI+.14);g.scale(4.6,4.6);
  window.WingmanSprites.draw(g,'bf109','level');g.restore();
 }
+
+/* Hangar aircraft gallery: artwork comes from the same airframe geometry as
+   gameplay, so no wrong-plane thumbnails or extra external image requests. */
+const fleet={
+ fighter:{name:'SPITFIRE',tag:'RAF · AGILE FIGHTER · OVERDRIVE',stats:[81,96,28]},
+ heavy:{name:'BEAUFIGHTER',tag:'RAF · HEAVY FIGHTER · SHIELD',stats:[68,47,80]},
+ bomber:{name:'LANCASTER',tag:'RAF · BOMBER · DEFENSIVE GUNNERS',stats:[52,29,98]},
+ bf109:{name:'BF 109',tag:'LUFTWAFFE · AGILE FIGHTER · OVERDRIVE',stats:[84,93,30]},
+ bf110:{name:'BF 110',tag:'LUFTWAFFE · HEAVY FIGHTER · SHIELD',stats:[70,45,77]},
+ he111:{name:'HE 111',tag:'LUFTWAFFE · BOMBER · REAR GUNNERS',stats:[54,32,93]}
+};
+function paintPlane(canvas,type,scale){
+ if(!canvas||!window.WingmanSprites)return;
+ const g=canvas.getContext('2d');if(!g)return;
+ g.clearRect(0,0,canvas.width,canvas.height);
+ const w=canvas.width,h=canvas.height;
+ g.save();g.translate(w*.5,h*.52);
+ g.scale(scale,scale);
+ g.rotate(-.085);
+ g.shadowColor='#051928';g.shadowBlur=1.3;g.shadowOffsetY=1.2;
+ window.WingmanSprites.draw(g,type,'level');
+ g.restore();
+}
+function renderFleet(){
+ document.querySelectorAll('canvas[data-aircraft-art]').forEach(c=>paintPlane(c,c.dataset.aircraftArt,10.3));
+ const current=document.querySelector('.plane-choice.selected')?.dataset.plane||'fighter';
+ const info=fleet[current]||fleet.fighter;
+ paintPlane($('wm-featured-plane'),current,21.5);
+ if($('wm-featured-name'))$('wm-featured-name').textContent=info.name;
+ if($('wm-featured-description'))$('wm-featured-description').textContent=info.tag;
+ for(const [i,id] of ['wm-stat-speed','wm-stat-turn','wm-stat-armour'].entries()){
+  const bar=$(id);if(bar)bar.style.setProperty('--wm-stat',info.stats[i]+'%');
+ }
+}
+document.querySelectorAll('[data-plane]').forEach(button=>button.addEventListener('click',()=>{
+ requestAnimationFrame(renderFleet);
+}));
+
 window.WingmanFlow={reset:()=>show('splash'),setMode,show};
-setMode('duel');show('splash');paintIntro();
+setMode('duel');show('splash');paintIntro();renderFleet();
 })();
