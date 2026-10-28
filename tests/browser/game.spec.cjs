@@ -178,3 +178,24 @@ test('visible MENU control returns to aircraft selection while preserving game n
   await expect(page.locator('#menu')).toHaveClass(/hidden/);
   expect(errors).toEqual([]);
 });
+
+test('Phase 8 arenas render distinct cached landscape colours without JS exceptions',async({page})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/');
+  const signatures=[];
+  for(const choice of ['0','1','2','3']){
+    await page.locator('#arena-select').selectOption(choice);
+    await page.locator('#start').click();
+    await page.waitForTimeout(120);
+    const signature=await page.locator('#game').evaluate(canvas=>{
+      const ctx=canvas.getContext('2d');
+      const points=[[.1,.66],[.35,.72],[.66,.82],[.9,.93]];
+      return points.flatMap(([x,y])=>Array.from(ctx.getImageData(
+        Math.round(canvas.width*x),Math.round(canvas.height*y),1,1).data).slice(0,3));
+    });
+    signatures.push(signature.join(','));
+    await page.locator('#menu-return').click();
+  }
+  expect(new Set(signatures).size).toBe(4);
+  expect(errors).toEqual([]);
+});

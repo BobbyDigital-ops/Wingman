@@ -22,7 +22,7 @@
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
     scores:[0,0],round:1,time:90,intermission:0,banner:'',bannerTime:0,paused:false,
-    impactLock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2,teams:false,difficulty:'standard',
+    impactLock:0,trails:[],blasts:[],visualClock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2,teams:false,difficulty:'standard',
     wind:{active:false,base:0,current:0,elapsed:0}
   };
   const controls={left:false,right:false,boost:false};
@@ -170,6 +170,7 @@ function plane(type,id,x,y,angle){
       }
     }
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
+    state.trails=[];state.blasts=[];state.visualClock=0;
     state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
     state.time=state.mode==='survival'?70:state.mode==='campaign'?120:90;state.impactLock=0;state.phase='playing';state.paused=false;
     if(menuReturn)menuReturn.hidden=false;
@@ -313,9 +314,11 @@ function plane(type,id,x,y,angle){
     p.armour-=absorbed;remaining-=absorbed;
     p.health=Math.max(0,p.health-remaining);
     p.hitFlash=.17;p.damageCause=cause;p.damageNotice=1.15;
+    if(state.blasts.length<12)state.blasts.push({x,y,r:3,life:.19,max:.19,large:false});
     emit(x,y,7,'#ffe0a0',26);sound('hit');
     if(p.health<=0){
       p.alive=false;emit(p.x,p.y,28,'#ffc47e',75);emit(p.x,p.y,16,'#625765',35);
+      if(state.blasts.length<12)state.blasts.push({x:p.x,y:p.y,r:p.d.radius+8,life:.65,max:.65,large:true});
       if(state.participants===2||p.id===0||opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
     }
   }
@@ -749,6 +752,7 @@ function plane(type,id,x,y,angle){
   }
   function update(dt){
     if(state.paused)return;
+    state.visualClock+=dt;
     if(state.phase==='intermission'){
       state.intermission-=dt;
       if(state.intermission<=0){state.round++;newRound();}
@@ -780,6 +784,31 @@ function plane(type,id,x,y,angle){
         endRound(Math.abs(a-b)<.025?-1:a>b?0:1);
       }
     }
+    // Damage smoke is a persistent, airy trail rather than a handful of
+    // unrelated particles. Bounded allocations and lifetimes suit phones.
+    if(state.phase==='playing'){
+      for(const p of state.fliers){
+        if(!p.alive||p.health>=p.d.hull*.70)continue;
+        p.trailClock=(p.trailClock||0)+dt;
+        if(p.trailClock>=.075){
+          p.trailClock=0;
+          const dx=Math.cos(p.angle),dy=Math.sin(p.angle);
+          state.trails.push({x:p.x-dx*(p.d.radius+2),y:p.y-dy*(p.d.radius+2),
+            vx:-p.vx*.10,vy:-3,age:0,life:p.health<p.d.hull*.3?1.4:1.0,
+            heavy:p.health<p.d.hull*.35});
+        }
+      }
+      if(state.trails.length>100)state.trails.splice(0,state.trails.length-100);
+    }
+    for(let i=state.trails.length-1;i>=0;i--){
+      const t=state.trails[i];t.age+=dt;t.x+=(t.vx+(state.wind?.current||0)*.1)*dt;
+      t.y+=(t.vy-.75)*dt;
+      if(t.age>=t.life)state.trails.splice(i,1);
+    }
+    for(let i=state.blasts.length-1;i>=0;i--){
+      state.blasts[i].life-=dt;
+      if(state.blasts[i].life<=0)state.blasts.splice(i,1);
+    }
     for(let i=state.sparks.length-1;i>=0;i--){
       const p=state.sparks[i];
       p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=14*dt;p.life-=dt;
@@ -803,6 +832,12 @@ function plane(type,id,x,y,angle){
     const ctx=c.getContext('2d');
     ctx.setTransform(c.width/W,0,0,c.height/H,0,0);
     ctx.imageSmoothingEnabled=renderScale>1;
+    // Phase 8 scenery is generated once on this pre-rendered canvas, not in
+    // the frame loop. Retain the old painted arena as an offline fallback.
+    if(window.WingmanScenery?.paint){
+      window.WingmanScenery.paint(ctx,W,H,state.arena);
+      return c;
+    }
     const scene=ARENAS[state.arena]||'ALPINE';
     const palettes={
       ALPINE:['#789eb6','#9bb9c9','#b8cbd1','#748c99','#596c74','#334c52'],
@@ -947,7 +982,10 @@ function plane(type,id,x,y,angle){
       c.beginPath();c.ellipse(0,0,10,8,0,0,TAU);
       c.strokeStyle='#b1ecf5c9';c.lineWidth=.75;c.stroke();
     }
-    c.scale(.54,.54);
+    // Aircraft now read at phone resolution without altering hitboxes or
+    // physics. Larger bombers communicate their imposing defensive role.
+    c.scale(p.role==='bomber'?.69:p.role==='heavy'?.64:.61,
+            p.role==='bomber'?.69:p.role==='heavy'?.64:.61);
     aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':'level');
     if(p.boosting){
       // Cool air streaks, not a jet flame: WWII engines don't have afterburners.
@@ -958,7 +996,14 @@ function plane(type,id,x,y,angle){
         c.stroke();
       }
     }
-    if(p.muzzleFlash>0){c.fillStyle='#fff4ad';c.fillRect(13,-1,7,2);}
+    if(p.muzzleFlash>0){
+      c.fillStyle='#fff4ad';
+      c.beginPath();c.moveTo(12,-2.5);c.lineTo(23,0);c.lineTo(12,2.5);c.fill();
+    }
+    if(p.turretFlash>0){
+      c.fillStyle='#ffc976';
+      c.beginPath();c.moveTo(-14,-2.3);c.lineTo(-23,0);c.lineTo(-14,2.3);c.fill();
+    }
     if(p.hitFlash>0){
       c.beginPath();c.ellipse(0,0,8,5,0,0,TAU);
       c.strokeStyle='#fff0bd';c.lineWidth=.8;c.stroke();
@@ -1053,8 +1098,8 @@ function plane(type,id,x,y,angle){
       if(p.role==='bomber'&&p.bombQueue>0){
         g.fillStyle='#ffd9a2';g.fillText('BOMBS AWAY',W*.50,33);
       }
-      g.fillStyle='#9ed2e8';g.font='bold 6px monospace';g.fillText('ARM '+Math.round(p.armour),W-100,24);
-      g.fillStyle='#bce3b4';g.fillText('HULL '+Math.round(p.health),W-100,33);
+      g.fillStyle='#9ed2e8';g.font='bold 6px monospace';g.fillText('ARM '+Math.round(e.armour),W-100,24);
+      g.fillStyle='#bce3b4';g.fillText('HULL '+Math.round(e.health),W-100,33);
     }
     if(state.wind?.active){
       const label=state.wind.current>0?'WIND →':'← WIND';
@@ -1068,7 +1113,7 @@ function plane(type,id,x,y,angle){
   }
   function damageDiagram(){
     const p=state.fliers[0];if(!p)return;
-    const c=modelCtx,x=W-78,y=47;
+    const c=modelCtx,x=W-78,y=82;
     c.save();c.fillStyle='#152b3de0';c.fillRect(x,y,71,31);
     c.strokeStyle='#7d9cac';c.lineWidth=.6;c.strokeRect(x,y,71,31);
     c.font='bold 6px monospace';c.fillStyle='#a9d8ed';c.fillText('ARMOUR',x+5,y+3);
@@ -1081,7 +1126,16 @@ function plane(type,id,x,y,angle){
   }
   function draw(){
     g.drawImage(background,0,0,W,H);
+    if(window.WingmanScenery?.weather)
+      window.WingmanScenery.weather(g,W,H,state.arena,state.visualClock,state.wind);
     drawWind();
+    for(const t of state.trails){
+      const fade=1-t.age/t.life;
+      g.globalAlpha=fade*.26;
+      g.fillStyle=t.heavy?'#242e34':'#53616a';
+      g.beginPath();g.ellipse(t.x,t.y,1.3+t.age*2.8,1+t.age*1.7,0,0,TAU);g.fill();
+    }
+    g.globalAlpha=1;
     // Light under-aircraft shadows create altitude clues.
     for(const m of state.mines){
       const x=Math.round(m.x),y=Math.round(m.y+Math.sin(m.phase)*1.4);
@@ -1101,6 +1155,19 @@ function plane(type,id,x,y,angle){
       g.fillStyle=heavy?'#653e33':'#574c43';g.fillRect(Math.round(b.x)-1,Math.round(b.y)-1,heavy?5:3,heavy?3:2);
       g.fillStyle=b.rearGun?'#ffbd65':heavy?'#ffd19b':'#fff1ac';g.fillRect(Math.round(b.x),Math.round(b.y),heavy?4:2,1);
     }
+    // Brief layered flashes and expanding shockwaves make confirmed hits
+    // immediately legible, without shake that would destabilise touch input.
+    for(const blast of state.blasts){
+      const progress=1-blast.life/blast.max;
+      g.globalAlpha=(1-progress)*(blast.large?.82:.48);
+      g.fillStyle=blast.large?'#ffd18a':'#ffe5b8';
+      g.beginPath();g.arc(blast.x,blast.y,Math.max(1,blast.r*(.30+progress*.75)),0,TAU);g.fill();
+      g.globalAlpha=(1-progress)*(blast.large?.75:.65);
+      g.strokeStyle=blast.large?'#fff1c2':'#ffcd80';
+      g.lineWidth=blast.large?1.5:.8;
+      g.beginPath();g.arc(blast.x,blast.y,Math.max(1,blast.r*(.4+progress*1.8)),0,TAU);g.stroke();
+    }
+    g.globalAlpha=1;
     drawModels();
     for(const p of state.sparks){
       g.globalAlpha=clamp(p.life/p.max,.2,1);
@@ -1113,7 +1180,9 @@ function plane(type,id,x,y,angle){
     // sharp glyphs instead of stretching the logical 250px canvas.
     const lowRes=g;g=modelCtx;
     try{drawHud();}finally{g=lowRes;}
-    damageDiagram();
+    // Arcade HUD already carries both hull and armour. Keep the extra
+    // damage instrument only in cockpit mode, away from MENU controls.
+    if(document.getElementById('hud-style')?.value==='cockpit')damageDiagram();
     const pilot=state.fliers[0];
     if(pilot&&pilot.alive&&pilot.y>H-42){
       const danger=clamp((pilot.y-(H-42))/29,0,1);
