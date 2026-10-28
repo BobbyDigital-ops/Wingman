@@ -183,6 +183,7 @@ function plane(type,id,x,y,angle){
     state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
     state.time=state.mode==='survival'?70:state.mode==='campaign'?120:90;state.impactLock=0;state.phase='playing';state.paused=false;
     if(menuReturn)menuReturn.hidden=false;
+    if(fullscreenButton)fullscreenButton.hidden=false;
     state.banner=state.wind.active?(state.wind.base>0?'CROSSWIND →':'← CROSSWIND'):'ROUND '+state.round;state.bannerTime=1.5;
     controls.left=false;controls.right=false;controls.boost=false;
   }
@@ -233,6 +234,7 @@ function plane(type,id,x,y,angle){
   function showMenu(){
     state.phase='menu';state.paused=false;controls.left=false;controls.right=false;controls.boost=false;
     if(menuReturn)menuReturn.hidden=true;
+    if(fullscreenButton)fullscreenButton.hidden=true;
     ui.result.classList.add('hidden');ui.menu.classList.remove('hidden');
     window.WingmanFlow?.reset?.();
     document.getElementById('bomb')?.setAttribute('hidden','');
