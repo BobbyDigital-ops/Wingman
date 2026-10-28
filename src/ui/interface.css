@@ -1,0 +1,161 @@
+/* Wingman: restrained WWII aviation art direction, not a spreadsheet UI.
+   Game viewport remains the same; these styles affect menus and touch hit areas. */
+.wingman-front{
+ z-index:8;
+ background:radial-gradient(ellipse at 49% 43%,#0a233065 0%,#081722d8 95%);
+ backdrop-filter:blur(3px);
+ padding:clamp(9px,2.2svh,20px);
+}
+.front-panel{
+ position:relative;
+ width:min(94%,880px);
+ max-height:96%;
+ overflow:auto;
+ margin:auto;
+ padding:clamp(12px,2.4svh,27px);
+ color:#e9e5d8;
+ text-align:center;
+ background:linear-gradient(155deg,#112c3be9,#081725f3);
+ border:1px solid #a38f65bb;
+ box-shadow:0 20px 70px #051321d9,inset 0 0 0 1px #fff5d617;
+ scrollbar-width:thin;
+}
+.front-panel[hidden],.flow-advanced[hidden]{display:none!important}
+.front-panel::before,.front-panel::after{
+ content:'';position:absolute;left:13px;right:13px;height:1px;
+ background:linear-gradient(90deg,transparent,#e3c99572,transparent);
+ pointer-events:none;
+}
+.front-panel::before{top:7px}.front-panel::after{bottom:7px}
+.splash-panel{
+ max-width:730px;
+ min-height:min(77svh,460px);
+ display:flex;flex-direction:column;justify-content:center;align-items:center;
+ background:radial-gradient(ellipse at 50% 25%,#37576b9f,#112735e8 56%,#081522f6);
+}
+.splash-topline,.flow-step,.splash-foot,.setup-label{
+ font-size:clamp(9px,1.5svh,12px);
+ color:#d5bb8c;letter-spacing:.24em;font-weight:800;
+}
+.splash-mark{display:flex;gap:18px;align-items:center;justify-content:center;color:#e5c795;margin:10px 0 3px}
+.wing-rule{height:2px;width:clamp(50px,8vw,100px);background:linear-gradient(90deg,transparent,#cda970,transparent)}
+.wing-emblem{font-size:20px}
+.splash-title{
+ font-family:Impact,'Arial Narrow',sans-serif;
+ font-size:clamp(54px,12svh,110px);
+ color:#f4e6c8;line-height:1;letter-spacing:.085em;
+ text-shadow:0 4px 0 #162c39,0 8px 16px #091624ae;
+}
+.splash-subtitle{font-weight:900;letter-spacing:.33em;color:#c4d5d2;font-size:clamp(10px,1.7svh,16px);margin-top:7px}
+#splash-aircraft{display:block;max-width:100%;height:clamp(55px,12svh,90px);object-fit:contain;opacity:.94}
+.splash-tagline{font-size:clamp(9px,1.4svh,13px);letter-spacing:.1em;color:#cbd8d6;margin:0 0 9px}
+.splash-foot{margin-top:12px;letter-spacing:.11em;color:#94acb0}
+.front-action,.front-secondary{
+ border:1px solid #d7c097;
+ letter-spacing:.12em;font-weight:900;cursor:pointer;
+ min-height:clamp(37px,6.5svh,52px);
+ padding:8px clamp(18px,3vw,29px);
+ color:#1b303d;background:linear-gradient(#f1d59b,#cda56b);
+ box-shadow:inset 0 1px #fff9d6aa,0 4px #5c4838;
+}
+.front-action:hover{filter:brightness(1.1)}
+.front-secondary{
+ background:#233e4cb9;color:#e1d6b9;border-color:#7d97a0;
+ box-shadow:inset 0 1px #ffffff17;
+}
+.front-secondary:hover{background:#315568}
+.splash-panel .front-secondary{margin-top:10px;font-size:clamp(10px,1.6svh,13px)}
+.flow-panel h2,.setup-panel h2{
+ font-size:clamp(24px,4.8svh,38px);letter-spacing:.14em;color:#f1dfb7;
+ margin:3px 0 6px;
+}
+.flow-copy{font-size:clamp(11px,1.7svh,14px);color:#b5cbd0;margin:5px 0 15px}
+.mode-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(7px,1.2svh,13px)}
+.mode-choice{
+ display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+ gap:3px;min-height:clamp(76px,14svh,115px);padding:clamp(8px,1.7svh,17px);
+ border:1px solid #557281;background:linear-gradient(110deg,#183546,#122a38);
+ text-align:left;color:#d7e1df;cursor:pointer;position:relative;
+}
+.mode-choice:before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:#708996}
+.mode-choice strong{color:#ead5ad;font-size:clamp(17px,3.2svh,28px);letter-spacing:.07em}
+.mode-choice span{font-size:clamp(11px,1.8svh,15px);font-weight:800}
+.mode-choice small{font-size:clamp(9px,1.3svh,11px);color:#a2b7bb;letter-spacing:.03em}
+.mode-choice.selected{background:linear-gradient(100deg,#30535a,#173643);border-color:#f2d18f}
+.mode-choice.selected:before{background:#eec58d}
+.flow-actions{display:flex;justify-content:space-between;gap:12px;margin-top:clamp(10px,2svh,18px)}
+.flow-actions .front-action,.flow-actions .front-secondary{min-width:125px}
+.setup-panel{max-width:945px}
+.setup-columns{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(175px,.85fr);gap:18px;text-align:left;margin-top:10px}
+.setup-label{margin:1px 0 9px;letter-spacing:.16em}
+.setup-panel .plane-picker{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.setup-panel .plane-choice{
+ display:flex;flex-direction:column;justify-content:center;min-height:clamp(55px,10svh,75px);
+ padding:8px;text-align:left;border-left:3px solid #657d83;
+}
+.setup-panel .plane-choice.selected{border-left-color:#ffda8f}
+.setup-panel .plane-choice b{font-size:clamp(10px,1.6svh,13px)}
+.setup-panel .plane-choice small{font-size:clamp(9px,1.3svh,11px);color:#b8c9c5}
+.setup-controls{padding:0 0 0 8px;border-left:1px solid #6b87913c}
+.setup-panel .mode-row{display:grid;grid-template-columns:1fr;gap:8px;margin:0}
+.setup-panel .mode-row label{width:100%;font-size:10px;text-align:left;color:#d9caa9}
+.setup-panel .mode-row select{
+ width:100%;max-width:100%;min-height:32px;padding:5px 9px;
+ background:#172e3c;border:1px solid #647f87;color:#f1e3cb;font:inherit;
+}
+.setup-hint{font-size:10px;color:#b3bec0;line-height:1.5;letter-spacing:.07em;margin:12px 0 0}
+@media(max-height:520px){
+ .front-panel{padding:10px 15px;max-height:98%}
+ .splash-panel{min-height:0}
+ .splash-mark{margin:2px 0}
+ .splash-title{font-size:clamp(40px,11svh,72px)}
+ #splash-aircraft{height:clamp(32px,12svh,65px)}
+ .splash-tagline{margin:0 0 4px}
+ .splash-foot{margin-top:6px}
+ .flow-panel h2,.setup-panel h2{font-size:clamp(18px,5svh,28px)}
+ .mode-cards{gap:6px}
+ .mode-choice{min-height:60px;padding:7px}
+ .mode-choice strong{font-size:16px}
+ .setup-panel .plane-choice{min-height:48px;padding:5px}
+ .setup-columns{gap:9px}
+ .setup-panel .mode-row{gap:4px}
+ .setup-panel .mode-row select{min-height:28px}
+ .front-action,.front-secondary{min-height:35px;padding:6px 15px}
+}
+@media(max-width:560px){
+ .setup-columns{grid-template-columns:1fr}
+ .setup-controls{border-left:0;padding:0}
+ .mode-cards{grid-template-columns:1fr 1fr}
+ .setup-panel .mode-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .setup-panel .plane-choice b{font-size:9px}
+}
+/* Touch: two large steer pads, three distinct action pads, no stale BOMB. */
+@media(pointer:coarse) and (orientation:landscape){
+ .control-layer{
+   padding:0 max(14px,env(safe-area-inset-right))
+     max(12px,env(safe-area-inset-bottom))
+     max(14px,env(safe-area-inset-left))!important;
+ }
+ .control-layer .control-cluster.steer{gap:clamp(10px,1.6vw,19px)!important}
+ .control-layer .control-cluster.attack{gap:clamp(8px,1.3vw,15px)!important}
+ .control-layer .control-cluster.steer .control-btn{
+   width:clamp(84px,16svh,118px)!important;
+   height:clamp(84px,16svh,118px)!important;
+   font-size:clamp(26px,5svh,39px)!important;
+   min-width:0!important;min-height:0!important;
+   display:grid!important;place-items:center!important;
+ }
+ .control-layer .control-cluster.attack .control-btn{
+   width:clamp(64px,13.5svh,92px)!important;
+   height:clamp(64px,13.5svh,92px)!important;
+   min-width:0!important;min-height:0!important;
+   display:grid!important;place-items:center!important;
+ }
+ .control-layer .control-cluster.attack #roll{font-size:clamp(12px,2.4svh,18px)!important}
+ .control-layer .control-cluster.attack #special{font-size:clamp(10px,2.2svh,17px)!important}
+ .control-layer .control-cluster.attack #fire{font-size:clamp(14px,2.6svh,20px)!important}
+ .control-layer .control-cluster.attack .control-btn[hidden]{display:none!important}
+ #menu-return,#fullscreen-toggle{top:clamp(54px,17svh,94px)!important;}
+}
+/* Even if an older hidden button remains in cached markup, hide it. */
+#bomb,.control-layer .control-cluster.attack #bomb{display:none!important}
