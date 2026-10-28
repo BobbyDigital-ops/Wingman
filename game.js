@@ -245,6 +245,9 @@
           3*t*t*(a.p3[key]-a.p2[key]))/a.duration;
       const x=bez('x'),y=bez('y'),vx=deriv('x'),vy=deriv('y');
       p.x=x;p.y=y;p.vx=vx;p.vy=vy;p.speed=Math.hypot(vx,vy);
+      if(p.x<-p.d.radius)p.x+=W+2*p.d.radius;
+      if(p.x>W+p.d.radius)p.x-=W+2*p.d.radius;
+      p.y=Math.max(37,p.y);
       if(p.speed>3)p.angle=Math.atan2(vy,vx);
       p.energy=Math.max(10,p.energy-dt*6);
       p.swoopTime=Math.max(0,a.duration-a.elapsed);
@@ -290,7 +293,9 @@
     // Soft ceiling: deflect upward velocity rather than teleporting or damaging.
     if(p.y<37){p.y=37;p.vy=Math.max(3,p.vy);p.angle+=clamp(angleDiff(.3,p.angle),-dt*3,dt*3);}
     // Floor is a deliberate lethal hazard, not a source of component damage.
-    if(p.y>=H-13){p.y=H-13;p.health=0;p.alive=false;p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);endRound(p.id===0?1:0);}
+    if(p.y>=H-13){p.y=H-13;p.health=0;p.alive=false;p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
+      if(p.id===0||state.participants===2||state.fliers.slice(1).every(other=>!other.alive))endRound(p.id===0?1:0);
+    }
 
   }
   // Tactical AI: state changes prevent indefinite tail-chasing and combat orbits.
@@ -313,9 +318,9 @@
     if(p.aiMode==='recover'){tx=W*.5;ty=H*.48;}
     if(p.aiMode==='extend'){
       tx=p.x+Math.cos(p.angle)*125;ty=p.y+Math.sin(p.angle)*85;
-      if(p.y>122)ty=55;
+      if(p.y>H-50)ty=H*.4;
     }
-    if(p.aiMode==='break'){tx=p.x+(p.x-target.x)*.9;ty=p.y<90?140:51;}
+    if(p.aiMode==='break'){tx=p.x+(p.x-target.x)*.9;ty=p.y<H*.5?H*.66:H*.27;}
     if(p.aiMode==='evade'){
       const a=targetAngle+Math.PI*.65;tx=p.x+Math.cos(a)*85;ty=p.y+Math.sin(a)*55;
       if(p.rollRecovery<=0&&range<75)triggerRoll(p);
@@ -335,7 +340,8 @@
     }
     tx=clamp(tx,12,W-12);ty=clamp(ty,48,H-43);
     if(p.role==='fighter'&&p.aiMode==='attack'&&range<65&&facing>1){tx=p.x+p.vx*.65;ty=clamp(p.y-35,45,H-30);}
-    const goal=Math.atan2(ty-p.y,tx-p.x);
+    const dx=tx-p.x;const wrapDx=Math.abs(dx)>W*.5?dx-Math.sign(dx)*W:dx;
+    const goal=Math.atan2(ty-p.y,wrapDx);
     const error=angleDiff(goal,p.angle);
     const turn=Math.abs(error)<.085?0:Math.sign(error);
     if(p.aiMode==='attack'&&range<165&&facing<.18&&p.gunCooldown<=0&&p.burstLeft===0&&
