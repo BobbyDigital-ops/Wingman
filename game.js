@@ -1034,12 +1034,11 @@ function plane(type,id,x,y,angle){
         p.gunCooldown>0 ? 1-p.gunCooldown/p.d.cooldown : 1;
       bar(7,33,64,charge,1,p.burstLeft>0?'#e4aa68':p.gunCooldown>0?'#d88e63':'#80c69e');
       const sc=p.specialCooldown>0?Math.ceil(p.specialCooldown)+'s':'READY';
-      g.fillStyle='#f0d8a2';g.fillText((p.role==='fighter'?'OVERDRIVE':p.role==='heavy'?'SHIELD':'BOMBS')+' '+sc,77,24);
-      bar(77,33,39,p.specialCooldown>0?1-p.specialCooldown/(p.role==='fighter'?12:20):1,
+      g.fillStyle='#f0d8a2';
+      g.fillText((p.role==='fighter'?'OVERDRIVE':p.role==='heavy'?'SHIELD':'BOMBS')+' '+sc,78,24);
+      bar(78,33,64,p.specialCooldown>0?1-p.specialCooldown/(p.role==='fighter'?12:20):1,
         1,'#c4b6df');
-      // CLIMB warns about altitude gained quickly, not height above ground.
-      g.fillStyle='#e6d3a0';g.fillText(p.role==='fighter'?'OVERDRIVE':'ABILITY',123,24);
-      bar(123,33,48,p.overdriveTime>0?p.overdriveTime/2.8:0,1,p.boosting?'#f4d07c':'#9bd4ad');
+      // No second overlapping OVERDRIVE label on small mobile displays.
       const risk=clamp(p.flightRisk||0,0,1);
       g.fillStyle='#d8e9d8';g.font='bold 7px monospace';g.fillText('CLIMB',W/2-13,44);
       // Clear tricolour risk scale: safe green → warning amber → stall red.
@@ -1050,9 +1049,9 @@ function plane(type,id,x,y,angle){
       g.fillStyle='#de806e';g.fillRect(meterX+26,meterY,14,4);
       g.fillStyle='#f6f5e6';g.fillRect(meterX+Math.min(38,Math.round(risk*38)),meterY-2,2,8);
       g.fillStyle=p.rollTime>0?'#f8e4a2':'#c0d9df';
-      g.fillText('SKILL '+(p.skillCooldown>0?Math.ceil(p.skillCooldown)+'s':'READY'),181,24);
-      if(p.role==='bomber'){
-        g.fillStyle='#ffd9a2';g.fillText(p.bombCooldown>0?'BOMB '+p.bombCooldown.toFixed(1):'BOMB READY',W*.50,33);
+      g.fillText('SKILL '+(p.skillCooldown>0?Math.ceil(p.skillCooldown)+'s':'READY'),165,24);
+      if(p.role==='bomber'&&p.bombQueue>0){
+        g.fillStyle='#ffd9a2';g.fillText('BOMBS AWAY',W*.50,33);
       }
       g.fillStyle='#9ed2e8';g.font='bold 6px monospace';g.fillText('ARM '+Math.round(p.armour),W-100,24);
       g.fillStyle='#bce3b4';g.fillText('HULL '+Math.round(p.health),W-100,33);
