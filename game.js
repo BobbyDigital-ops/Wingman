@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
-  const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(2.25,Math.max(2,window.devicePixelRatio||2)) : 1;
+  const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
   const modelCanvas=document.getElementById('aircraft-layer');

@@ -115,3 +115,41 @@ test('pilot offers random recruits and retains the chosen flight attributes',asy
 });
 
 test('rolled airframe is saved and locked for the run',async({page})=>{await page.goto('/');await page.locator('#career-open').click();await page.locator('[data-candidate="0"]').click();await page.getByRole('button',{name:'ROAD TO ACE'}).last().click();await expect(page.locator('.airframe-card')).toHaveCount(3);await page.locator('[data-aircraft="fighter"]').click();const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')).run);expect(result.airframe.type).toBe('fighter');expect(result.airframe.stats.speed).toBeGreaterThan(0);await page.reload();await page.locator('#career-open').click();await expect(page.getByText('RANK 1/8')).toBeVisible();});
+
+
+test('mobile landscape controls stay onscreen, hold steering and render at increased resolution',async({page})=>{
+  await page.goto('/');
+  if(!(await page.evaluate(()=>matchMedia('(pointer: coarse)').matches)))return;
+  await page.locator('#start').click();
+  const dimensions=await page.evaluate(()=>{
+    const canvas=document.getElementById('game'),r=canvas.getBoundingClientRect();
+    const controls=['left','right','fire','special','roll'].map(id=>{
+      const el=document.getElementById(id),b=el.getBoundingClientRect();
+      return {id,size:Math.min(b.width,b.height),bottom:b.bottom,left:b.left,right:b.right};
+    });
+    return {canvasPixels:canvas.width,screenWidth:r.width,screenHeight:innerHeight,controls};
+  });
+  expect(dimensions.canvasPixels).toBeGreaterThan(dimensions.screenWidth*1.4);
+  for(const b of dimensions.controls){
+    expect(b.size).toBeGreaterThanOrEqual(60);
+    expect(b.bottom).toBeLessThanOrEqual(dimensions.screenHeight+1);
+    expect(b.left).toBeGreaterThanOrEqual(0);
+    expect(b.right).toBeLessThanOrEqual(dimensions.screenWidth+1);
+  }
+  const touchResult=await page.evaluate(()=>{
+    const btn=document.getElementById('right'),r=btn.getBoundingClientRect();
+    const t=new Touch({identifier:35,target:btn,clientX:r.left+r.width/2,clientY:r.top+r.height/2});
+    const event=(type,touches)=>btn.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,changedTouches:[t],touches,targetTouches:touches}));
+    event('touchstart',[t]);
+    return btn.classList.contains('pressed');
+  });
+  expect(touchResult).toBe(true);
+  await page.waitForTimeout(450);
+  await expect(page.locator('#right')).toHaveClass(/pressed/);
+  await page.evaluate(()=>{
+    const btn=document.getElementById('right'),r=btn.getBoundingClientRect();
+    const t=new Touch({identifier:35,target:btn,clientX:r.left+r.width/2,clientY:r.top+r.height/2});
+    btn.dispatchEvent(new TouchEvent('touchend',{bubbles:true,cancelable:true,changedTouches:[t],touches:[],targetTouches:[]}));
+  });
+  await expect(page.locator('#right')).not.toHaveClass(/pressed/);
+});
