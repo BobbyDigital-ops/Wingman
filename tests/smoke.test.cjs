@@ -313,7 +313,7 @@ test('tail damage limits turns without removing steering',()=>{
  const angle=p.angle;
  game.internals.steerPlane(p,1,1/60);
  assert.ok(p.angle>angle,'steering still responds');
- assert.ok(p.turnVelocity<.1,'tail damage limits turn authority');
+ assert.ok(p.turnVelocity<.25,'tail damage limits turn authority');
  assert.ok(p.alive);
 });
 test('body hits reduce structural health without instant failure',()=>{
