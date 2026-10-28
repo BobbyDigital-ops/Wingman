@@ -292,34 +292,31 @@ test('the four-pilot arena continues after a single AI is destroyed',()=>{
  assert.equal(state.fliers.length,4);
 });
 
-test('component failure needs repeated accurate hits and leaves hull intact',()=>{
+test('armour absorbs hits before the hull is damaged',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[1];p.spawnSafe=0;
- for(let i=0;i<6;i++)game.internals.hit(p,15,p.x,p.y,'engine');
- assert.ok(p.parts.engine>0,'six targeted gun hits cannot kill the engine');
- assert.equal(p.critical,false);
- for(let i=0;i<9;i++)game.internals.hit(p,15,p.x,p.y,'engine');
- assert.equal(p.parts.engine,0);
- assert.equal(p.criticalCause,'ENGINE FAILURE');
- assert.ok(p.health>0,'engine failure occurs before loss of hull');
+ const hp=p.health;
+ game.internals.hit(p,20,p.x,p.y);
+ assert.equal(p.health,hp);
+ assert.ok(p.armour<p.d.armour);
+ game.internals.hit(p,200,p.x,p.y);
+ assert.equal(p.armour,0);
+ assert.ok(p.health<hp);
 });
-test('tail damage limits turns without removing steering',()=>{
+test('all classes have their intended simple armour and health',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const p=game.internals.state.fliers[0];
+ assert.equal(p.d.hull,80);assert.equal(p.d.armour,20);
+ assert.equal(p.d.burst,10);
+});
+test('damaged aircraft still turn and are not component-disabled',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];p.spawnSafe=0;
- p.parts.tail=0;p.energy=90;
+ p.armour=0;p.health=24;p.energy=90;
  const angle=p.angle;
  game.internals.steerPlane(p,1,1/60);
- assert.ok(p.angle>angle,'steering still responds');
- assert.ok(p.turnVelocity<.25,'tail damage limits turn authority');
+ assert.notEqual(p.angle,angle);
  assert.ok(p.alive);
-});
-test('body hits reduce structural health without instant failure',()=>{
- const game=launch();game.listeners.get('start:click')();
- const p=game.internals.state.fliers[1];p.spawnSafe=0;
- game.internals.hit(p,15,p.x,p.y,'body');
- assert.ok(p.health>0);
- assert.equal(p.critical,false);
- assert.ok(p.parts.body<100);
 });
 test('holding boost uses charge and releasing it recharges',()=>{
  const game=launch();game.listeners.get('start:click')();
@@ -390,9 +387,10 @@ test('keyboard special is reachable with E and roll with Q',()=>{
  game.listeners.get('document:keydown')({code:'KeyQ',repeat:false,preventDefault(){}});
  assert.ok(p.rollTime>0);
 });
-test('all three aircraft component readings remain available',()=>{
+test('aircraft do not use component health pools',()=>{
  const game=launch();game.listeners.get('start:click')();
- assert.deepEqual(Object.keys(game.internals.state.fliers[0].parts).sort(),['body','engine','tail']);
+ assert.equal(game.internals.state.fliers[0].parts,undefined);
+ assert.ok(game.internals.state.fliers[0].armour>0);
 });
 
 test('HUD styles all have the same playable game state',()=>{
