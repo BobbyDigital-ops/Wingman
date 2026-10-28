@@ -17,7 +17,7 @@ const CATALOG=[
  ['Charles "Last Light" Morgan','fighter','ace'],['Wilhelm "The Baron" Adler','bf109','ace'],
  ['Hugh "Raven" Doyle','fighter','ace'],['Max "Nightwatch" Beck','bf109','ace']
 ].map((x,i)=>({id:'pilot-'+i,name:x[0],plane:x[1],skill:x[2],faction:AXIS.includes(x[1])?'Axis':'Allies'}));
-const byId=Object.fromEntries(CATALOG.map((p,i)=>[p.id,{...p,appearance:appearance(i*47+9)}]));
+const byId=Object.fromEntries(CATALOG.map((p,i)=>[p.id,{...p,appearance:appearance(i*47+9),attributes:{manoeuvrability:50+(i*17)%37,gunnery:48+(i*23)%40,engine:52+(i*11)%34}}]));
 const aircraft={fighter:'Spitfire',heavy:'Beaufighter',bomber:'Lancaster',bf109:'Bf 109',bf110:'Bf 110',he111:'He 111'};
 const screen=document.getElementById('career-screen'),menu=document.getElementById('menu'),result=document.getElementById('result');
 const nav=document.getElementById('career-open'),licenceBtn=document.getElementById('career-license');
@@ -82,16 +82,40 @@ function makeChoices(run){
  }));
 }
 function show(which='ladder'){
+ if(!data&&!candidates.length)candidates=generateCandidates();
  showing=true;view=which;screen.hidden=false;menu.classList.add('hidden');result.classList.add('hidden');render();
 }
 function close(){showing=false;screen.hidden=true;window.WingmanGame?.showMenu();}
-function createProfile(){
+const ATTRS=['manoeuvrability','gunnery','engine'];
+let candidates=[];
+function rollAttributes(){
+ const shuffled=[0,1,2].sort(()=>Math.random()-.5);
+ const values=[82,65,53];
+ return Object.fromEntries(shuffled.map((key,i)=>[ATTRS[key],values[i]+Math.floor(Math.random()*7)-3]));
+}
+function generateCandidates(){
+ const pool=[];
+ for(let i=0;i<3;i++){
+  const seed=Math.floor(Math.random()*2147483647);
+  pool.push({style:appearance(seed),attributes:rollAttributes(),id:seed});
+ }
+ return pool;
+}
+function candidatePicker(){
+ return '<div class="candidate-grid">'+candidates.map((c,i)=>
+  '<button type="button" data-candidate="'+i+'" class="candidate-card" aria-label="Select pilot '+(i+1)+'">'+
+  '<div class="candidate-portrait">'+pilotPortrait(document.getElementById('career-faction')?.value||'Allies',c.style)+'</div>'+
+  '<strong>CADET '+(i+1)+'</strong>'+
+  '<small>MANOEUVRABILITY '+c.attributes.manoeuvrability+'</small>'+
+  '<small>GUNNERY '+c.attributes.gunnery+'</small>'+
+  '<small>ENGINE '+c.attributes.engine+'</small>'+
+  '<span>SELECT PILOT</span></button>').join('')+'</div>';
+}
+function createProfile(index){
+ const chosen=candidates[index];if(!chosen)return;
  const name=document.getElementById('career-name')?.value.trim().slice(0,30)||'Unknown Pilot';
  const faction=document.getElementById('career-faction')?.value==='Axis'?'Axis':'Allies';
- const style={};
- for(const feature of ['face','skin','hair','headwear','goggles','scarf','moustache','monocle','nose'])
-  style[feature]=Number(document.getElementById('career-'+feature)?.value||0);
- data={profile:{name,faction,style},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
+ data={profile:{name,faction,style:chosen.style,attributes:chosen.attributes},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
  save();view='licence';render();
 }
 function startRun(aircraftId){
@@ -147,12 +171,12 @@ function ladder(run){
 }
 function render(){
  if(!data){
-  panel('CREATE YOUR PILOT',`<div class="career-layout"><div class="career-photo" id="career-photo">${pilotPortrait('Allies',appearance())}</div><div class="career-form">
-   <label>PILOT NAME<input id="career-name" maxlength="30" placeholder="Your name or callsign" autocomplete="off"></label>
-   <label>ALLEGIANCE<select id="career-faction"><option>Allies</option><option>Axis</option></select></label>
-   ${appearanceControls()}
-   <p class="career-muted">Your uniform, aircraft selection and opponents will reflect your allegiance.</p>
-   <button class="career-primary" data-action="create">ISSUE PILOT LICENCE</button></div></div>`);
+  if(!candidates.length)candidates=generateCandidates();
+  panel('CHOOSE YOUR PILOT',`<p class="career-muted">Three unique recruits. Pick one to keep across your sorties; each has a different flight speciality.</p>
+  <div class="candidate-identity"><label>CALLSIGN <input id="career-name" maxlength="30" placeholder="Your pilot name" autocomplete="off"></label>
+  <label>ALLEGIANCE <select id="career-faction"><option>Allies</option><option>Axis</option></select></label></div>
+  <div id="candidate-picker">${candidatePicker()}</div>
+  <button data-action="reroll">GENERATE THREE NEW RECRUITS</button>`);
   return;
  }
  const p=data.profile,run=data.run,losses=data.losses,wins=data.wins,ratio=losses?(wins/losses).toFixed(2):wins?wins.toFixed(2):'0.00';
@@ -160,7 +184,7 @@ function render(){
   const nemesis=Object.entries(data.records).filter(([,r])=>r.losses>r.wins).sort((a,b)=>(b[1].losses-b[1].wins)-(a[1].losses-a[1].wins))[0];
   panel('PILOT LICENCE',`<div class="career-licence"><div class="career-photo">${pilotPortrait(p.faction,p.style)}</div>
    <div><strong>${escape(p.name)}</strong><small>${p.faction.toUpperCase()} · ACTIVE SERVICE</small>
-   <p>CONFIRMED KILLS <b>${data.kills}</b></p><p>VICTORIES <b>${wins}</b></p><p>DEFEATS <b>${losses}</b></p>
+   <p>MANOEUVRABILITY <b>${p.attributes?.manoeuvrability??65}</b></p><p>GUNNERY <b>${p.attributes?.gunnery??65}</b></p><p>ENGINE HANDLING <b>${p.attributes?.engine??65}</b></p><p>CONFIRMED KILLS <b>${data.kills}</b></p><p>VICTORIES <b>${wins}</b></p><p>DEFEATS <b>${losses}</b></p>
    <p>WIN / LOSS <b>${ratio}</b></p><p>HIGHEST RANK <b>${Math.min(MAX_RANK,data.best||1)}</b></p>
    <p>NEMESIS <b>${nemesis?escape(byId[nemesis[0]]?.name||'Unknown'):'None yet'}</b></p>
    <p>ACE RUNS COMPLETED <b>${data.completed}</b></p></div></div>
@@ -184,17 +208,17 @@ screen.addEventListener('click',e=>{
  const el=e.target.closest('button');if(!el)return;
  const action=el.dataset.action;
  if(action==='close')close();
- if(action==='create')createProfile();
+ if(action==='reroll'){candidates=generateCandidates();render();}
+ if(el.dataset.candidate!==undefined)createProfile(Number(el.dataset.candidate));
  if(action==='ladder'){view=data?.run?'ladder':'licence';if(data&&!data.run)view='ladder';render();}
  if(action==='licence'){view='licence';render();}
  if(el.dataset.aircraft)startRun(el.dataset.aircraft);
  if(el.dataset.choice!==undefined)fight(Number(el.dataset.choice));
 });
 screen.addEventListener('change',e=>{
- if(e.target.id==='career-faction'||e.target.id.startsWith('career-')){
-  const f=document.getElementById('career-faction').value;
-  const look={};for(const k of ['face','skin','hair','headwear','goggles','scarf','moustache','monocle','nose'])look[k]=Number(document.getElementById('career-'+k)?.value||0);
-  document.getElementById('career-photo').innerHTML=pilotPortrait(f,look);
+ if(e.target.id==='career-faction'&&!data){
+  const picker=document.getElementById('candidate-picker');
+  if(picker)picker.innerHTML=candidatePicker();
  }
 });
 nav.addEventListener('click',()=>show('ladder'));licenceBtn.addEventListener('click',()=>show('licence'));
