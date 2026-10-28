@@ -82,9 +82,9 @@ const fleet={
  fighter:{name:'SPITFIRE',tag:'RAF · AGILE FIGHTER · OVERDRIVE',stats:[81,96,28]},
  heavy:{name:'BEAUFIGHTER',tag:'RAF · HEAVY FIGHTER · SHIELD',stats:[68,47,80]},
  bomber:{name:'LANCASTER',tag:'RAF · BOMBER · DEFENSIVE GUNNERS',stats:[52,29,98]},
- bf109:{name:'BF 109',tag:'LUFTWAFFE · AGILE FIGHTER · OVERDRIVE',stats:[84,93,30]},
- bf110:{name:'BF 110',tag:'LUFTWAFFE · HEAVY FIGHTER · SHIELD',stats:[70,45,77]},
- he111:{name:'HE 111',tag:'LUFTWAFFE · BOMBER · REAR GUNNERS',stats:[54,32,93]}
+ bf109:{name:'EMIL',tag:'MESSERSCHMITT BF 109E · INTERCEPTOR · OVERDRIVE',stats:[84,93,30]},
+ bf110:{name:'ZERSTÖRER',tag:'MESSERSCHMITT BF 110 · HEAVY FIGHTER · SHIELD',stats:[70,45,77]},
+ he111:{name:'HEINKEL',tag:'HE 111 · MEDIUM BOMBER · DEFENSIVE GUNNERS',stats:[54,32,93]}
 };
 function paintPlane(canvas,type,scale){
  if(!canvas||!window.WingmanSprites)return;
