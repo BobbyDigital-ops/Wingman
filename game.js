@@ -282,7 +282,7 @@ function plane(type,id,x,y,angle){
     // Reflect horizontal direction and descend into the playable area.
     if(p.y>=-p.d.radius)return false;
     // Re-enter from the same offscreen coordinate: never teleport to HUD.
-    p.y=-p.d.radius;
+    p.y=39+p.d.radius;
     p.angle=Math.atan2(Math.sin(Math.PI-p.angle),Math.cos(Math.PI-p.angle));
     const incoming=Math.max(p.speed,Math.hypot(p.vx,p.vy),p.d.speed*.65);
     p.vx=Math.cos(p.angle)*incoming;
@@ -293,6 +293,8 @@ function plane(type,id,x,y,angle){
       p.angle=Math.atan2(p.vy,p.vx);
     }
     p.turnVelocity=0;
+    // Hold a descending course long enough to emerge visibly beneath the HUD.
+    p.topRecovery=.65;
     p.climbLoad=0;p.flightRisk=0;p.stallTime=0;
     return true;
   }
@@ -326,6 +328,13 @@ function plane(type,id,x,y,angle){
         p.speed=Math.min(p.speed,p.d.speed*1.22);
         p.vx=Math.cos(p.angle)*p.speed;p.vy=Math.sin(p.angle)*p.speed;
       }
+      return;
+    }
+    if(p.topRecovery>0){
+      p.topRecovery=Math.max(0,p.topRecovery-dt);
+      p.vy=Math.max(p.vy,p.d.speed*.42);
+      p.y+=p.vy*dt;p.x+=p.vx*dt;
+      if(p.x<0)p.x+=W;else if(p.x>W)p.x-=W;
       return;
     }
     const skill=pilotFactors(p),engine=skill.engine,tail=1;
@@ -1079,7 +1088,7 @@ function plane(type,id,x,y,angle){
     if(!rect.width||!rect.height)return;
     // The original logical height remains 180; extra-wide screens show
     // more horizontal sky so 4-player combat will eventually fit naturally.
-    const nextW=clamp(Math.round(H*rect.width/rect.height),520,850);
+    const nextW=clamp(Math.round(H*rect.width/rect.height),320,850);
     const dpr=clamp(window.devicePixelRatio||1,1,3);
     const pixelWidth=Math.max(1,Math.round(rect.width*dpr));
     const pixelHeight=Math.max(1,Math.round(rect.height*dpr));

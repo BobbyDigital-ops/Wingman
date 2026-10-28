@@ -132,3 +132,7 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
 @media (pointer:coarse) and (orientation:landscape) and (max-height:400px){
  .control-btn,.control-cluster.attack .control-btn{width:clamp(60px,19svh,80px)!important;height:clamp(60px,19svh,80px)!important}
 }
+
+/* Mobile hires presentation: don't enlarge low-res scenery with harsh nearest-neighbour blocks.
+   Preserve the separate DPR-scaled vector aircraft/HUD canvas. */
+@media(pointer:coarse){#game{image-rendering:auto!important}.game-frame>.aircraft-layer{image-rendering:auto!important}}
