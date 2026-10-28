@@ -98,7 +98,7 @@ function pilotPortrait(faction,look=0){
  const hairParts=buildPortraitHair(hairStyle,hair);
  // Painted source artwork is independent of old procedural SVG features.
  // Legacy SVG stays as a no-network fallback and preserves saved appearances.
- const artIndex=axis?[0,2,4][((Number(opt.face)||0)+(Number(opt.hair)||0))%3]:
+ const artIndex=Number.isInteger(opt.portraitIndex)?((opt.portraitIndex%5)+5)%5:
    ((Number(opt.face)||0)*3+(Number(opt.hair)||0))%5;
  const paintedArt=window.WingmanPaintedAtlas?
   `<image class="painted-pilot-portrait" href="${window.WingmanPaintedAtlas}" x="${-artIndex*120}" y="0" width="774" height="247" preserveAspectRatio="none"/>`:'';
@@ -173,7 +173,8 @@ function generateCandidates(){
   while(usedFaces.has(style.face))style.face=(style.face+1)%5;
   while(usedStyles.has(style.hairstyle))style.hairstyle=(style.hairstyle+1)%6;
   usedFaces.add(style.face);usedStyles.add(style.hairstyle);
-  if(i===0)style.headwear=2; // always preview at least one hairstyle uncovered
+  style.portraitIndex=i; // three different illustrated faces per recruit set
+  if(i===0)style.headwear=2;
   pool.push({style,attributes:rollAttributes(),id:seed});
  }
  return pool;
@@ -257,11 +258,16 @@ function ladder(run){
  for(let rank=MAX_RANK;rank>=1;rank--){
   const current=rank===run.rank,cleared=rank<run.rank;
   const status=current?'current':cleared?'cleared':'locked';
+  const occupied=new Set();
   const options=[0,1,2].map((lane)=>{
    if(!current)return '<div class="route-node '+status+'" aria-label="Rank '+rank+' route '+(lane+1)+' '+status+'"><span class="route-node-symbol">'+(cleared?'✓':'◆')+'</span><small>'+(cleared?'CLEARED':'UNKNOWN ACE')+'</small></div>';
    const op=run.choices[lane],p=byId[op?.id],record=data.records[op?.id];
    if(!p)return '<div class="route-node locked">?</div>';
-   return '<button class="route-node route-opponent" data-choice="'+lane+'" aria-label="Challenge '+escape(p.name)+'"><span class="route-photo">'+pilotPortrait(p.faction,p.appearance)+'</span><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+'</small>'+(record?'<em>'+record.wins+'–'+record.losses+' RIVALRY</em>':'')+'<span class="route-cta">CHALLENGE →</span></button>';
+   const appearance={...p.appearance};
+   let portraitIndex=((Number(p.id.replace('pilot-',''))||0)*7)%5;
+   while(occupied.has(portraitIndex))portraitIndex=(portraitIndex+1)%5;
+   occupied.add(portraitIndex);appearance.portraitIndex=portraitIndex;
+   return '<button class="route-node route-opponent" data-choice="'+lane+'" aria-label="Challenge '+escape(p.name)+'"><span class="route-photo">'+pilotPortrait(p.faction,appearance)+'</span><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+'</small>'+(record?'<em>'+record.wins+'–'+record.losses+' RIVALRY</em>':'')+'<span class="route-cta">CHALLENGE →</span></button>';
   }).join('');
   rows.push('<section class="route-tier '+status+'" '+(current?'id="active-rung"':'')+'><div class="route-rank">'+(rank===MAX_RANK?'★ FINAL ACE':'RANK '+rank)+(current?' • CHOOSE A BRANCH':'')+'</div><div class="route-fork" aria-hidden="true"><span></span><span></span><span></span></div><div class="route-three">'+options+'</div><div class="route-join" aria-hidden="true"><span></span><span></span><span></span></div></section>');
  }
@@ -287,7 +293,7 @@ function render(){
    <p>WIN / LOSS <b>${ratio}</b></p><p>HIGHEST RANK <b>${Math.min(MAX_RANK,data.best||1)}</b></p>
    <p>NEMESIS <b>${nemesis?escape(byId[nemesis[0]]?.name||'Unknown'):'None yet'}</b></p>
    <p>ACE RUNS COMPLETED <b>${data.completed}</b></p></div></div>
-   <button class="career-primary" data-action="ladder">ROAD TO ACE</button><button data-action="select">CHOOSE A DIFFERENT PILOT</button>`);
+   <button class="career-primary" data-action="ladder">ROAD TO ACE</button><button data-action="portrait">CHANGE PORTRAIT ◀ ▶</button><button data-action="select">CHOOSE A DIFFERENT PILOT</button>`);
   return;
  }
  if(!run){
@@ -319,6 +325,12 @@ screen.addEventListener('click',e=>{
  if(el.dataset.candidate!==undefined)createProfile(Number(el.dataset.candidate));
  if(action==='ladder'){view=data?.run?'ladder':'licence';if(data&&!data.run)view='ladder';render();}
  if(action==='licence'){view='licence';render();}
+ if(action==='portrait'&&data?.profile){
+  const style=data.profile.style||(data.profile.style=appearance(0));
+  const originalArt=((Number(style.face)||0)*3+(Number(style.hair)||0))%5;
+  style.portraitIndex=((Number.isInteger(style.portraitIndex)?style.portraitIndex:originalArt)+1)%5;
+  save();view='licence';render();
+ }
  if(el.dataset.aircraft)startRun(el.dataset.aircraft);
  if(el.dataset.choice!==undefined)fight(Number(el.dataset.choice));
 });
