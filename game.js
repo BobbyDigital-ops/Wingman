@@ -132,7 +132,16 @@ function plane(type,id,x,y,angle){
     g.restore();
   }
   const ARENAS=['ALPINE','COAST','DESERT','STORM'];
+  function syncAbilityButton(){
+    const action=document.getElementById('special');
+    if(!action)return;
+    const role=PLANES[state.selected]?.class||state.selected;
+    const label=role==='fighter'?'BOOST':role==='heavy'?'SHIELD':'BOMBS';
+    action.textContent=label;
+    action.setAttribute('aria-label',role==='bomber'?'Release bomb salvo':role==='heavy'?'Activate defensive shield':'Activate overdrive');
+  }
   function newRound(){
+    syncAbilityButton();
     state.fliers=[
       plane(state.selected,0,W*.22,H*.45,-.14),
       plane(state.enemyType,1,W*.78,H*.52,Math.PI+.15)
@@ -188,7 +197,7 @@ function plane(type,id,x,y,angle){
     state.difficulty=document.getElementById('difficulty-select')?.value||'standard';
     state.arena=Number(document.getElementById('arena-select')?.value||0);
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
-    document.getElementById('bomb').hidden=true;
+    document.getElementById('bomb')?.setAttribute('hidden','');
     background=makeBackground();newRound();
   }
   function startCampaignFight(encounter,aircraft,airframe){
@@ -204,7 +213,7 @@ function plane(type,id,x,y,angle){
     state.difficulty=encounter.difficulty||'standard';
     state.arena=encounter.arena||0;
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
-    document.getElementById('bomb').hidden=true;
+    document.getElementById('bomb')?.setAttribute('hidden','');
     background=makeBackground();newRound();
   }
   window.WingmanGame={startCampaignFight,showMenu:()=>showMenu()};
@@ -225,7 +234,8 @@ function plane(type,id,x,y,angle){
     state.phase='menu';state.paused=false;controls.left=false;controls.right=false;controls.boost=false;
     if(menuReturn)menuReturn.hidden=true;
     ui.result.classList.add('hidden');ui.menu.classList.remove('hidden');
-    document.getElementById('bomb').hidden=true;
+    window.WingmanFlow?.reset?.();
+    document.getElementById('bomb')?.setAttribute('hidden','');
   }
   function endRound(winner){
     if(state.phase!=='playing')return;
@@ -630,18 +640,20 @@ function plane(type,id,x,y,angle){
     p.bombCooldown=Math.max(0,p.bombCooldown-dt);
     p.rearCooldown=Math.max(0,p.rearCooldown-dt);
     if(p.role==='bomber'&&p.rearCooldown<=0&&p.rearShots===0){
-      // A bomber's tail/dorsal gunners defend its rear cone, not the whole sky.
+      // Fighters have forward weapons; bombers have an independent rear
+      // battery. A pilot sitting directly astern gets a sustained, physical
+      // gun burst. Approaches from ahead or the flank remain safer.
       const threats=opponents(p).filter(q=>{
         if(q.spawnSafe>0||q.rollTime>0)return false;
         const dx=wrappedDelta(p.x,q.x),dy=q.y-p.y;
         const along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle);
         const lateral=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
         const range=Math.hypot(dx,dy);
-        return along< -12&&range<142&&lateral<Math.min(50,range*.58);
+        return along< -11&&range<155&&lateral<Math.min(65,range*.70);
       }).sort((a,b)=>combatDistance(p,a)-combatDistance(p,b));
       if(threats.length){
-        p.rearShots=5;p.rearShotTime=0;p.rearTarget=threats[0].id;
-        p.rearCooldown=1.9;
+        p.rearShots=9;p.rearShotTime=0;p.rearTarget=threats[0].id;
+        p.rearCooldown=1.55;
       }
     }
     if(p.role==='bomber'&&p.rearShots>0){
@@ -653,18 +665,28 @@ function plane(type,id,x,y,angle){
           const range=Math.hypot(dx,dy);
           const along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle);
           const lateral=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
-          if(along< -10&&range<155&&lateral<Math.min(56,range*.65)){
-            const speed=205,lead=clamp(range/speed,.1,.65)*.72;
-            const aim=Math.atan2(dy+(target.vy-p.vy*.2)*lead,
-              dx+(target.vx-p.vx*.2)*lead)+random(-.095,.095);
-            state.bullets.push({x:p.x-Math.cos(p.angle)*(p.d.radius+2),
-              y:p.y-Math.sin(p.angle)*(p.d.radius+2),
-              vx:Math.cos(aim)*speed+p.vx*.2,vy:Math.sin(aim)*speed+p.vy*.2,
-              owner:p.id,damage:8,life:.85,age:0,rearGun:true});
-            p.turretFlash=.17;
+          if(along< -9&&range<165&&lateral<Math.min(70,range*.76)){
+            // Lead the target using relative airspeed and preserve real bullet
+            // collisions. Nine 7-damage rounds approach fighter cadence,
+            // but never match the fighter's 10 x 11 primary gun damage.
+            const speed=221;
+            const lead=clamp(range/speed,.05,.78);
+            const muzzleX=p.x-Math.cos(p.angle)*(p.d.radius+4);
+            const muzzleY=p.y-Math.sin(p.angle)*(p.d.radius+4);
+            const aim=Math.atan2(
+              target.y-muzzleY+(target.vy-p.vy*.32)*lead,
+              wrappedDelta(muzzleX,target.x)+(target.vx-p.vx*.32)*lead
+            )+random(-.035,.035);
+            state.bullets.push({
+              x:muzzleX,y:muzzleY,
+              vx:Math.cos(aim)*speed+p.vx*.32,
+              vy:Math.sin(aim)*speed+p.vy*.32,
+              owner:p.id,damage:7,life:1.0,age:0,rearGun:true
+            });
+            p.turretFlash=.12;
           }
         }
-        p.rearShots--;p.rearShotTime=.12;
+        p.rearShots--;p.rearShotTime=.073;
       }
     }
     p.evasiveTime=Math.max(0,(p.evasiveTime||0)-dt);
@@ -1330,13 +1352,14 @@ function plane(type,id,x,y,angle){
   });
   for(const btn of document.querySelectorAll('[data-plane]')){
     btn.addEventListener('click',()=>{
-      state.selected=btn.dataset.plane;
+      state.selected=btn.dataset.plane;syncAbilityButton();
       for(const b of document.querySelectorAll('[data-plane]')){
         const chosen=b===btn;b.classList.toggle('selected',chosen);
         b.setAttribute('aria-pressed',String(chosen));
       }
     });
   }
+  syncAbilityButton();
   ui.start.addEventListener('click',startMatch);
   ui.rematch.addEventListener('click',startMatch);
   ui.change.addEventListener('click',showMenu);
