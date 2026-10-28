@@ -216,3 +216,12 @@ test('plane models have a dedicated display-sized rendering surface',()=>{
  game.listeners.get('start:click')();
  game.advance(12,1000);
 });
+
+test('all six unique side-on aircraft are available in art renderer',()=>{
+ const source=fs.readFileSync(require('node:path').join(__dirname,'../src/art/aircraft.js'),'utf8');
+ const vm=require('node:vm');
+ const window={};vm.runInNewContext(source,{window},{timeout:2000});
+ assert.deepEqual(Array.from(window.WingmanSprites.types).sort(),
+  ['fighter','heavy','bomber','bf109','bf110','he111'].sort());
+ assert.equal(typeof window.WingmanSprites.draw,'function');
+});
