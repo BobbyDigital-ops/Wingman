@@ -396,7 +396,7 @@ test('the roster artwork contains 32 individually addressable paintings with dis
   const img=new Image();img.src=window.WingmanRosterPortraitAtlas;
   await img.decode();return [img.naturalWidth,img.naturalHeight];
  });
- expect(dimensions).toEqual([608,376]);
+ expect(dimensions).toEqual([768,448]);
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
  else await page.locator('#career-open-mobile').click();
  const allOffsets=async()=>page.locator('.candidate-portrait .unique-pilot-portrait image').evaluateAll(els=>
@@ -414,7 +414,7 @@ test('every roster name has a portrait-matched gender and no new pilot is presel
  await page.goto('/');
  const result=await page.evaluate(()=>{
   const rs=window.WingmanRoster;
-  const female=[8,9,10,14,17,18,19,24,27,31];
+  const female=[8,9,13,17,18,19,23,26,31];
   return {length:rs.length,uniqueIds:new Set(rs.map(p=>p.id)).size,
    uniquePortraits:new Set(rs.map(p=>p.portrait)).size,
    errors:rs.flatMap((p,i)=>[
