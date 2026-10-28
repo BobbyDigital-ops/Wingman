@@ -42,7 +42,7 @@ function launch(){
     console
   };
   const instrumented=code.replace('  // All scenery is painted once;',
-    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,hit,steerPlane,updatePlane,controls,aiInput,assignCampaignAI,tailMagnet,shoot,rollWind,updateWind,projectiles,PLANES};\n  // All scenery is painted once;');
+    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,hit,steerPlane,updatePlane,controls,aiInput,assignCampaignAI,tailMagnet,shoot,rollWind,updateWind,projectiles,PLANES,wrappedDelta,combatDistance,interceptPoint};\n  // All scenery is painted once;');
   const artCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/aircraft.js'),'utf8');
   vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
   vm.runInNewContext(instrumented,sandbox,{timeout:3000,filename:'game.js'});
@@ -523,4 +523,49 @@ test('no-wind round leaves the wind force at zero',()=>{
  const w=game.internals.state.wind;
  if(!w.active)assert.equal(w.current,0);
  else {assert.ok(Math.abs(w.current)>0);}
+});
+
+test('AI sees a nearby opponent across the horizontally wrapped boundary',()=>{
+  const game=launch();game.listeners.get('start:click')();
+  const [target,p]=game.internals.state.fliers,W=game.canvas.width;
+  p.x=W-11;p.y=115;p.angle=0;p.vx=0;p.vy=0;
+  p.aiMode='attack';p.aiThink=5;p.aiRecoveryTime=0;p.gunCooldown=4;
+  target.x=13;target.y=115;target.vx=0;target.vy=0;
+  assert.ok(game.internals.combatDistance(p,target)<30);
+  assert.equal(game.internals.wrappedDelta(p.x,target.x),24);
+  assert.equal(game.internals.aiInput(p,target),0,
+    'the shortest pursuit direction points right across the edge');
+});
+test('predicted gun interception accounts for relative movement and wind',()=>{
+  const game=launch();game.listeners.get('start:click')();
+  const [target,p]=game.internals.state.fliers;
+  p.x=80;p.y=100;p.angle=0;p.vx=40;p.vy=0;
+  target.x=155;target.y=100;target.vx=0;target.vy=38;
+  const solution=game.internals.interceptPoint(p,target);
+  assert.ok(solution.time>0);
+  assert.ok(solution.y>target.y,'a moving target requires vertical lead');
+  game.internals.state.wind.current=16;
+  const windy=game.internals.interceptPoint(p,target);
+  assert.ok(windy.x>solution.x,'wind changes the physical intercept geometry');
+});
+test('bullets cross the horizontal boundary and hit an aircraft on the other side',()=>{
+  const game=launch();game.listeners.get('start:click')();
+  const state=game.internals.state,[shooter,target]=state.fliers,W=game.canvas.width;
+  shooter.x=W-55;shooter.y=120;shooter.spawnSafe=0;
+  target.x=4;target.y=120;target.angle=0;target.spawnSafe=0;
+  const armour=target.armour;
+  state.wind.current=0;
+  state.bullets=[{x:W-8,y:120,vx:180,vy:0,owner:0,damage:20,age:.1,life:1}];
+  game.internals.projectiles(1/15);
+  assert.ok(target.armour<armour,'a bullet hitting a wrapped ghost should deal gun damage');
+  assert.equal(state.bullets.length,0);
+});
+test('duel timeouts count remaining armour as well as hull',()=>{
+  const game=launch();game.listeners.get('start:click')();
+  const state=game.internals.state,[player,enemy]=state.fliers;
+  player.health=player.d.hull;player.armour=0;
+  enemy.health=enemy.d.hull*.94;enemy.armour=enemy.d.armour*.94;
+  state.time=.001;
+  game.advance(3,1000);
+  assert.equal(state.scores[1],1,'enemy with more total durability wins timeout');
 });
