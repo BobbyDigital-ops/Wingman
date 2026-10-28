@@ -52,3 +52,31 @@
 .tree-choices:before{content:'';position:absolute;top:-15px;left:16.66%;right:16.66%;height:14px;border-top:2px solid #d3b783;border-left:2px solid #d3b783;border-right:2px solid #d3b783;pointer-events:none}
 .tree-node{min-width:0;min-height:175px;overflow-wrap:anywhere}
 @media(max-width:530px){.tree-choices{grid-template-columns:repeat(3,minmax(0,1fr))}.tree-node{font-size:10px;padding:7px 3px!important}.tree-node .career-small-photo{max-width:100%}}
+
+/* Compact real-phone layout. Keep campaign navigation reachable above
+   Android browser bars and give portrait art a clean saturated backing. */
+@media(pointer:coarse) and (orientation:landscape){
+ .career-screen{padding:7px 8px;overflow:hidden;align-items:center}
+ .career-panel{width:min(96vw,1000px);max-height:calc(100svh - 16px);padding:11px 15px;overflow-y:auto}
+ .career-head{margin-bottom:8px}
+ .career-head h2{font-size:clamp(17px,4svh,26px)}
+ .career-stats{padding:7px 2px}
+ .career-panel .career-muted{margin:5px 0;font-size:11px;line-height:1.3}
+ .ladder-scroll{height:min(44svh,270px);min-height:110px}
+ .tree-spine{padding:10px 5px}
+ .tree-tier{padding:8px 5px 12px!important}
+ .tree-choices{margin-top:14px}
+ .tree-node{min-height:135px;padding:5px!important}
+ .tree-node .career-small-photo{width:clamp(52px,12svh,78px);height:auto;aspect-ratio:5/6}
+ .career-opponent{min-height:135px;gap:4px}
+ .career-opponent strong{font-size:11px;line-height:1.2}
+ .career-small-photo{filter:none}
+ .candidate-portrait{filter:none}
+ .career-photo{filter:none}
+ .career-panel [data-action="close"]{min-height:38px}
+}
+.pilot-avatar{image-rendering:auto!important}
+.career-photo,.candidate-portrait,.career-small-photo{
+ background:#264959;box-shadow:0 3px 15px #030d1ba8;
+ border-color:#b7d3c8;
+}
