@@ -78,7 +78,77 @@ function buildPortraitHair(style,colour){
  };
 }
 
+
+// Luftwaffe character cards: individually composed, centred busts, separate from
+// the established RAF painted atlas. The twenty designs are indexed by pilot ID.
+function germanPilotPortrait(slot){
+ const pilots=window.WingmanRoster||[];
+ const p=pilots.find(x=>x.portrait===slot&&x.faction==='Axis');
+ const i=p?pilots.filter(x=>x.faction==='Axis').findIndex(x=>x.id===p.id):Math.max(0,slot-20);
+ const female=p?.gender==='female';
+ const faces=['#e6b18c','#e2a77e','#c9906c','#efc4a3','#bd876b','#e9b897','#d6a081','#efc9a7','#b68161','#eabda0',
+ '#dbad91','#c98f73','#e8b998','#e0a987','#f0c5a4','#d4a184','#c98b67','#e9b794','#dba68a','#edc3a6'];
+ const hair=['#302c2b','#644530','#b58a5c','#282a29','#85634a','#4a3330','#c1a17c','#453932','#7b4e3c','#b7a27e',
+ '#252528','#5a4437','#aa8260','#3b3030','#6d5040','#b5a078','#2d3335','#77513a','#3b3437','#c18b54'];
+ const uniforms=['#657168','#53645a','#626b5b','#475c59','#6a6657','#53625a'];
+ const backgrounds=['#a1afb1','#8c9692','#a7a79b','#788f96','#a3a19a','#879c99'];
+ const face=faces[i],locks=hair[i],uniform=uniforms[i%6],background=backgrounds[i%6];
+ const headWidth=[24,30,22,25,32,23,26,29,24,27,22,30,26,24,29,22,31,26,23,28][i];
+ const chin=[88,94,85,91,89,97,87,90,98,86,93,88,97,86,94,89,91,99,86,92][i];
+ const brow=[0,2,-1,3,-2,1,-3,2,0,-2,3,-1,2,-2,0,3,-1,1,-3,2][i];
+ const cap=[1,0,2,0,3,1,0,2,1,0,3,2,1,0,2,0,3,1,0,2][i];
+ const moustache=!female&&[0,4,7,11,15,19].includes(i);
+ const beard=!female&&[5,12].includes(i);
+ const glasses=[6,16].includes(i);
+ const monocle=i===9;
+ const eyepatch=i===14;
+ const scar=[2,10,18].includes(i);
+ const pipe=i===5;
+ const goggles=[1,8,13,17].includes(i);
+ const hairShape=female
+ ? '<path d="M30 46Q24 17 54 13Q93 10 94 48L91 103L77 107L81 53L39 49L39 105L26 104Z" fill="'+locks+'"/>'
+ : ['<path d="M34 46Q30 18 48 19Q63 7 80 19L87 42Q67 32 54 38L39 51Z" fill="'+locks+'"/>',
+ '<path d="M30 49L34 20L49 29L58 10L73 26L85 18L91 47L76 40L53 37L38 56Z" fill="'+locks+'"/>',
+ '<path d="M32 45Q36 17 58 14Q82 14 87 43Q70 31 54 38L36 52Z" fill="'+locks+'"/>'][i%3];
+ const hat=cap===1?'<path d="M29 45Q26 17 60 13Q90 14 91 44L79 39L39 41Z" fill="#5b6055" stroke="#333b38" stroke-width="2"/><path d="M30 41Q60 35 93 41L82 49L39 49Z" fill="#323c3b"/><circle cx="60" cy="29" r="3" fill="#c5c5b5"/>'
+ :cap===2?'<path d="M29 48Q28 12 59 11Q93 13 90 50L83 62L79 36Q57 30 41 38L39 65Z" fill="#4b4037" stroke="#272d2d" stroke-width="2"/><path d="M36 36H84" stroke="#a8a39a" stroke-width="3"/>'
+ :cap===3?'<path d="M28 39Q18 26 41 17Q67 7 88 23L89 36L72 42L36 45Z" fill="#4d5c59" stroke="#253b3a" stroke-width="2"/>':'';
+ const ornaments=[
+  '<rect x="18" y="116" width="13" height="7" rx="2" fill="#a6aca0"/>',
+  '<path d="M88 114l12 4l-9 8Z" fill="#a9a48c"/>',
+  '<circle cx="24" cy="120" r="6" fill="#bca66b"/>',
+  '<path d="M89 112l9 8l-9 8l-9-8Z" fill="#b6afa2"/>'
+ ][i%4];
+ // All artwork uses a consistent 120x144 viewBox, centred at x=60.
+ return '<svg class="pilot-avatar german-unique" viewBox="0 0 120 144" role="img" aria-label="'+(p?.name||'Luftwaffe pilot')+' portrait">'+
+ '<rect width="120" height="144" fill="'+background+'"/><path d="M0 65L120 12V0H0Z" fill="#ffffff" opacity=".14"/>'+
+ '<circle cx="92" cy="31" r="32" fill="#f4e7c4" opacity=".12"/>'+
+ '<path d="M0 144Q3 105 37 100L49 91H72L83 100Q119 107 120 144Z" fill="'+uniform+'" stroke="#35463f" stroke-width="3"/>'+
+ '<path d="M34 104L48 143H71L86 103L70 96H49Z" fill="#34433f"/>'+
+ '<path d="M51 88L50 101L60 113L71 100L69 87Z" fill="'+face+'"/>'+
+ hairShape+
+ '<path d="M'+(60-headWidth)+' 50Q'+(60-headWidth-5)+' 27 60 26Q'+(60+headWidth+5)+' 27 '+(60+headWidth)+' 50L'+(60+headWidth-2)+' 73Q75 '+chin+' 60 '+chin+'Q45 '+chin+' '+(60-headWidth+2)+' 73Z" fill="'+face+'" stroke="#825f51" stroke-width="1.5"/>'+
+ '<path d="M'+(60-headWidth+3)+' 58q-8 -5 -6 5q4 11 9 7M'+(60+headWidth-3)+' 58q8 -5 6 5q-4 11 -9 7" fill="'+face+'" stroke="#916e59" stroke-width="1.2"/>'+
+ '<path d="M39 '+(53+brow)+'Q48 '+(48+brow)+' 55 '+(53+brow)+'M65 '+(53-brow)+'Q73 '+(48-brow)+' 81 '+(53-brow)+'" fill="none" stroke="'+locks+'" stroke-width="'+(female?2.4:3.6)+'"/>'+
+ '<ellipse cx="48" cy="61" rx="5.8" ry="2.5" fill="#e8e4d6"/><ellipse cx="73" cy="61" rx="5.8" ry="2.5" fill="#e8e4d6"/>'+
+ '<circle cx="'+(48+i%3-1)+'" cy="61" r="2.25" fill="#384b51"/><circle cx="'+(72+i%3-1)+'" cy="61" r="2.25" fill="#384b51"/>'+
+ '<path d="M60 58l'+(i%4-1)+' 13l-5 1" stroke="#a26b55" stroke-width="1.6" fill="none"/>'+
+ '<path d="M51 79Q60 '+(80+(i%5))+' 69 79" fill="none" stroke="#8d5c54" stroke-width="1.6"/>'+
+ (moustache?'<path d="M45 75Q52 69 59 74Q68 69 76 75Q68 78 60 76Q52 79 45 75Z" fill="'+locks+'"/>':'')+
+ (beard?'<path d="M37 74Q43 92 60 101Q77 93 83 74L76 83Q60 96 44 83Z" fill="'+locks+'" opacity=".85"/>':'')+
+ (glasses?'<g stroke="#3d403c" stroke-width="2.4" fill="none"><circle cx="48" cy="60" r="10"/><circle cx="73" cy="60" r="10"/><path d="M58 59h5M38 59l-6 -4M83 59l5 -4"/></g>':'')+
+ (monocle?'<circle cx="74" cy="60" r="11" stroke="#b6a16b" stroke-width="2" fill="none"/><path d="M84 64Q88 80 86 104" fill="none" stroke="#b6a16b"/>':'')+
+ (eyepatch?'<path d="M32 56L86 46" stroke="#272b2b" stroke-width="3"/><ellipse cx="48" cy="61" rx="10" ry="8" fill="#252a2b"/>':'')+
+ (scar?'<path d="M75 67l-6 16" stroke="#925b50" stroke-width="2.5"/>':'')+
+ (pipe?'<path d="M69 79l19 8l8 -11" stroke="#503b30" stroke-width="3" fill="none"/>':'')+
+ hat+
+ (goggles?'<rect x="37" y="'+(cap===2?32:18)+'" width="20" height="11" rx="5" stroke="#b0a487" stroke-width="3" fill="#5b858a"/><rect x="64" y="'+(cap===2?32:18)+'" width="20" height="11" rx="5" stroke="#b0a487" stroke-width="3" fill="#5b858a"/>':'')+
+ ornaments+
+ '<path d="M8 8H24M8 8V23M111 135H97M111 135V120" fill="none" stroke="#e2ded0" stroke-width="1.4" opacity=".65"/></svg>';
+}
+
 function pilotPortrait(faction,look=0){
+ if(faction==='Axis'&&typeof look==='object'&&Number.isInteger(look.rosterPortrait))return germanPilotPortrait(look.rosterPortrait);
  const opt=typeof look==='object'?look:appearance(look);
  const axis=faction==='Axis';
  const skins=['#f9bc93','#df9e78','#b97957','#895b4c','#f8d2ac'];
