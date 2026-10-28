@@ -3,14 +3,94 @@
 (function(){
 'use strict';
 const types=['fighter','heavy','bomber','bf109','bf110','he111'];
+// Each type has a distinct 1940s-inspired squadron livery. These pigments
+// alter only fill/shading/markings, never the established airframe silhouette.
 const palettes={
- fighter:{base:'#627057',light:'#a5a995',dark:'#38453f',glass:'#98c4ce',nation:'raf'},
- heavy:{base:'#5b6955',light:'#a3aa95',dark:'#394640',glass:'#9fc8ce',nation:'raf'},
- bomber:{base:'#535f50',light:'#a0a795',dark:'#343f39',glass:'#a6c7cc',nation:'raf'},
- bf109:{base:'#7d897e',light:'#c1c7b8',dark:'#4a5a54',glass:'#a4c8d0',nation:'german'},
- bf110:{base:'#78877a',light:'#b3c0b2',dark:'#46584f',glass:'#a4c9d0',nation:'german'},
- he111:{base:'#738174',light:'#b9c1b2',dark:'#42564e',glass:'#9dcad0',nation:'german'}
+ fighter:{base:'#6d7b5d',light:'#d4c3a0',dark:'#34483c',glass:'#9fcfda',nation:'raf',camouflage:['#345849','#958362'],trim:'#ead7b2',serial:'DW-K'},
+ heavy:{base:'#51717a',light:'#b0c6bb',dark:'#29464c',glass:'#9fd0d8',nation:'raf',camouflage:['#365e69','#708d81'],trim:'#dae0bc',serial:'NE-O'},
+ bomber:{base:'#746c50',light:'#c0ac85',dark:'#34493e',glass:'#a5cad0',nation:'raf',camouflage:['#365548','#887d58'],trim:'#dccf9e',serial:'VN-A'},
+ bf109:{base:'#91a9b1',light:'#d9dbd4',dark:'#566c70',glass:'#a9d5df',nation:'german',camouflage:['#5d7265','#9baca5'],trim:'#e8e6db',serial:'Y-1'},
+ bf110:{base:'#4f657a',light:'#9cabb4',dark:'#2b3d51',glass:'#91c4d1',nation:'german',camouflage:['#314a60','#657786'],trim:'#becbcc',serial:'S-2'},
+ he111:{base:'#918767',light:'#d6c9a2',dark:'#586650',glass:'#b2d1cd',nation:'german',camouflage:['#697852','#a18c65'],trim:'#ddd5b5',serial:'K-3'}
 };
+function litPalette(g,type){
+ const p=palettes[type];
+ // Local-space gradients follow the existing 2D drawing without changing the
+ // physical outline, collision shape, sprite scale or angular response.
+ const grad=(stops,x1=-11,y1=-6,x2=10,y2=7)=>{
+  const v=g.createLinearGradient(x1,y1,x2,y2);
+  for(const [at,c] of stops)v.addColorStop(at,c);
+  return v;
+ };
+ return {...p,
+  base:grad([[0,p.light],[.28,p.base],[.62,p.base],[1,p.dark]]),
+  light:grad([[0,p.trim],[.3,p.light],[1,p.base]],-10,-5,12,6),
+  dark:grad([[0,p.camouflage[0]],[.6,p.dark],[1,'#172e38']],-6,-7,12,7),
+  glass:grad([[0,'#e0eff0'],[.4,p.glass],[1,'#417580']],-4,-6,7,1)
+ };
+}
+// Painted wing camouflage is clipped to the actual old outline. This is
+// intentional: the new illustration cannot expand or distort any aircraft.
+function wingSkin(g,p,kind){
+ g.save();g.beginPath();
+ if(kind==='single'){
+  g.moveTo(-4,1.15);g.lineTo(2.2,.6);g.lineTo(9.4,4.3);
+  g.quadraticCurveTo(9.5,5.15,8.2,5.2);g.lineTo(-2.7,3.4);
+ }else if(kind==='twin'){
+  g.moveTo(-5,1.4);g.lineTo(3,.8);g.lineTo(10.2,4.6);
+  g.quadraticCurveTo(9.8,5.45,8.2,5.25);g.lineTo(-3.5,3.7);
+ }else{
+  g.moveTo(-7,1.3);g.lineTo(5,.85);g.lineTo(14,5.5);
+  g.quadraticCurveTo(13.7,6.45,11.7,6.2);g.lineTo(-5,3.75);
+ }
+ g.closePath();g.clip();
+ const isBomber=kind==='bomber';
+ const segments=isBomber?[[0,1.2,5.5,3],[9,3.2,4.2,1.9],[-5,2.1,4.1,2.1]]:
+   [[-2.3,2.1,4.6,2.1],[5.7,3.5,3.2,1.7],[2.1,1.5,2.2,1.1]];
+ g.globalAlpha=.76;
+ for(let i=0;i<segments.length;i++){
+  const [x,y,rx,ry]=segments[i];
+  g.fillStyle=p.camouflage[(i+(p.nation==='german'?1:0))%2];
+  g.beginPath();g.ellipse(x,y,rx,ry,-.20+i*.31,0,Math.PI*2);g.fill();
+ }
+ g.globalAlpha=.22;g.strokeStyle='#f5eed6';g.lineWidth=.17;
+ for(const dy of [1.9,2.8,3.75,4.9]){
+  g.beginPath();g.moveTo(-8,dy);g.lineTo(16,dy+1.2);g.stroke();
+ }
+ g.restore();
+}
+function fuselageSkin(g,p,kind){
+ g.save();g.beginPath();
+ // Only a narrow, in-bounds upper fuselage band is touched, so this cannot
+ // alter edge shape even for the smallest fighter aircraft.
+ const w=kind==='single'?10:kind==='twin'?11:14;
+ g.moveTo(-w,-.75);g.quadraticCurveTo(-4,-1.7,0,-1.8);
+ g.lineTo(w-1,-1.45);g.lineTo(w-1,-.6);
+ g.lineTo(-w,-.15);g.closePath();g.clip();
+ g.globalAlpha=p.nation==='german'?.60:.71;
+ for(const [i,x] of [-8,-3,2,7,12].entries()){
+  g.fillStyle=p.camouflage[i%2];g.beginPath();
+  g.ellipse(x,-.7,i%2?2.5:3.7,.8,i*.18,0,Math.PI*2);g.fill();
+ }
+ g.restore();
+}
+function finishDetail(g,p,kind){
+ // Light airframe panels, restrained rivets and engine soot. Aircraft
+ // markings are hand-drawn on top of them by the existing code.
+ g.save();
+ g.lineCap='round';g.strokeStyle=p.trim;g.globalAlpha=.34;g.lineWidth=.20;
+ const span=kind==='bomber'?12:kind==='twin'?9:7;
+ for(let x=-span;x<span;x+=3.1){
+  g.beginPath();g.moveTo(x,-.7);g.lineTo(x+.5,.35);g.stroke();
+ }
+ g.globalAlpha=.23;g.fillStyle='#f4efdc';
+ for(let x=-span;x<span;x+=2.2){
+  g.beginPath();g.arc(x,1.04,.12,0,Math.PI*2);g.fill();
+ }
+ g.globalAlpha=.22;g.fillStyle='#0a2430';
+ g.beginPath();g.ellipse(kind==='single'?6:3,1.4,kind==='bomber'?5:3,.46,-.08,0,Math.PI*2);g.fill();
+ g.restore();
+}
 function path(g,paint,trace,draw){
  g.beginPath();draw(g);g.closePath();g.fillStyle=paint;g.fill();
  if(trace){g.lineWidth=.55;g.strokeStyle=trace;g.stroke();}
@@ -59,12 +139,14 @@ function fighter(g,p,is109){
  });
  path(g,p.light,null,c=>{c.moveTo(-8,-1.4);c.lineTo(4,-1.8);c.quadraticCurveTo(9,-2,11,-1.1);c.lineTo(3,-.95);c.lineTo(-8,-.45);});
  path(g,p.dark,null,c=>{c.moveTo(-5,1.75);c.lineTo(9,1.45);c.lineTo(7.6,2.05);c.lineTo(-3.5,2.2);});
+ fuselageSkin(g,p,'single');
  // Wing root is a strong shoulder, not a floating rectangle.
  path(g,p.dark,'#33423c',c=>{
   c.moveTo(-4,1.15);c.lineTo(2.2,.6);c.lineTo(9.4,4.3);
   c.quadraticCurveTo(9.5,5.15,8.2,5.2);c.lineTo(-2.7,3.4);
  });
  path(g,p.light,null,c=>{c.moveTo(-2.7,1.45);c.lineTo(2,1.15);c.lineTo(8.8,4.45);c.lineTo(-1.7,3);});
+ wingSkin(g,p,'single');finishDetail(g,p,'single');
  roundel(g,3.8,3.3,p.nation,.75);
  // Different cockpit lines make the Spitfire and Bf 109 recognisable.
  if(is109){
@@ -96,8 +178,10 @@ function twin(g,p,is110){
   c.quadraticCurveTo(-11,1.9,tx-1,0);
  });
  path(g,p.light,null,c=>{c.moveTo(-8.3,-1.45);c.lineTo(6.5,-2);c.lineTo(11.2,-1);c.lineTo(-7.8,-.3);});
+ fuselageSkin(g,p,'twin');
  path(g,p.dark,'#32413c',c=>{c.moveTo(-5,1.4);c.lineTo(3,.8);c.lineTo(10.2,4.6);c.quadraticCurveTo(9.8,5.45,8.2,5.25);c.lineTo(-3.5,3.7);});
  path(g,p.light,null,c=>{c.moveTo(-3.8,1.65);c.lineTo(2.9,1.3);c.lineTo(9.5,4.75);c.lineTo(-3.1,3.2);});
+ wingSkin(g,p,'twin');finishDetail(g,p,'twin');
  // Visible nacelles belong to the wing, with the far engine offset.
  for(const [xx,yy,far] of [[-1,1.35,true],[5.2,2.9,false]]){
   path(g,far?p.dark:p.base,'#33443e',c=>{
@@ -130,10 +214,12 @@ function bomber(g,p,is111){
   c.quadraticCurveTo(-13,2.25,tx-1,0);
  });
  path(g,p.light,null,c=>{c.moveTo(-12,-1.9);c.lineTo(8.5,-2.35);c.lineTo(14,-1.7);c.lineTo(12,-.65);c.lineTo(-12,-.55);});
+ fuselageSkin(g,p,'bomber');
  path(g,p.dark,null,c=>{c.moveTo(-12,2.1);c.lineTo(12,2.3);c.lineTo(8,3.2);c.lineTo(-7,2.85);});
  // Deep wing root, tapered tip, visually connected to the fuselage.
  path(g,p.dark,'#364540',c=>{c.moveTo(-7,1.3);c.lineTo(5,.85);c.lineTo(14,5.5);c.quadraticCurveTo(13.7,6.45,11.7,6.2);c.lineTo(-5,3.75);});
  path(g,p.light,null,c=>{c.moveTo(-5,1.6);c.lineTo(4,1.4);c.lineTo(13,5.6);c.lineTo(-4.8,3.2);});
+ wingSkin(g,p,'bomber');finishDetail(g,p,'bomber');
  for(const [xx,yy,far] of [[-2.8,1.25,true],[4.5,3.15,false]]){
   path(g,far?p.dark:p.base,'#344640',c=>{
    c.moveTo(xx-3.2,yy-.7);c.lineTo(xx+2.7,yy-1);
@@ -184,7 +270,8 @@ function strokeDetails(g,p){
  for(const x of [-1.1,4.2])g.fillRect(x+2,3.2,3,.75);
 }
 function draw(g,type,variant){
- const p=palettes[type];if(!p)return;
+ if(!palettes[type])return;
+ const p=litPalette(g,type);
  g.save();g.lineCap='round';g.lineJoin='round';
  if(type==='fighter'||type==='bf109')fighter(g,p,type==='bf109');
  else if(type==='heavy'||type==='bf110')twin(g,p,type==='bf110');
@@ -195,5 +282,5 @@ function draw(g,type,variant){
  }
  g.restore();
 }
-window.WingmanSprites={draw,types};
+window.WingmanSprites={draw,types,liveries:Object.fromEntries(types.map(t=>[t,{nation:palettes[t].nation,camouflage:palettes[t].camouflage,serial:palettes[t].serial}]))};
 })();
