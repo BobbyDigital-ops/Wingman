@@ -2,7 +2,7 @@
    Gameplay is separated from rendering so input can later be sourced from networking. */
 (() => {
   'use strict';
-  let W=320; const H=180, STEP=1/60, TAU=Math.PI*2;
+  let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
   const modelCanvas=document.getElementById('aircraft-layer');
@@ -66,8 +66,8 @@
   }
   function newRound(){
     state.fliers=[
-      plane(state.selected,0,W*.19,81,-.14),
-      plane(state.enemyType,1,W*.81,92,Math.PI+.15)
+      plane(state.selected,0,W*.22,H*.45,-.14),
+      plane(state.enemyType,1,W*.78,H*.52,Math.PI+.15)
     ];
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.time=90;state.impactLock=0;state.phase='playing';state.paused=false;
@@ -261,12 +261,12 @@
     p.x+=p.vx*dt;p.y+=p.vy*dt;
     // A soft, continuous boundary recovery avoids frame-to-frame angle snaps.
     const margin=15;
-    if(p.x<margin||p.x>W-margin||p.y<37||p.y>H-15){
-      p.x=clamp(p.x,margin,W-margin);p.y=clamp(p.y,37,H-15);
+    if(p.x<margin||p.x>W-margin||p.y<37||p.y>H-18){
+      p.x=clamp(p.x,margin,W-margin);p.y=clamp(p.y,37,H-18);
       const inward=Math.atan2(H*.52-p.y,W*.5-p.x);
       p.angle+=clamp(angleDiff(inward,p.angle),-2.7*dt,2.7*dt);
       if(p.x===margin&&p.vx<0||p.x===W-margin&&p.vx>0)p.vx=0;
-      if(p.y===37&&p.vy<0||p.y===H-15&&p.vy>0)p.vy=0;
+      if(p.y===37&&p.vy<0||p.y===H-18&&p.vy>0)p.vy=0;
     }
   }
   // Tactical AI: state changes prevent indefinite tail-chasing and combat orbits.
@@ -277,7 +277,7 @@
     const facing=Math.abs(angleDiff(targetAngle,p.angle));
     const enemyBehind=Math.abs(angleDiff(Math.atan2(p.y-target.y,p.x-target.x),target.angle))<.65;
     if(p.aiThink<=0){
-      if(p.x<45||p.x>W-45||p.y<43||p.y>H-31) p.aiMode='recover';
+      if(p.x<45||p.x>W-45||p.y<46||p.y>H-24) p.aiMode='recover';
       else if(target.burstLeft>0&&range<95) p.aiMode='evade';
       else if(enemyBehind&&range<80) p.aiMode='break';
       else if(p.gunCooldown>0&&range<110) p.aiMode='extend';
@@ -309,7 +309,7 @@
       if(p.y<target.y-14&&Math.abs((p.x+p.vx*.15)-(target.x+target.vx*.15))<24)
         triggerBomb(p);
     }
-    tx=clamp(tx,32,W-32);ty=clamp(ty,48,H-31);
+    tx=clamp(tx,32,W-32);ty=clamp(ty,48,H-27);
     const goal=Math.atan2(ty-p.y,tx-p.x);
     const error=angleDiff(goal,p.angle);
     const turn=Math.abs(error)<.085?0:Math.sign(error);
@@ -380,7 +380,7 @@
           state.bullets.splice(i,1);continue;
         }
       }
-      if(b.life<=0||b.x<0||b.x>W||b.y<31||b.y>176)
+      if(b.life<=0||b.x<0||b.x>W||b.y<31||b.y>H-4)
         state.bullets.splice(i,1);
     }
     for(let i=state.bombs.length-1;i>=0;i--){
@@ -390,8 +390,8 @@
       b.age=(b.age||0)+dt;
       b.vy+=94*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
       const target=state.fliers[1-b.owner];
-      if(b.y>=172||(b.age>.24&&target&&target.alive&&distance(b,target)<target.d.radius+4)){
-        explosion(b.x,Math.min(b.y,172),24,b.owner,55);
+      if(b.y>=H-8||(b.age>.24&&target&&target.alive&&distance(b,target)<target.d.radius+4)){
+        explosion(b.x,Math.min(b.y,H-8),24,b.owner,55);
         state.bombs.splice(i,1);continue;
       }
       if(b.life<=0||b.x<0||b.x>W)state.bombs.splice(i,1);
@@ -458,6 +458,8 @@
   function makeBackground(){
     const c=document.createElement('canvas');c.width=W;c.height=H;
     const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
+    ctx.fillStyle='#73adcf';ctx.fillRect(0,0,W,H);
+    ctx.save();ctx.translate(0,H-180);
     // A few solid sky bands, rather than an expensive per-frame gradient.
     const skies=['#6fa9cf','#80b6d4','#92c3d9','#a9d0da','#bfd9d8'];
     skies.forEach((v,i)=>{ctx.fillStyle=v;ctx.fillRect(0,30+i*18,W,19);});
@@ -561,6 +563,7 @@
       const x=rnd()*W,y=162+rnd()*18;
       rect(x,y,rnd()>.65?2:1,1,rnd()>.5?'#7eaaa5':'#436a74');
     }
+    ctx.restore();
     return c;
   }
   let background=makeBackground();
@@ -575,6 +578,7 @@
       c.beginPath();c.ellipse(0,0,15,14,0,0,TAU);
       c.strokeStyle='#b1ecf5c9';c.lineWidth=.75;c.stroke();
     }
+    c.scale(1.22,1.22);
     aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':'level');
     if(p.hitFlash>0){
       c.beginPath();c.ellipse(0,0,12,8,0,0,TAU);
@@ -768,7 +772,7 @@
     if(!rect.width||!rect.height)return;
     // The original logical height remains 180; extra-wide screens show
     // more horizontal sky so 4-player combat will eventually fit naturally.
-    const nextW=clamp(Math.round(H*rect.width/rect.height),480,650);
+    const nextW=clamp(Math.round(H*rect.width/rect.height),520,850);
     const dpr=clamp(window.devicePixelRatio||1,1,3);
     const pixelWidth=Math.max(1,Math.round(rect.width*dpr));
     const pixelHeight=Math.max(1,Math.round(rect.height*dpr));
