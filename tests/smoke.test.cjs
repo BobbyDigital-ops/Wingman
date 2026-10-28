@@ -177,7 +177,7 @@ test('Spitfire has effective guns while remaining controllable',()=>{
  game.listeners.get('start:click')();
  const s=game.internals.state.fliers[0];
  assert.equal(s.d.speed,83);
- assert.equal(s.d.damage,15);
+ assert.equal(s.d.damage,9);
  assert.equal(s.d.burst,10);
  assert.ok(s.d.turn>3);
 });
