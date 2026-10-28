@@ -18,6 +18,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Install browser
         run: npx playwright install --with-deps chromium
+      - name: Run deterministic combat regression tests
+        run: npm run test:unit
       - name: Run browser tests
         run: npm run test:browser
       - name: Upload failure screenshots, video, and traces

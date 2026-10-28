@@ -37,6 +37,30 @@
   const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
   const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const angleDiff=(target,current)=>Math.atan2(Math.sin(target-current),Math.cos(target-current));
+  // Flight and targeting share the same horizontally wrapping sky.
+  const wrappedDelta=(from,to)=>{
+    let dx=to-from;
+    if(dx>W*.5)dx-=W;else if(dx< -W*.5)dx+=W;
+    return dx;
+  };
+  const combatDistance=(a,b)=>Math.hypot(wrappedDelta(a.x,b.x),b.y-a.y);
+  // Predict relative bullet travel; AI must physically steer into the solution.
+  function interceptPoint(shooter,target){
+    const dx=wrappedDelta(shooter.x,target.x),dy=target.y-shooter.y;
+    const vx=target.vx-shooter.vx*.35+(state.wind?.current||0)*.82;
+    const vy=target.vy-shooter.vy*.35;
+    const speed=shooter.d.bulletSpeed*pilotFactors(shooter).gun;
+    const a=vx*vx+vy*vy-speed*speed,b=2*(dx*vx+dy*vy),cc=dx*dx+dy*dy;
+    let t=Math.sqrt(cc)/Math.max(speed,1),discriminant=b*b-4*a*cc;
+    if(Math.abs(a)>1e-6&&discriminant>=0){
+      const root=Math.sqrt(discriminant);
+      const options=[(-b-root)/(2*a),(-b+root)/(2*a)].filter(n=>n>0);
+      if(options.length)t=Math.min(...options);
+    }else if(Math.abs(a)<=1e-6&&Math.abs(b)>1e-6&&-cc/b>0)t=-cc/b;
+    t=clamp(t,0,1.2);
+    return {x:shooter.x+dx+target.vx*t+(state.wind?.current||0)*.82*t,
+      y:target.y+target.vy*t,time:t};
+  }
   const palette={sky:'#95c7df',ink:'#243945',cream:'#f2e1ad',red:'#e88469'};
 
   function audioUnlock(){
@@ -230,7 +254,7 @@ function plane(type,id,x,y,angle){
     p.burstLeft=p.d.burst;p.shotTimer=0;
   }
   function opponents(p){return state.fliers.filter(other=>other.alive&&other.id!==p.id&&(!state.teams||other.team!==p.team));}
-  function nearestEnemy(p){return opponents(p).sort((a,b)=>distance(p,a)-distance(p,b))[0];}
+  function nearestEnemy(p){return opponents(p).sort((a,b)=>combatDistance(p,a)-combatDistance(p,b))[0];}
   function triggerSpecial(p){
     if(!p||!p.alive||p.specialCooldown>0||state.phase!=='playing'||state.paused)return;
     if(p.role==='fighter'){
@@ -434,8 +458,7 @@ function plane(type,id,x,y,angle){
     const enemy=nearestEnemy(p);
     if(!enemy||Math.abs(angleDiff(enemy.angle,p.angle))>.36)return 0;
     const dirX=Math.cos(enemy.angle),dirY=Math.sin(enemy.angle);
-    let dx=enemy.x-p.x;
-    if(dx>W*.5)dx-=W;else if(dx< -W*.5)dx+=W;
+    const dx=wrappedDelta(p.x,enemy.x);
     const dy=enemy.y-p.y;
     const range=Math.hypot(dx,dy);
     if(range<17||range>82||dx*Math.cos(p.angle)+dy*Math.sin(p.angle)<10)return 0;
@@ -467,11 +490,10 @@ function plane(type,id,x,y,angle){
     const rankAI=state.mode==='campaign'&&p.id>0;
     const talent=rankAI?(p.aiSkillLevel||0):state.difficulty==='ace'?1:state.difficulty==='rookie'?0:.55;
     const style=rankAI?p.aiStyle:'hunter';
-    const range=distance(p,target);
-    const targetAngle=Math.atan2(target.y-p.y,target.x-p.x);
-    const facing=Math.abs(angleDiff(targetAngle,p.angle));
+    const range=combatDistance(p,target);
+    const targetAngle=Math.atan2(target.y-p.y,wrappedDelta(p.x,target.x));
     if(target.smokescreen>0&&p.aiMode==='attack'&&Math.random()<.36)p.aiThink=Math.max(p.aiThink,.28);
-    const enemyBehind=Math.abs(angleDiff(Math.atan2(p.y-target.y,p.x-target.x),target.angle))<.65;
+    const enemyBehind=Math.abs(angleDiff(Math.atan2(p.y-target.y,wrappedDelta(target.x,p.x)),target.angle))<.65;
     // Begin pulling out BEFORE the impact point is reached. Account for
     // downward velocity, pitch, and the inertia of heavy aircraft.
     const diveSpeed=Math.max(0,p.vy);
@@ -502,11 +524,17 @@ function plane(type,id,x,y,angle){
       if(rankAI&&talent<.58&&Math.random()<(1-talent)*.16)p.aiMistake=.3+(1-talent)*.35;
       p.aiThink=rankAI?.75-talent*.53+Math.random()*(.29-talent*.12):(state.difficulty==='rookie'?.68:state.difficulty==='ace'?.23:.35)+Math.random()*.22;
     }
-    let tx=target.x+target.vx*.36,ty=target.y+target.vy*.36;
-    if(rankAI){const lead=.13+talent*.54;tx=target.x+target.vx*lead;ty=target.y+target.vy*lead;
+    const solution=interceptPoint(p,target);
+    // Rookies aim near present position; aces account for bullet travel time.
+    // Neither receives homing bullets or forced steering.
+    const lead=rankAI?.18+talent*.72:state.difficulty==='rookie'?.20:state.difficulty==='ace'?.90:.55;
+    const aimDx=solution.x-(p.x+wrappedDelta(p.x,target.x));
+    let tx=target.x+aimDx*lead,ty=target.y+(solution.y-target.y)*lead;
+    if(rankAI){
       if(style==='duellist'&&range<110)ty-=18;
       if(style==='hunter'&&range<125)tx+=target.vx*.13;
-      if(p.aiMistake>0){p.aiMistake=Math.max(0,p.aiMistake-STEP);ty+=25*(1-talent);}}
+      if(p.aiMistake>0){p.aiMistake=Math.max(0,p.aiMistake-STEP);ty+=25*(1-talent);}
+    }
 
     if(p.aiMode==='recover'){tx=p.x+Math.cos(p.angle)*25;ty=H*.43;}
     if(p.aiMode==='extend'){
@@ -519,8 +547,7 @@ function plane(type,id,x,y,angle){
       if(p.rollRecovery<=0&&range<75)triggerRoll(p);
     }
     if(p.aiMode==='intercept'){
-      const lead=rankAI?.16+talent*.55:state.difficulty==='ace'?.69:state.difficulty==='rookie'?.24:.55;
-      tx=target.x+target.vx*lead;ty=target.y+target.vy*lead;
+      tx=target.x+aimDx*lead;ty=target.y+(solution.y-target.y)*lead;
       if(p.energy<38)ty=Math.max(70,ty);
     }
     // The AI can spend limited boost to intercept or extend out of danger.
@@ -531,17 +558,21 @@ function plane(type,id,x,y,angle){
       ty=p.y>target.y-25?Math.max(43,target.y-48):Math.max(45,target.y-22);
       if(p.y>target.y-16&&p.specialCooldown<=0)
         triggerSpecial(p);
-      if(p.y<target.y-14&&Math.abs((p.x+p.vx*.15)-(target.x+target.vx*.15))<29&&p.specialCooldown<=0)
+      if(p.y<target.y-14&&Math.abs(wrappedDelta(p.x+p.vx*.15,target.x+target.vx*.15))<29&&p.specialCooldown<=0)
         triggerSpecial(p);
     }
-    tx=clamp(tx,12,W-12);ty=clamp(ty,48,H-43);
+    // Never clamp x to screen edges: crossing the seam is a normal path.
+    ty=clamp(ty,48,H-43);
+    const facing=Math.abs(angleDiff(targetAngle,p.angle));
     if(p.role==='fighter'&&p.aiMode==='attack'&&range<65&&facing>1){tx=p.x+p.vx*.65;ty=clamp(p.y-35,45,H-30);}
-    const dx=tx-p.x;const wrapDx=Math.abs(dx)>W*.5?dx-Math.sign(dx)*W:dx;
+    const wrapDx=wrappedDelta(p.x,tx);
     const goal=Math.atan2(ty-p.y,wrapDx);
     const error=angleDiff(goal,p.angle);
     const turn=Math.abs(error)<.085?0:Math.sign(error);
-    if(p.aiMode==='attack'&&range<(rankAI?115+talent*65:165)&&facing<(rankAI?.11+talent*.14:state.difficulty==='rookie'?.13:state.difficulty==='ace'?.22:.18)&&p.gunCooldown<=0&&p.burstLeft===0&&
-      (p.role!=='bomber'||range<65&&Math.random()<.12))triggerBurst(p);
+    const tolerance=rankAI?.11+talent*.14:state.difficulty==='rookie'?.13:state.difficulty==='ace'?.22:.18;
+    if(p.aiMode==='attack'&&range<(rankAI?115+talent*65:165)&&Math.abs(error)<tolerance&&
+      target.spawnSafe<=0&&target.rollTime<=0&&p.gunCooldown<=0&&p.burstLeft===0&&
+      (p.role!=='bomber'||range<72&&Math.random()<.16))triggerBurst(p);
     if(p.specialCooldown<=0){
       if(p.role==='heavy'&&range<100&&(p.health<p.d.hull*.7||target.burstLeft>0))triggerSpecial(p);
       if(p.role==='fighter'&&(p.aiMode==='intercept'||p.aiMode==='extend')&&range>75)triggerSpecial(p);
@@ -637,24 +668,28 @@ function plane(type,id,x,y,angle){
       // by touching another airframe: rounds must leave the collision envelope.
       let struck=false;
       for(const target of targets){
-        const clear=shooter&&distance(target,shooter)>target.d.radius+shooter.d.radius+3;
+        const clear=shooter&&combatDistance(target,shooter)>target.d.radius+shooter.d.radius+3;
         if(!clear||target.rollTime>0||target.evasiveTime>0||b.age<=.035)continue;
         const vx=b.x-px,vy=b.y-py,denom=vx*vx+vy*vy;
-        const t=denom>0?clamp(((target.x-px)*vx+(target.y-py)*vy)/denom,0,1):0;
-        const nx=px+t*vx,ny=py+t*vy;
-        // Rotate the contact point into the airframe's own axes.
-        // Extended fuselage and wing are independently hittable; no huge
-        // circular hit area around larger bombers.
-        const rx=nx-target.x,ry=ny-target.y;
-        const longitudinal=rx*Math.cos(target.angle)+ry*Math.sin(target.angle);
-        const lateral=-rx*Math.sin(target.angle)+ry*Math.cos(target.angle);
+        // Extended fuselage and wing are independently hittable, without a
+        // giant circular hit area around the bombers.
         const halfLength=target.role==='bomber'?10.8:target.role==='heavy'?9.3:7.8;
         const wingWidth=target.role==='bomber'?4.5:target.role==='heavy'?4.1:3.5;
-        const hitBody=Math.abs(longitudinal)<=halfLength&&Math.abs(lateral)<=3.3;
-        const hitWing=Math.abs(longitudinal)<=halfLength*.55&&Math.abs(lateral)<=wingWidth;
-        if(hitBody||hitWing){
-          hit(target,b.damage,b.x,b.y,undefined,'GUN');struck=true;break;
+        // Closest point AND collision geometry must use the same wrapped
+        // target image; otherwise bullets miss on the frame they cross x=0.
+        for(const shiftedX of [target.x-W,target.x,target.x+W]){
+          const t=denom>0?clamp(((shiftedX-px)*vx+(target.y-py)*vy)/denom,0,1):0;
+          const nx=px+t*vx,ny=py+t*vy;
+          const rx=nx-shiftedX,ry=ny-target.y;
+          const longitudinal=rx*Math.cos(target.angle)+ry*Math.sin(target.angle);
+          const lateral=-rx*Math.sin(target.angle)+ry*Math.cos(target.angle);
+          const hitBody=Math.abs(longitudinal)<=halfLength&&Math.abs(lateral)<=3.3;
+          const hitWing=Math.abs(longitudinal)<=halfLength*.55&&Math.abs(lateral)<=wingWidth;
+          if(hitBody||hitWing){
+            hit(target,b.damage,nx,ny,undefined,'GUN');struck=true;break;
+          }
         }
+        if(struck)break;
       }
       if(struck){state.bullets.splice(i,1);continue;}
       if(b.x<0)b.x+=W;else if(b.x>W)b.x-=W;
@@ -708,7 +743,11 @@ function plane(type,id,x,y,angle){
         else if(opponents(user).every(p=>!p.alive))endRound(0);
         else if(state.time<=0)endRound(1);
       }else if(state.time<=0){
-        const enemy=enemies[0],a=user.health/user.d.hull,b=enemy.health/enemy.d.hull;
+        const enemy=enemies[0];
+        // Armour and hull both count: an intact hull with no armour is
+        // not equivalent to a completely undamaged aircraft at timeout.
+        const condition=p=>(p.health+p.armour)/(p.d.hull+p.d.armour);
+        const a=condition(user),b=condition(enemy);
         endRound(Math.abs(a-b)<.025?-1:a>b?0:1);
       }
     }
