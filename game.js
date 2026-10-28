@@ -100,7 +100,7 @@ function pilotFactors(p){
 function plane(type,id,x,y,angle){
     const d=PLANES[type];
     return {overdriveTime:0,bombQueue:0,bombInterval:0,bombRunId:0,attributes:pilotAttributes(),pilotSkill:'roll',skillCooldown:0,smokescreen:0,hardenTime:0,deadeyeTime:0,engineCutTime:0,diveTime:0,id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
-      vy:Math.sin(angle)*d.speed*.8,health:d.hull,armour:d.armour,rearCooldown:0,rearShots:0,rearShotTime:0,
+      vy:Math.sin(angle)*d.speed*.8,health:d.hull,armour:d.armour,rearCooldown:0,rearShots:0,rearShotTime:0,aiBombDelay:id>0?4.5:0,turretFlash:0,
       critical:false,criticalCause:'',flightRisk:0,climbLoad:0,aiRecoveryTime:0,tailAssist:0,
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boostCharge:100,boosting:false,aiBoost:false,
       spawnSafe:1.0,smokeTimer:0,hitFlash:0,alive:true,aiThink:0,
@@ -172,6 +172,7 @@ function plane(type,id,x,y,angle){
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
     state.time=state.mode==='survival'?70:state.mode==='campaign'?120:90;state.impactLock=0;state.phase='playing';state.paused=false;
+    if(menuReturn)menuReturn.hidden=false;
     state.banner=state.wind.active?(state.wind.base>0?'CROSSWIND →':'← CROSSWIND'):'ROUND '+state.round;state.bannerTime=1.5;
     controls.left=false;controls.right=false;controls.boost=false;
   }
@@ -206,14 +207,22 @@ function plane(type,id,x,y,angle){
     background=makeBackground();newRound();
   }
   window.WingmanGame={startCampaignFight,showMenu:()=>showMenu()};
+  const menuReturn=document.getElementById('menu-return');
+  menuReturn?.addEventListener('click',showMenu);
   const fullscreenButton=document.getElementById('fullscreen-toggle');
   fullscreenButton?.addEventListener('click',async()=>{
     const frame=document.getElementById('frame');
     try{if(document.fullscreenElement)await document.exitFullscreen();else if(frame.requestFullscreen)await frame.requestFullscreen();}catch{}
   });
-  document.addEventListener('fullscreenchange',()=>{if(fullscreenButton)fullscreenButton.textContent=document.fullscreenElement?'×':'⛶';});
+  document.addEventListener('fullscreenchange',()=>{if(fullscreenButton){
+    const full=!!document.fullscreenElement;
+    fullscreenButton.textContent=full?'×':'⛶';
+    fullscreenButton.setAttribute('aria-label',full?'Exit full screen':'Enter full screen');
+    fullscreenButton.title=full?'Exit full screen':'Full screen';
+  }});
   function showMenu(){
     state.phase='menu';state.paused=false;controls.left=false;controls.right=false;controls.boost=false;
+    if(menuReturn)menuReturn.hidden=true;
     ui.result.classList.add('hidden');ui.menu.classList.remove('hidden');
     document.getElementById('bomb').hidden=true;
   }
@@ -556,9 +565,14 @@ function plane(type,id,x,y,angle){
     if(p.role==='bomber'&&p.aiMode!=='recover'){
       tx=target.x+target.vx*.3;
       ty=p.y>target.y-25?Math.max(43,target.y-48):Math.max(45,target.y-22);
-      if(p.y>target.y-16&&p.specialCooldown<=0)
-        triggerSpecial(p);
-      if(p.y<target.y-14&&Math.abs(wrappedDelta(p.x+p.vx*.15,target.x+target.vx*.15))<29&&p.specialCooldown<=0)
+      // A bomb run requires time to develop and a predicted firing solution.
+      const dropHeight=target.y-p.y;
+      const fallTime=clamp(Math.sqrt(Math.max(0,2*(dropHeight-7)/94)),.25,1.1);
+      const releaseX=p.x+p.vx*.035;
+      const projectedX=target.x+(target.vx-p.vx*.58)*fallTime;
+      const aligned=Math.abs(wrappedDelta(releaseX,projectedX))<22;
+      if(p.aiBombDelay<=0&&p.specialCooldown<=0&&target.spawnSafe<=0&&
+         dropHeight>=32&&dropHeight<=112&&aligned&&range<155)
         triggerSpecial(p);
     }
     // Never clamp x to screen edges: crossing the seam is a normal path.
@@ -594,6 +608,8 @@ function plane(type,id,x,y,angle){
     p.hitFlash=Math.max(0,p.hitFlash-dt);p.muzzleFlash=Math.max(0,p.muzzleFlash-dt);
     p.damageNotice=Math.max(0,p.damageNotice-dt);
     p.specialCooldown=Math.max(0,p.specialCooldown-dt);
+    p.aiBombDelay=Math.max(0,(p.aiBombDelay||0)-dt);
+    p.turretFlash=Math.max(0,(p.turretFlash||0)-dt);
     for(const key of ['skillCooldown','smokescreen','hardenTime','deadeyeTime','engineCutTime','diveTime'])p[key]=Math.max(0,(p[key]||0)-dt);
     p.armourTime=Math.max(0,p.armourTime-dt);
     p.overdriveTime=Math.max(0,(p.overdriveTime||0)-dt);
@@ -602,14 +618,18 @@ function plane(type,id,x,y,angle){
     p.bombCooldown=Math.max(0,p.bombCooldown-dt);
     p.rearCooldown=Math.max(0,p.rearCooldown-dt);
     if(p.role==='bomber'&&p.rearCooldown<=0&&p.rearShots===0){
-      const target=nearestEnemy(p);
-      if(target){
-        let dx=target.x-p.x;if(dx>W*.5)dx-=W;else if(dx< -W*.5)dx+=W;
-        const dy=target.y-p.y,range=Math.hypot(dx,dy);
+      // A bomber's tail/dorsal gunners defend its rear cone, not the whole sky.
+      const threats=opponents(p).filter(q=>{
+        if(q.spawnSafe>0||q.rollTime>0)return false;
+        const dx=wrappedDelta(p.x,q.x),dy=q.y-p.y;
         const along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle);
-        if(along< -14&&range<95&&Math.abs(dx*Math.sin(p.angle)-dy*Math.cos(p.angle))<55){
-          p.rearShots=3;p.rearShotTime=0;p.rearTarget=target.id;p.rearCooldown=2.4;
-        }
+        const lateral=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
+        const range=Math.hypot(dx,dy);
+        return along< -12&&range<142&&lateral<Math.min(50,range*.58);
+      }).sort((a,b)=>combatDistance(p,a)-combatDistance(p,b));
+      if(threats.length){
+        p.rearShots=5;p.rearShotTime=0;p.rearTarget=threats[0].id;
+        p.rearCooldown=1.9;
       }
     }
     if(p.role==='bomber'&&p.rearShots>0){
@@ -617,13 +637,22 @@ function plane(type,id,x,y,angle){
       if(p.rearShotTime<=0){
         const target=state.fliers.find(q=>q.id===p.rearTarget&&q.alive);
         if(target){
-          let dx=target.x-p.x;if(dx>W*.5)dx-=W;else if(dx< -W*.5)dx+=W;
-          const aim=Math.atan2(target.y-p.y,dx)+random(-.15,.15),speed=175;
-          state.bullets.push({x:p.x-Math.cos(p.angle)*p.d.radius,y:p.y-Math.sin(p.angle)*p.d.radius,
-            vx:Math.cos(aim)*speed+p.vx*.2,vy:Math.sin(aim)*speed+p.vy*.2,
-            owner:p.id,damage:5.5,life:.65,age:0});
+          const dx=wrappedDelta(p.x,target.x),dy=target.y-p.y;
+          const range=Math.hypot(dx,dy);
+          const along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle);
+          const lateral=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
+          if(along< -10&&range<155&&lateral<Math.min(56,range*.65)){
+            const speed=205,lead=clamp(range/speed,.1,.65)*.72;
+            const aim=Math.atan2(dy+(target.vy-p.vy*.2)*lead,
+              dx+(target.vx-p.vx*.2)*lead)+random(-.095,.095);
+            state.bullets.push({x:p.x-Math.cos(p.angle)*(p.d.radius+2),
+              y:p.y-Math.sin(p.angle)*(p.d.radius+2),
+              vx:Math.cos(aim)*speed+p.vx*.2,vy:Math.sin(aim)*speed+p.vy*.2,
+              owner:p.id,damage:8,life:.85,age:0,rearGun:true});
+            p.turretFlash=.17;
+          }
         }
-        p.rearShots--;p.rearShotTime=.14;
+        p.rearShots--;p.rearShotTime=.12;
       }
     }
     p.evasiveTime=Math.max(0,(p.evasiveTime||0)-dt);
@@ -1067,11 +1096,11 @@ function plane(type,id,x,y,angle){
     }
     for(const b of state.bullets){
       const heavy=state.fliers[b.owner]?.role==='heavy';
-      g.strokeStyle=heavy?'#ffd093':'#fff1b0';g.lineWidth=heavy?2:1;
+      g.strokeStyle=b.rearGun?'#ffc778':heavy?'#ffd093':'#fff1b0';g.lineWidth=b.rearGun?1.6:heavy?2:1;
       g.beginPath();g.moveTo(b.x,b.y);
       g.lineTo(b.x-b.vx*.042,b.y-b.vy*.042);g.stroke();
       g.fillStyle=heavy?'#653e33':'#574c43';g.fillRect(Math.round(b.x)-1,Math.round(b.y)-1,heavy?5:3,heavy?3:2);
-      g.fillStyle=heavy?'#ffd19b':'#fff1ac';g.fillRect(Math.round(b.x),Math.round(b.y),heavy?4:2,1);
+      g.fillStyle=b.rearGun?'#ffbd65':heavy?'#ffd19b':'#fff1ac';g.fillRect(Math.round(b.x),Math.round(b.y),heavy?4:2,1);
     }
     drawModels();
     for(const p of state.sparks){
@@ -1201,6 +1230,7 @@ function plane(type,id,x,y,angle){
     if(e.code==='KeyL'||e.code==='KeyQ'){audioUnlock();triggerPilotSkill(state.fliers[0]);}
     
     if(e.code==='KeyP'&&state.phase==='playing')state.paused=!state.paused;
+    if(e.code==='Escape'&&state.phase!=='menu'){e.preventDefault();showMenu();}
   });
   document.addEventListener('keyup',e=>{
     if(e.code==='KeyA'||e.code==='ArrowLeft')controls.left=false;
