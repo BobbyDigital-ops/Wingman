@@ -238,3 +238,33 @@ test('older saved pilot portraits without hairstyle still render on licence',asy
  await expect(portrait.locator('.hair-back')).toHaveCount(1);
  await expect(portrait.locator('.hair-front')).toHaveCount(1);
 });
+
+test('saved pilot can reopen selection safely and keep their career on cancel',async({page})=>{
+ await page.goto('/');
+ await page.locator('#career-open').click();
+ await page.locator('[data-candidate="0"]').click();
+ const original=await page.evaluate(()=>localStorage.getItem('wingman-road-to-ace-v1'));
+ await page.getByRole('button',{name:'CHOOSE A DIFFERENT PILOT'}).click();
+ await expect(page.locator('[data-candidate]')).toHaveCount(3);
+ page.once('dialog',dialog=>dialog.dismiss());
+ await page.locator('[data-candidate="1"]').click();
+ expect(await page.evaluate(()=>localStorage.getItem('wingman-road-to-ace-v1'))).toBe(original);
+ await page.locator('[data-action="licence"]').click();
+ await expect(page.getByRole('heading',{name:'PILOT LICENCE'})).toBeVisible();
+});
+
+test('rank map has eight three-way branching tiers and an active challenge lane',async({page})=>{
+ await page.goto('/');
+ await page.locator('#career-open').click();
+ await page.locator('[data-candidate="0"]').click();
+ await page.getByRole('button',{name:'ROAD TO ACE'}).last().click();
+ await page.locator('[data-aircraft="fighter"]').click();
+ const map=page.locator('.career-route-map');
+ await expect(map).toBeVisible();
+ await expect(map.locator('.route-tier')).toHaveCount(8);
+ await expect(map.locator('.route-node')).toHaveCount(24);
+ await expect(map.locator('.route-fork')).toHaveCount(8);
+ await expect(map.locator('.route-join')).toHaveCount(8);
+ await expect(map.locator('#active-rung [data-choice]')).toHaveCount(3);
+ await expect(page.locator('[data-action="select"]')).toBeVisible();
+});
