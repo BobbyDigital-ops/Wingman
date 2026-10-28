@@ -323,6 +323,6 @@ screen.addEventListener('change',e=>{
  }
 });
 nav.addEventListener('click',()=>show(data?'ladder':'select'));licenceBtn.addEventListener('click',()=>show('licence'));
-document.getElementById('career-open-mobile')?.addEventListener('click',()=>show('select'));
+document.getElementById('career-open-mobile')?.addEventListener('click',()=>show(data?'ladder':'select'));
 window.WingmanCareer={finishEncounter,open:show};
 })();
