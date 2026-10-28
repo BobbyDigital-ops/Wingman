@@ -89,23 +89,21 @@ test('Road to Ace creates a pilot licence and persists it across reloads',async(
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/');
  await openCareer(page);
- await expect(page.getByRole('heading',{name:'CHOOSE YOUR PILOT'})).toBeVisible();
- await page.locator('#career-name').fill('Test Squadron');
+ await expect(page.getByRole('heading',{name:'SELECT YOUR ACE'})).toBeVisible();
  await page.locator('#career-faction').selectOption('Axis');
  
  await page.locator('[data-candidate="1"]').click();
- await expect(page.getByText('Test Squadron',{exact:true})).toBeVisible();
+ await expect(page.getByText('Friedrich',{exact:false}).first()).toBeVisible();
  await expect(page.getByText('AXIS · ACTIVE SERVICE')).toBeVisible();
  await page.reload();
  await openLicence(page);
- await expect(page.getByText('Test Squadron',{exact:true})).toBeVisible();
+ await expect(page.getByText('Friedrich',{exact:false}).first()).toBeVisible();
  expect(errors).toEqual([]);
 });
 test('Road to Ace starts and saves a locked-aircraft three-life run',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/');
  await openCareer(page);
- await page.locator('#career-name').fill('Flight Leader');
  await page.locator('[data-candidate="0"]').click();
  await page.getByRole('button',{name:'ROAD TO ACE'}).last().click();
  await page.locator('[data-aircraft="fighter"]').click();
@@ -120,21 +118,19 @@ test('Road to Ace starts and saves a locked-aircraft three-life run',async({page
  expect(errors).toEqual([]);
 });
 
-test('pilot offers random recruits and retains the chosen flight attributes',async({page})=>{
+test('career offers the full predetermined RAF and German pilot rosters',async({page})=>{
  await page.goto('/');
  await openCareer(page);
- await expect(page.locator('[data-candidate]')).toHaveCount(3);
- const before=await page.locator('.candidate-grid').innerText();
- await page.getByRole('button',{name:'GENERATE THREE NEW RECRUITS'}).click();
- const after=await page.locator('.candidate-grid').innerText();
- expect(after.length).toBeGreaterThan(20);
- await page.locator('#career-name').fill('Sky Captain');
+ await expect(page.locator('[data-candidate]')).toHaveCount(20);
+ await page.locator('#career-faction').selectOption('Axis');
+ await expect(page.locator('[data-candidate]')).toHaveCount(12);
  await page.locator('[data-candidate="0"]').click();
- await expect(page.getByText('MANOEUVRABILITY')).toBeVisible();
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
+ expect(saved.profile.name).toContain('Schnapps');
+ expect(saved.profile.attributes.gunnery).toBe(86);
  await page.reload();await openLicence(page);
- await expect(page.getByText('Sky Captain',{exact:true})).toBeVisible();
+ await expect(page.getByText('Otto',{exact:false}).first()).toBeVisible();
 });
-
 test('rolled airframe is saved and locked for the run',async({page})=>{await page.goto('/');await openCareer(page);await page.locator('[data-candidate="0"]').click();await page.getByRole('button',{name:'ROAD TO ACE'}).last().click();await expect(page.locator('.airframe-card')).toHaveCount(3);await page.locator('[data-aircraft="fighter"]').click();const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')).run);expect(result.airframe.type).toBe('fighter');expect(result.airframe.stats.speed).toBeGreaterThan(0);await page.reload();await openCareer(page);await expect(page.getByText('RANK 1/8')).toBeVisible();});
 
 
