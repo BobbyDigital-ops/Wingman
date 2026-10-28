@@ -150,7 +150,7 @@ test('new portraits render colourful gradients and detailed facial features',asy
  }));
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
  else await page.locator('#career-open-mobile').click();
- await expect(page.locator('.pilot-avatar')).toHaveCount(3);
+ await expect(page.locator('.pilot-avatar')).toHaveCount(20);
  const avatar=await portrait();
  expect(avatar.defs).toBeGreaterThanOrEqual(3);
  expect(avatar.whiteEyes).toBe(2);
@@ -177,47 +177,17 @@ test('Road to Ace has a preflight fullscreen control outside its rerendered pane
  await expect(page.locator('#career-fullscreen')).toBeVisible();
 });
 
-test('cartoon pilots have distinct facial geometry and full-volume hairstyle paths',async({page})=>{
+test('predefined RAF pilots have varied SVG face and hair outlines',async({page})=>{
  await page.goto('/');
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
  else await page.locator('#career-open-mobile').click();
- await expect(page.locator('.pilot-avatar')).toHaveCount(3);
- const shapes=new Map(),styles=new Map();
- for(let round=0;round<20;round++){
-  const features=await page.locator('.pilot-avatar').evaluateAll(avatars=>avatars.map(svg=>{
-    const face=svg.querySelector('.pilot-face-shape');
-    const hair=svg.querySelector('.pilot-hair-style');
-    const back=svg.querySelector('.hair-back');
-    const front=svg.querySelector('.hair-front');
-    return {
-      face:face?.getAttribute('data-face-shape'),
-      facePath:face?.getAttribute('d'),
-      hair:hair?.getAttribute('data-hair-style'),
-      hairPath:back?.getAttribute('d'),
-      frontPath:front?.getAttribute('d'),
-      volume: back&&face ? face.getBBox().y-back.getBBox().y : -1
-    };
-  }));
-  expect(features).toHaveLength(3);
-  expect(new Set(features.map(x=>x.face)).size).toBe(3);
-  expect(new Set(features.map(x=>x.hair)).size).toBe(3);
-  for(const f of features){
-    expect(f.facePath?.length).toBeGreaterThan(35);
-    expect(f.hairPath?.length).toBeGreaterThan(35);
-    expect(f.frontPath?.length).toBeGreaterThan(30);
-    expect(f.volume).toBeGreaterThan(7);
-    shapes.set(f.face,f.facePath);
-    styles.set(f.hair,f.hairPath);
-  }
-  if(shapes.size===5&&styles.size===6)break;
-  await page.getByRole('button',{name:'GENERATE THREE NEW RECRUITS'}).click();
- }
- expect(shapes.size,'five visibly different face silhouettes').toBe(5);
- expect(new Set(shapes.values()).size).toBe(5);
- expect(styles.size,'six distinct raised hairstyles').toBe(6);
- expect(new Set(styles.values()).size).toBe(6);
+ await expect(page.locator('[data-candidate]')).toHaveCount(20);
+ const distinct=await page.locator('.candidate-portrait .pilot-avatar').evaluateAll(avatars=>({
+  face:new Set(avatars.map(a=>a.querySelector('.pilot-face-shape')?.getAttribute('d'))).size,
+  hair:new Set(avatars.map(a=>a.querySelector('.pilot-hair-style')?.getAttribute('data-hair-style'))).size
+ }));
+ expect(distinct.face).toBe(5);expect(distinct.hair).toBe(6);
 });
-
 test('older saved pilot portraits without hairstyle still render on licence',async({page})=>{
  await page.goto('/');
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
@@ -246,7 +216,7 @@ test('saved pilot can reopen selection safely and keep their career on cancel',a
  await page.locator('[data-candidate="0"]').click();
  const original=await page.evaluate(()=>localStorage.getItem('wingman-road-to-ace-v1'));
  await page.getByRole('button',{name:'START A NEW PILOT'}).click();
- await expect(page.locator('[data-candidate]')).toHaveCount(3);
+ await expect(page.locator('[data-candidate]')).toHaveCount(20);
  page.once('dialog',dialog=>dialog.dismiss());
  await page.locator('[data-candidate="1"]').click();
  expect(await page.evaluate(()=>localStorage.getItem('wingman-road-to-ace-v1'))).toBe(original);
@@ -411,25 +381,22 @@ test('aircraft preview remains crisp transparent original geometry instead of en
  expect(corners).toEqual([0,0,0]);
 });
 
-test('existing pilot has explicit 5-character selection with editable name and preserved career',async({page})=>{
+test('fixed roster gives persistent predesigned identities without erasing career stats',async({page})=>{
  await page.goto('/');
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
  else await page.locator('#career-open-mobile').click();
- if(await page.locator('[data-candidate="0"]').isVisible())await page.locator('[data-candidate="0"]').click();
- await page.locator('[data-action="character"]').first().click();
- await expect(page.getByRole('heading',{name:'CHOOSE YOUR CHARACTER'})).toBeVisible();
- await expect(page.locator('[data-portrait]')).toHaveCount(5);
+ await expect(page.locator('[data-candidate]')).toHaveCount(20);
+ await page.locator('[data-candidate="2"]').click();
  const original=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
- const selection=(Number(original.profile.style?.portraitIndex)||0)+1;
- await page.locator('[data-portrait="'+selection%5+'"]').click();
- await page.locator('#character-name').fill('Squadron Leader Test');
- await page.locator('[data-action="save-character"]').click();
+ expect(original.profile.name).toContain('Chocs');
+ await page.locator('[data-action="character"]').first().click();
+ await expect(page.locator('[data-roster]')).toHaveCount(20);
+ await page.locator('[data-roster="ace-01"]').click();
  const updated=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
- expect(updated.profile.name).toBe('Squadron Leader Test');
- expect(updated.profile.style.portraitIndex).toBe(selection%5);
+ expect(updated.profile.name).toContain('Biscuit');
+ expect(updated.profile.skill).toBe('reverse');
+ expect(updated.profile.attributes.manoeuvrability).toBe(91);
  for(const field of ['wins','losses','kills','best','completed','run']){
   expect(updated[field]).toEqual(original[field]);
  }
- await expect(page.locator('.career-photo')).toContainText('');
- await expect(page.getByText('Squadron Leader Test')).toBeVisible();
 });
