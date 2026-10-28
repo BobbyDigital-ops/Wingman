@@ -88,3 +88,5 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
  .game-frame{width:min(98vw,calc((100dvh - 80px)*16/9));max-height:calc(100dvh - 80px)}
  .site-header,.site-footer{width:min(98vw,1600px)}
 }
+
+.mode-row{display:flex;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap}.mode-row label{display:flex;flex-direction:column;gap:4px;color:#d8decf;font-size:10px}.mode-row select{background:#244053;color:#fff0ce;border:1px solid #b8a480;padding:5px;max-width:160px}
