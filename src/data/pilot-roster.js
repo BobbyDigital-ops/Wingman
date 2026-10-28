@@ -323,7 +323,7 @@
   },
   {
     "id": "ace-21",
-    "name": "Otto \"Schnapps\" Krüger",
+    "name": "Otto \"Sauerkraut\" Krüger",
     "faction": "Axis",
     "plane": "bf110",
     "signature": "harden",
@@ -339,7 +339,7 @@
   },
   {
     "id": "ace-22",
-    "name": "Friedrich \"Der Fuchs\" Bauer",
+    "name": "Friedrich \"Schnitzel\" Bauer",
     "faction": "Axis",
     "plane": "bf109",
     "signature": "reverse",
@@ -355,7 +355,7 @@
   },
   {
     "id": "ace-23",
-    "name": "Heinrich \"Blitz\" Vogel",
+    "name": "Heinrich \"Donnerhosen\" Vogel",
     "faction": "Axis",
     "plane": "bf109",
     "signature": "dive",
@@ -387,7 +387,7 @@
   },
   {
     "id": "ace-25",
-    "name": "Ernst \"Dachs\" Neumann",
+    "name": "Ernst \"Knödel\" Neumann",
     "faction": "Axis",
     "plane": "bf110",
     "signature": "harden",
@@ -403,7 +403,7 @@
   },
   {
     "id": "ace-26",
-    "name": "Hans \"Kuckuck\" Fischer",
+    "name": "Hans \"Bratwurst\" Fischer",
     "faction": "Axis",
     "plane": "he111",
     "signature": "smoke",
@@ -419,7 +419,7 @@
   },
   {
     "id": "ace-27",
-    "name": "Ludwig \"Eule\" Richter",
+    "name": "Ludwig \"Pumpernickel\" Richter",
     "faction": "Axis",
     "plane": "bf109",
     "signature": "deadeye",
@@ -435,7 +435,7 @@
   },
   {
     "id": "ace-28",
-    "name": "Rudolf \"Wraith\" Stein",
+    "name": "Rudolf \"Wackelflügel\" Stein",
     "faction": "Axis",
     "plane": "bf110",
     "signature": "cut",
@@ -451,7 +451,7 @@
   },
   {
     "id": "ace-29",
-    "name": "Max \"Donner\" Beck",
+    "name": "Max \"Schnurrbart\" Beck",
     "faction": "Axis",
     "plane": "bf110",
     "signature": "harden",
@@ -467,7 +467,7 @@
   },
   {
     "id": "ace-30",
-    "name": "Wilhelm \"Graf\" Adler",
+    "name": "Wilhelm \"Von Waffles\" Adler",
     "faction": "Axis",
     "plane": "bf109",
     "signature": "dive",
@@ -483,7 +483,7 @@
   },
   {
     "id": "ace-31",
-    "name": "Dieter \"Schatten\" Falk",
+    "name": "Dieter \"Flugzeug\" Falk",
     "faction": "Axis",
     "plane": "bf109",
     "signature": "smoke",
@@ -499,7 +499,7 @@
   },
   {
     "id": "ace-32",
-    "name": "Günther \"Kessel\" Hoffmann",
+    "name": "Günther \"Käsekopf\" Hoffmann",
     "faction": "Axis",
     "plane": "he111",
     "signature": "deadeye",
