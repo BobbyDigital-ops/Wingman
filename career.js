@@ -306,7 +306,7 @@ function finishEncounter(won,encounter){
  if(!active||!data?.run)return;
  const run=data.run;
  const record=data.records[active.id]||(data.records[active.id]={wins:0,losses:0});
- if(won){data.wins++;data.kills+=active.types.length;record.wins++;run.rank++;data.best=Math.max(data.best,run.rank);
+ if(won){data.wins++;data.kills+=active.types.length;record.wins++;run.rank++;data.best=Math.max(data.best,Math.min(MAX_RANK,run.rank));
   if(run.rank>MAX_RANK){data.completed++;data.run=null;}
  }else{data.losses++;record.losses++;run.lives--;run.rank=Math.max(1,run.rank-1);
   if(run.lives<=0)data.run=null;
@@ -464,5 +464,5 @@ screen.addEventListener('change',e=>{
 });
 nav.addEventListener('click',()=>show(data?'ladder':'select'));licenceBtn.addEventListener('click',()=>show('licence'));
 document.getElementById('career-open-mobile')?.addEventListener('click',()=>show(data?'ladder':'select'));
-window.WingmanCareer={finishEncounter,open:show};
+window.WingmanCareer={finishEncounter,open:show,cancelEncounter:()=>{active=null;}};
 })();
