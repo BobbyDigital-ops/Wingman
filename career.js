@@ -36,24 +36,27 @@ function appearance(seed=0){
 function pilotPortrait(faction,look=0){
  const opt=typeof look==='object'?look:appearance(look);
  const axis=faction==='Axis';
- const skins=['#e9bf9b','#cfa384','#af795d','#845640','#f4d0ac'];
- const hairs=['#392e27','#8b6244','#b99353','#c5b58a','#322c2d','#6d4735'];
+ const skins=['#f9bc93','#df9e78','#b97957','#895b4c','#f8d2ac'];
+ const hairs=['#202a34','#71463b','#d39c5c','#efbf77','#151c2b','#a64f3c'];
  const skin=skins[opt.skin%skins.length],hair=hairs[opt.hair%hairs.length];
- const coat=axis?'#546b65':'#656b53',trim=axis?'#bdc6b5':'#cbb887';
+ const coat=axis?'#547568':'#2b6382',trim=axis?'#e5d3a3':'#e8ca8e';
+ const backdrops=[['#63bac4','#1c456d'],['#ba7770','#4b3b62'],['#539e8e','#233b56'],['#8799c7','#2d355c'],['#d39a59','#514058'],['#4688b8','#143e5c']];
+ const bg=backdrops[(opt.face*3+opt.hair+(axis?2:0))%backdrops.length];
+ const bgId='portrait-'+[axis?1:0,opt.face,opt.skin,opt.hair,opt.headwear,opt.goggles].join('-');
  const caps=['#','cap','helmet','none','beret'][opt.headwear%4+1]||'cap';
  const nose=[2,3,4,2.6][opt.nose%4],face=[24,22,26,23,25][opt.face%5];
  return `<svg class="pilot-avatar" viewBox="0 0 120 144" role="img" aria-label="${faction} pilot wearing a customised uniform">
- <defs><linearGradient id="bg${opt.face}${opt.skin}" x2=".8" y2="1"><stop stop-color="#758b8a"/><stop offset="1" stop-color="#273d43"/></linearGradient></defs>
- <rect width="120" height="144" fill="#364c50"/><path d="M3 0H117V144H3Z" fill="none" stroke="#d5c8a3" stroke-width="2"/>
- <path d="M0 127Q10 94 41 90L79 90Q111 95 120 128V144H0Z" fill="${coat}" stroke="#253637" stroke-width="2"/>
- <path d="M38 93L59 131L77 93L87 102L76 144H43L31 103Z" fill="${axis?'#414d4a':'#4e564a'}" stroke="${trim}" stroke-width="1.5"/>
+ <defs><linearGradient id="${bgId}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${bg[0]}"/><stop offset="1" stop-color="${bg[1]}"/></linearGradient><linearGradient id="${bgId}-skin" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="${skin}"/><stop offset=".73" stop-color="${skin}"/><stop offset="1" stop-color="#754545"/></linearGradient><linearGradient id="${bgId}-coat" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="${axis?'#8ca894':'#61a1bd'}"/><stop offset="1" stop-color="${axis?'#253e42':'#183c5b'}"/></linearGradient></defs>
+ <rect width="120" height="144" fill="url(#${bgId})"/><circle cx="24" cy="19" r="66" fill="#ffdf9d" opacity=".16"/><path d="M0 36L120 0V23L0 58Z" fill="#ffffff" opacity=".09"/><path d="M8 9H24M8 9V26M96 134H111V119" stroke="#e9f0d2" stroke-width="1.5" opacity=".6" fill="none"/>
+ <path d="M-4 145V126Q8 95 40 90L79 90Q111 96 124 127V145Z" fill="url(#${bgId}-coat)" stroke="#172d3a" stroke-width="3"/><path d="M0 137Q16 105 35 103L43 144H0Z" fill="#11243d" opacity=".33"/><path d="M120 137Q107 103 85 103L78 144H120Z" fill="#fff" opacity=".13"/>
+ <path d="M38 93L59 131L77 93L87 102L76 144H43L31 103Z" fill="${axis?'#273f40':'#1a415b'}" stroke="${trim}" stroke-width="1.9"/><path d="M43 104L59 131L75 103" stroke="#fff3da" stroke-width="1.3" opacity=".7" fill="none"/>
  <path d="M49 93L59 109L70 93" fill="#e2c7a4" stroke="#bca482"/><path d="M51 91V75H70V91L60 101Z" fill="${skin}"/>
- <ellipse cx="60" cy="56" rx="${face}" ry="34" fill="${skin}" stroke="#764e3f" stroke-width=".7"/>
+ <ellipse cx="${60-face}" cy="61" rx="4" ry="9" fill="${skin}" stroke="#764e3f" stroke-width="1.5"/><ellipse cx="${60+face}" cy="61" rx="4" ry="9" fill="${skin}" stroke="#764e3f" stroke-width="1.5"/><ellipse cx="60" cy="56" rx="${face}" ry="34" fill="url(#${bgId}-skin)" stroke="#764e3f" stroke-width="1.4"/><path d="M39 67Q42 83 59 89Q46 86 40 77Z" fill="#74413d" opacity=".25"/><path d="M68 39Q81 43 78 66" stroke="#fff0d6" stroke-opacity=".28" stroke-width="3" fill="none"/>
  <path d="M36 50Q33 18 59 16Q83 19 83 49Q75 32 61 32Q46 42 36 50" fill="${hair}"/>
- <path d="M40 58q7 -4 15 0m13 0q7 -4 13 0" fill="none" stroke="#40382f" stroke-width="2.2" stroke-linecap="round"/>
- <circle cx="48" cy="58" r="1.6" fill="#283735"/><circle cx="74" cy="58" r="1.6" fill="#283735"/>
+ <path d="M40 54q7 -5 15-1m13 0q7 -4 13 1" fill="none" stroke="${hair}" stroke-width="2.8" stroke-linecap="round"/><ellipse cx="48" cy="61" rx="6" ry="3.3" fill="#f7f0e3"/><ellipse cx="74" cy="61" rx="6" ry="3.3" fill="#f7f0e3"/>
+ <circle cx="${47+(opt.face%3)}" cy="61" r="2.5" fill="#315765"/><circle cx="${73+(opt.face%2)}" cy="61" r="2.5" fill="#315765"/><circle cx="48" cy="60" r=".9" fill="#fff"/><circle cx="74" cy="60" r=".9" fill="#fff"/>
  <path d="M60 56l${nose} 10l-4 1" fill="none" stroke="#a97159" stroke-width="1.4"/>
- <path d="M53 78q7 2 14-1" fill="none" stroke="#77483e" stroke-width="1.2"/>
+ <path d="M52 78q8 ${opt.face%2?4:7} 16 0" fill="none" stroke="#773e41" stroke-width="1.9" stroke-linecap="round"/><circle cx="27" cy="119" r="6.1" fill="#dce7e4" stroke="#193646" stroke-width="1.3"/><circle cx="27" cy="119" r="3.7" fill="${axis?'#535a5a':'#4289b3'}"/><circle cx="27" cy="119" r="1.8" fill="${axis?'#c2b38b':'#cc5353'}"/>
  ${opt.moustache%3?'<path d="M58 72q-6 -4 -12 1q7 3 13 0q7 3 14-1q-7 -4 -13 0" fill="'+hair+'"/>':''}
  ${opt.monocle%3===1?'<circle cx="74" cy="57" r="10" stroke="#d9c593" stroke-width="2" fill="none"/><path d="M84 62Q88 83 85 101" stroke="#d9c593" fill="none"/>':''}
  ${opt.goggles%3===1?'<path d="M32 56H86" stroke="#534a3e" stroke-width="3"/><rect x="38" y="50" width="19" height="13" rx="4" fill="#98b8ba88" stroke="#c2ad84" stroke-width="2"/><rect x="64" y="50" width="19" height="13" rx="4" fill="#98b8ba88" stroke="#c2ad84" stroke-width="2"/>':''}
@@ -63,7 +66,7 @@ function pilotPortrait(faction,look=0){
  caps==='beret'?'<path d="M29 35Q20 17 57 12Q95 9 91 29L84 39Q62 33 31 41Z" fill="'+coat+'" stroke="'+trim+'" stroke-width="2"/>':''}
  ${opt.goggles%3===2?'<rect x="37" y="29" width="21" height="12" rx="5" fill="#8db3b8" stroke="#c8b893" stroke-width="3"/><rect x="63" y="29" width="21" height="12" rx="5" fill="#8db3b8" stroke="#c8b893" stroke-width="3"/>':''}
  <path d="M93 108l9 5m-9 2l9 5" stroke="${trim}" stroke-width="2"/>
- <path d="M15 130H105" stroke="#cfb98d" opacity=".5"/>
+ <path d="M4 140H116" stroke="#e9e1c4" opacity=".42"/><path d="M104 17l6 8m-6 0l6-8" stroke="#fff" opacity=".20" stroke-width="1.4"/>
  </svg>`;
 }
 function makeChoices(run){
@@ -229,7 +232,13 @@ function render(){
  panel('ROAD TO ACE',`<div class="career-stats"><span>${escape(p.name)} · ${aircraft[run.aircraft]}</span><span>RANK ${run.rank}/${MAX_RANK}</span><span>${'♥'.repeat(run.lives)}${'♡'.repeat(3-run.lives)}</span></div>
  <p class="career-muted">Choose one of three rival branches to ascend. Cleared ranks remain below; future ranks are locked above.</p>
  ${ladder(run)}<button data-action="licence">VIEW PILOT LICENCE</button>`);
- const marker=screen.querySelector('#active-rung');if(marker)marker.scrollIntoView({block:'center'});
+ const marker=screen.querySelector('#active-rung'),list=screen.querySelector('.ladder-scroll');
+  // Only centre the active rank inside the ladder itself. scrollIntoView()
+  // also scrolled the outer career panel and hid the title/navigation on phones.
+  if(marker&&list){
+    const a=marker.getBoundingClientRect(),b=list.getBoundingClientRect();
+    list.scrollTop+=a.top-b.top-(list.clientHeight-a.height)/2;
+  }
 
 }
 screen.addEventListener('click',e=>{

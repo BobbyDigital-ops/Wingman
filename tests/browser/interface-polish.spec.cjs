@@ -90,3 +90,89 @@ test('fullscreen instruction cannot interrupt operation selection', async ({page
   const full=await page.evaluate(()=>Boolean(document.fullscreenElement));
   expect(full).toBe(false);
 });
+
+test('preflight fullscreen is available on title, operations and loadout',async({page})=>{
+ await page.addInitScript(()=>{
+   window.fullscreenInvocations=0;
+   Element.prototype.requestFullscreen=function(){
+     if(this.classList.contains('app'))window.fullscreenInvocations++;
+     return Promise.resolve();
+   };
+ });
+ await page.goto('/');
+ const button=page.locator('#menu-fullscreen');
+ await expect(button).toBeVisible();
+ await button.click();
+ await expect.poll(()=>page.evaluate(()=>window.fullscreenInvocations)).toBe(1);
+ await page.locator('#splash-continue').click();
+ await expect(button).toBeVisible();
+ await button.click();
+ await expect.poll(()=>page.evaluate(()=>window.fullscreenInvocations)).toBe(2);
+ await page.locator('#mode-next').click();
+ await expect(button).toBeVisible();
+ await button.click();
+ await expect.poll(()=>page.evaluate(()=>window.fullscreenInvocations)).toBe(3);
+});
+
+test('every pre-game action stays inside the visible landscape viewport without scrolling',async({page})=>{
+ for(const vp of [{width:915,height:412},{width:740,height:360},{width:844,height:320}]){
+  await page.setViewportSize(vp);
+  await page.goto('/');
+  const verify=async id=>{
+    const loc=page.locator('#'+id);
+    await expect(loc).toBeVisible();
+    const bounds=await loc.evaluate(el=>{
+      const r=el.getBoundingClientRect();
+      const viewport=document.getElementById('frame').getBoundingClientRect();
+      return {top:r.top,bottom:r.bottom,height:r.height,
+        floor:Math.min(window.innerHeight,viewport.bottom),
+        hit:el.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2))};
+    });
+    expect(bounds.top,id+' top outside viewport at '+vp.height).toBeGreaterThanOrEqual(0);
+    expect(bounds.bottom,id+' hidden below viewport at '+vp.height).toBeLessThanOrEqual(bounds.floor+1);
+    expect(bounds.hit,id+' obstructed at '+vp.height).toBe(true);
+  };
+  await verify('splash-continue');
+  await page.locator('#splash-continue').click();
+  await verify('mode-back');await verify('mode-next');
+  await page.locator('#mode-next').click();
+  await verify('options-back');await verify('start');
+ }
+});
+
+test('new portraits render colourful gradients and detailed facial features',async({page})=>{
+ await page.goto('/');
+ const portrait=async()=>page.locator('.pilot-avatar').first().evaluate(svg=>({
+  defs:svg.querySelectorAll('linearGradient').length,
+  whiteEyes:svg.querySelectorAll('ellipse[fill="#f7f0e3"]').length,
+  gradient:svg.querySelector('linearGradient stop')?.getAttribute('stop-color'),
+  eyeDetail:svg.querySelectorAll('circle[fill="#fff"]').length
+ }));
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ await expect(page.locator('.pilot-avatar')).toHaveCount(3);
+ const avatar=await portrait();
+ expect(avatar.defs).toBeGreaterThanOrEqual(3);
+ expect(avatar.whiteEyes).toBe(2);
+ expect(avatar.eyeDetail).toBe(2);
+ expect(['#63bac4','#ba7770','#539e8e','#8799c7','#d39a59','#4688b8']).toContain(avatar.gradient);
+});
+
+test('Road to Ace has a preflight fullscreen control outside its rerendered panel',async({page})=>{
+ await page.addInitScript(()=>{
+   window.careerFull=0;
+   Element.prototype.requestFullscreen=function(){
+     if(this.classList.contains('app'))window.careerFull++;
+     return Promise.resolve();
+   };
+ });
+ await page.goto('/');
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ await expect(page.locator('#career-screen')).toBeVisible();
+ await expect(page.locator('#career-fullscreen')).toBeVisible();
+ await page.locator('#career-fullscreen').click();
+ await expect.poll(()=>page.evaluate(()=>window.careerFull)).toBe(1);
+ await page.locator('[data-candidate="0"]').click();
+ await expect(page.locator('#career-fullscreen')).toBeVisible();
+});
