@@ -16,6 +16,7 @@ function launch(){
   let viewport={width:320,height:180};
   el.frame={getBoundingClientRect:()=>viewport};
   el['pilots-select']={value:'2'};
+  el['team-select']={value:'ffa'};
   el['mode-select']={value:'duel'};
   el['arena-select']={value:'0'};
   for(const id of ['menu','result','result-title','result-detail','start',
@@ -48,6 +49,7 @@ function launch(){
   return {
     listeners,canvas,modelCanvas,internals:sandbox.window.__wingmanTest,
     setPilots:n=>{el['pilots-select'].value=String(n);},
+    setTeams:v=>{el['team-select'].value=v;},
     setViewport:(width,height)=>{
       viewport={width,height};
       listeners.get('window:resize')?.();
@@ -262,4 +264,33 @@ test('top boundary is recoverable and does not deal health damage',()=>{
  p.spawnSafe=0;p.y=32;p.angle=-Math.PI/2;
  const hp=p.health;game.advance(2,1000);
  assert.ok(p.alive);assert.equal(p.health,hp);assert.ok(p.y>=37);
+});
+
+test('2v2 uses two sides and never allows friendly-fire to target an ally',()=>{
+ const game=launch();
+ game.setPilots(4);game.setTeams('teams');
+ game.listeners.get('start:click')();
+ const state=game.internals.state;
+ assert.equal(state.teams,true);
+ assert.deepEqual(Array.from(state.fliers,p=>p.team),[0,1,0,1]);
+ const player=state.fliers[0],wingman=state.fliers[2];
+ player.spawnSafe=0;wingman.spawnSafe=0;
+ player.x=wingman.x-22;player.y=wingman.y=90;
+ player.angle=0;player.vx=0;wingman.vx=0;
+ const initialHP=wingman.health;
+ state.bullets.push({
+  x:wingman.x-12,y:wingman.y,vx:250,vy:0,
+  owner:0,damage:70,life:1,age:.12
+ });
+ game.advance(3,1000);
+ assert.equal(wingman.health,initialHP);
+});
+test('the four-pilot arena continues after a single AI is destroyed',()=>{
+ const game=launch();game.setPilots(4);
+ game.listeners.get('start:click')();
+ const state=game.internals.state;
+ state.fliers[1].alive=false;state.fliers[1].health=0;
+ game.advance(2,1000);
+ assert.equal(state.phase,'playing');
+ assert.equal(state.fliers.length,4);
 });
