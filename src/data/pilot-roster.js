@@ -514,5 +514,8 @@
     "legacyId": null
   }
 ];
+ const names=[[8,"Geraldine \"Ginny\" Featherstone"],[9,"Ivy \"Sparky\" Cranleigh"],[12,"Mavis \"Sparks\" Flitton"],[14,"Edith \"Pudding\" Pennyworth"],[17,"Beatrice \"Sprocket\" Wilkins"],[19,"Elsie \"Tinker\" Marlowe"],[24,"Erika \"Katze\" Neumann"],[25,"Lotte \"Schwalbe\" Fischer"],[28,"Helga \"Nebel\" Beck"],[30,"Ingrid \"Teufel\" Falk"]];
+ for(const [index,name] of names){roster[index].name=name;}
+ roster.forEach((p,i)=>{p.gender=names.some(([idx])=>idx===i)?'female':'male';p.portrait=i;});
  window.WingmanRoster=Object.freeze(roster.map(p=>Object.freeze({...p,attributes:Object.freeze(p.attributes)})));
 })();
