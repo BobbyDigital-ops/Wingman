@@ -149,6 +149,9 @@ function makeChoices(run){
  }));
 }
 function show(which='ladder'){
+ // Existing unconfirmed legacy pilots are not treated as a default choice.
+ // Do not discard their records; require the player to confirm an identity.
+ if(!data || (data?.profile&&!data.profile.characterConfirmed))which='select';
  if((!data||which==='select')&&!candidates.length)candidates=generateCandidates();
  showing=true;view=which;screen.hidden=false;menu.classList.add('hidden');result.classList.add('hidden');render();
 }
@@ -167,7 +170,7 @@ function rollAttributes(){
 function generateCandidates(){
  // Preview all defined characters, not three random names/stats.
  return ROSTER.filter(p=>p.faction===selectFaction).map(p=>({
-  id:p.id,roster:p,style:{...appearance(p.portrait*47+9),portraitIndex:p.portrait%5},
+  id:p.id,roster:p,style:{...appearance(p.portrait*47+9),rosterPortrait:p.portrait},
   attributes:{...p.attributes}
  }));
 }
@@ -187,7 +190,7 @@ function createProfile(index){
  const name=chosen.roster.name;
  const faction=chosen.roster.faction;
  airframeOffers=[];
- data={profile:{name,faction,rosterId:chosen.roster.id,plane:chosen.roster.plane,style:chosen.style,attributes:chosen.attributes,skill:chosen.roster.signature},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
+ data={profile:{name,faction,rosterId:chosen.roster.id,plane:chosen.roster.plane,style:chosen.style,attributes:chosen.attributes,skill:chosen.roster.signature,characterConfirmed:true,gender:chosen.roster.gender},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
  save();view='licence';render();
 }
 const BASE_AIRCRAFT={fighter:{speed:82,turn:3.15,hull:130,armour:40},heavy:{speed:75,turn:1.85,hull:160,armour:96},bomber:{speed:66,turn:1.30,hull:180,armour:147},bf109:{speed:84,turn:3.05,hull:125,armour:42},bf110:{speed:77,turn:1.78,hull:160,armour:90},he111:{speed:69,turn:1.35,hull:175,armour:135}};
@@ -349,6 +352,7 @@ screen.addEventListener('click',e=>{
    // Existing career progress is retained; current sortie's chosen plane
    // remains unchanged until the next run.
    data.profile.rosterId=newPilot.id;data.profile.name=newPilot.name;
+   data.profile.gender=newPilot.gender;data.profile.characterConfirmed=true;
    data.profile.plane=newPilot.plane;data.profile.skill=newPilot.signature;
    data.profile.attributes={...newPilot.attributes};
    data.profile.style={...appearance(newPilot.portrait*47+9),portraitIndex:newPilot.portrait%5,rosterPortrait:newPilot.portrait};
