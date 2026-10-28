@@ -407,12 +407,12 @@ test('HUD styles all have the same playable game state',()=>{
 test('all six aircraft use distinct tactical class statistics',()=>{
  const game=launch(),planes=game.internals.PLANES;
  const cases=[
-  ['fighter',82,3.15,100,30,11],
-  ['heavy',75,1.85,125,75,16],
-  ['bomber',66,1.30,140,115,10],
-  ['bf109',84,3.05,96,32,11],
-  ['bf110',77,1.78,125,70,17],
-  ['he111',69,1.35,136,105,10]
+  ['fighter',82,3.15,130,40,11],
+  ['heavy',75,1.85,160,96,16],
+  ['bomber',66,1.30,180,147,10],
+  ['bf109',84,3.05,125,42,11],
+  ['bf110',77,1.78,160,90,17],
+  ['he111',69,1.35,175,135,10]
  ];
  for(const [type,speed,turn,hull,armour,damage] of cases){
   const p=planes[type];assert.equal(p.speed,speed);assert.equal(p.turn,turn);
