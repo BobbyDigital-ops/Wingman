@@ -20,7 +20,7 @@ const CATALOG=[
  ['Hugh "Raven" Doyle','fighter','ace'],['Max "Nightwatch" Beck','bf109','ace']
 ].map((x,i)=>({id:'pilot-'+i,name:x[0],plane:x[1],skill:x[2],faction:AXIS.includes(x[1])?'Axis':'Allies'}));
 const byId=Object.fromEntries(CATALOG.map((p,i)=>[p.id,{...p,appearance:appearance(i*47+9),attributes:{manoeuvrability:50+(i*17)%37,gunnery:48+(i*23)%40,engine:52+(i*11)%34}}]));
-const aircraft={fighter:'Spitfire',heavy:'Beaufighter',bomber:'Lancaster',bf109:'Bf 109',bf110:'Bf 110',he111:'He 111'};
+const aircraft={fighter:'Spitfire',heavy:'Beaufighter',bomber:'Lancaster',bf109:'Emil (Bf 109)',bf110:'Zerstörer (Bf 110)',he111:'Heinkel He 111'};
 const screen=document.getElementById('career-screen'),menu=document.getElementById('menu'),result=document.getElementById('result');
 const nav=document.getElementById('career-open'),licenceBtn=document.getElementById('career-license');
 function load(){try{const o=JSON.parse(localStorage.getItem(STORE)||'null');return o?.profile?o:null;}catch{return null;}}

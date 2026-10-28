@@ -308,10 +308,58 @@ test('Wingman 2.0 airframe gallery uses six genuine live aircraft previews',asyn
  }));
  expect(painted.every(n=>n>250)).toBe(true);
  await page.locator('[data-plane="bf110"]').click();
- await expect(page.locator('#wm-featured-name')).toHaveText('BF 110');
+ await expect(page.locator('#wm-featured-name')).toHaveText('ZERSTÖRER');
  await expect(page.locator('#wm-featured-description')).toContainText('LUFTWAFFE');
  expect(await page.locator('#wm-stat-armour').evaluate(el=>el.style.getPropertyValue('--wm-stat'))).toBe('77%');
  await page.locator('#options-back').click();
  await expect(page.locator('#mode-panel')).toBeVisible();
  expect(errors).toEqual([]);
+});
+
+test('Wingman 2 aircraft retain silhouettes while showing six distinct liveries',async({page})=>{
+ await page.goto('/');
+ const result=await page.evaluate(()=>{
+  const types=['fighter','heavy','bomber','bf109','bf110','he111'];
+  return types.map(type=>{
+   const c=document.createElement('canvas');c.width=560;c.height=250;
+   const g=c.getContext('2d');
+   g.translate(c.width*.5,c.height*.5);g.scale(12,12);
+   window.WingmanSprites.draw(g,type,'level');
+   const img=g.getImageData(0,0,c.width,c.height);
+   const frequency=new Map(),pixels=img.data;let coverage=0;
+   let minX=c.width,maxX=0,minY=c.height,maxY=0;
+   for(let y=0;y<c.height;y+=2)for(let x=0;x<c.width;x+=2){
+    const i=(y*c.width+x)*4,a=pixels[i+3];if(a<120)continue;
+    coverage++;minX=Math.min(minX,x);maxX=Math.max(maxX,x);
+    minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+    const key=[pixels[i]>>4,pixels[i+1]>>4,pixels[i+2]>>4].join('-');
+    frequency.set(key,(frequency.get(key)||0)+1);
+   }
+   return {type,coverage,colourCount:frequency.size,width:maxX-minX,height:maxY-minY,
+     palette:window.WingmanSprites.liveries[type]};
+  });
+ });
+ expect(result).toHaveLength(6);
+ for(const shape of result){
+  expect(shape.coverage).toBeGreaterThan(200);
+  expect(shape.colourCount).toBeGreaterThan(20);
+  expect(shape.width).toBeGreaterThan(250);
+  expect(shape.height).toBeLessThan(180);
+  expect(shape.palette.camouflage).toHaveLength(2);
+ }
+ expect(new Set(result.map(x=>x.palette.camouflage.join('|'))).size).toBe(6);
+});
+
+test('German aircraft display recognisable identities with accurate original designations',async({page})=>{
+ await page.goto('/');
+ await page.locator('#splash-continue').click();
+ await page.locator('#mode-next').click();
+ for(const [type,title,model] of [
+  ['bf109','EMIL','BF 109E'],['bf110','ZERSTÖRER','BF 110'],
+  ['he111','HEINKEL','HE 111']
+ ]){
+  await page.locator('[data-plane="'+type+'"]').click();
+  await expect(page.locator('#wm-featured-name')).toHaveText(title);
+  await expect(page.locator('#wm-featured-description')).toContainText(model);
+ }
 });
