@@ -691,7 +691,7 @@ test('climbing trades forward airspeed for height and diving restores it',()=>{
    game.internals.steerPlane(p,0,1/60);
  }
  assert.ok(p.speed>base,`a dive must recover and exceed initial speed: ${p.speed} vs ${base}`);
- assert.ok(p.speed<=p.d.speed*1.43+1,'diving should not create unlimited speed');
+ assert.ok(p.speed<=p.d.speed*1.60+1,'diving should still have a bounded top speed');
  assert.ok(p.alive,'normal altitude/speed exchange should not damage the plane');
 });
 
@@ -719,4 +719,49 @@ test('the fighter combat HUD and ability naming remain independent of bomb contr
  assert.equal(s.selected,'fighter');
  assert.equal(s.fliers[0].role,'fighter');
  assert.equal(s.phase,'playing');
+});
+
+test('steep dives produce useful overspeed that persists after leveling out',()=>{
+  const game=launch();game.listeners.get('start:click')();
+  const p=game.internals.state.fliers[0];p.spawnSafe=0;
+  p.topRecovery=0;p.climbLoad=0;
+  for(let i=0;i<110;i++){
+    p.angle=Math.PI/2;p.x=220;p.y=105;p.topRecovery=0;p.climbLoad=0;
+    game.internals.steerPlane(p,0,1/60);
+  }
+  const diveSpeed=p.speed;
+  assert.ok(diveSpeed>p.d.speed*1.40,
+    `a steep dive should accelerate well above cruise: ${diveSpeed}`);
+  for(let i=0;i<45;i++){
+    p.angle=0;p.x=220;p.y=105;p.topRecovery=0;p.climbLoad=0;
+    game.internals.steerPlane(p,0,1/60);
+  }
+  assert.ok(p.speed>p.d.speed*1.20,
+    `dive momentum should survive a .75s level-out: ${p.speed}`);
+  assert.ok(p.speed<diveSpeed,'overspeed must gradually fade once level');
+  assert.ok(p.speed<=p.d.speed*1.60+1,'overspeed must remain bounded');
+});
+
+test('Spitfire Overdrive gains about 25 percent power; BF 109 keeps previous boost',()=>{
+  function overdriveSpeed(type){
+    const game=launch();game.listeners.get('start:click')();
+    const p=game.internals.state.fliers[0];
+    if(type==='bf109'){
+      p.type='bf109';p.d=game.internals.PLANES.bf109;
+      p.speed=p.d.speed*.8;p.role='fighter';
+    }
+    p.topRecovery=0;p.spawnSafe=0;
+    game.internals.triggerSpecial(p);
+    for(let i=0;i<145;i++){
+      p.x=200;p.y=105;p.angle=0;p.climbLoad=0;
+      game.internals.updatePlane(p,1/60,0);
+    }
+    assert.ok(p.boosting,'Overdrive remains active during acceleration');
+    return p.speed/p.d.speed;
+  }
+  const spitfire=overdriveSpeed('fighter');
+  const bf109=overdriveSpeed('bf109');
+  assert.ok(spitfire>bf109*1.18,
+    `Spitfire boost should exceed previous fighter tuning by roughly 25%: ${spitfire} vs ${bf109}`);
+  assert.ok(spitfire<1.90+0.01,'Spitfire should respect the boosted speed ceiling');
 });
