@@ -63,7 +63,7 @@ test('eight real career victories ascend exactly one tier each and complete the 
   }else{
     expect(after.completed).toBe(1);
     expect(after.run).toBeNull();
-    expect(after.best).toBeGreaterThanOrEqual(8);
+    expect(after.best).toBe(8);
   }
  }
 });
@@ -119,4 +119,48 @@ test('all 40 pilots have valid unique identity-and-skill profiles and unique art
     artReady:window.WingmanGermanPortraitsReady===true};
  });
  expect(result).toEqual({total:40,raf:20,axis:20,names:40,ids:40,portraits:40,profiles:40,invalid:[],artReady:true});
+});
+
+test('abandoning an active career sortie via MENU unlocks the same tier without charging a life',async({page})=>{
+ await newPilot(page,'Allies',0);
+ const before=await state(page);
+ await page.locator('#active-rung [data-choice="0"]').click();
+ await expect(page.locator('#menu-return')).toBeVisible();
+ await page.locator('#menu-return').click();
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
+ await expect(page.locator('#active-rung [data-choice]')).toHaveCount(3);
+ await page.locator('#active-rung [data-choice="1"]').click();
+ await expect(page.locator('#menu-return')).toBeVisible();
+ const after=await state(page);
+ expect(after.wins).toBe(before.wins);
+ expect(after.losses).toBe(before.losses);
+ expect(after.run.lives).toBe(3);
+ expect(after.run.rank).toBe(1);
+});
+test('rolled heavy fighter armour reflects actual combat armour rather than inflated historical cards',async({page})=>{
+ for(const [faction,type,base] of [['Allies','heavy',78],['Axis','bf110',75]]){
+  await openCareer(page);
+  await page.locator('#career-faction').selectOption(faction);
+  await page.locator('[data-candidate="0"]').click();
+  await page.locator('[data-action="ladder"]').last().click();
+  const armour=Number((await page.locator('[data-aircraft="'+type+'"]').innerText()).match(/ARMOUR\s+(\d+)/)?.[1]);
+  expect(armour).toBeGreaterThanOrEqual(Math.round(base*.9));
+  expect(armour).toBeLessThanOrEqual(Math.ceil(base*1.1));
+  await page.locator('[data-aircraft="'+type+'"]').click();
+  const saved=await state(page);
+  expect(saved.run.airframe.stats.armour).toBe(armour);
+  await page.evaluate(key=>localStorage.removeItem(key),KEY);
+  await page.goto('/');
+ }
+});
+test('roster remains scrollable with the faction selector visible on both mobile and desktop',async({page})=>{
+ await openCareer(page);
+ await page.locator('#career-faction').selectOption('Axis');
+ const before=await page.locator('.character-roster').evaluate(el=>({scrollHeight:el.scrollHeight,clientHeight:el.clientHeight}));
+ expect(before.scrollHeight).toBeGreaterThan(before.clientHeight);
+ await page.locator('.character-roster').evaluate(el=>el.scrollTop=el.scrollHeight);
+ const offset=await page.locator('.character-roster').evaluate(el=>el.scrollTop);
+ expect(offset).toBeGreaterThan(0);
+ await expect(page.locator('#career-faction')).toBeVisible();
 });
