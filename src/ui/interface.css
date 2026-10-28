@@ -449,3 +449,12 @@ body:has(#career-screen:not([hidden])) #touch-controls{
 
 #career-fullscreen{display:none!important}
 #career-screen:not([hidden]) + #career-fullscreen{display:flex!important}
+
+/* Short browser windows need the same edge-to-edge layout as mobile.
+   Otherwise the desktop header/footer steals 122px and hides briefing CTAs. */
+@media (orientation:landscape) and (max-height:540px){
+ html,body{height:100%;overflow:hidden}
+ .app{height:100dvh!important;min-height:0!important;max-height:100dvh!important;padding:0!important;gap:0!important;justify-content:flex-start!important}
+ .site-header,.site-footer,.career-nav{display:none!important}
+ .game-frame{width:100vw!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;min-height:0!important;aspect-ratio:auto!important;border:0!important;box-shadow:none!important}
+}
