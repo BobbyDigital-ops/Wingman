@@ -513,13 +513,149 @@
     "portrait": 31,
     "legacyId": null
   }
+{
+  "id": "ace-33",
+  "name": "Konrad \"Kartoffel\" Weiss",
+  "faction": "Axis",
+  "plane": "bf109",
+  "signature": "cut",
+  "archetype": "Ambush",
+  "bio": "A sly opportunist who vanishes into the clouds.",
+  "attributes": {
+    "manoeuvrability": 94,
+    "gunnery": 77,
+    "engine": 89
+  },
+  "portrait": 32,
+  "legacyId": null,
+  "gender": "male"
+},
+{
+  "id": "ace-34",
+  "name": "Matthias \"Mücke\" Brandt",
+  "faction": "Axis",
+  "plane": "bf109",
+  "signature": "roll",
+  "archetype": "Mosquito",
+  "bio": "A tiny menace with impossible reflexes.",
+  "attributes": {
+    "manoeuvrability": 99,
+    "gunnery": 68,
+    "engine": 85
+  },
+  "portrait": 33,
+  "legacyId": null,
+  "gender": "male"
+},
+{
+  "id": "ace-35",
+  "name": "Hilde \"Himmel\" Vogt",
+  "faction": "Axis",
+  "plane": "bf109",
+  "signature": "dive",
+  "archetype": "Dive Queen",
+  "bio": "A fearless interceptor who attacks from above.",
+  "attributes": {
+    "manoeuvrability": 89,
+    "gunnery": 83,
+    "engine": 98
+  },
+  "portrait": 34,
+  "legacyId": null,
+  "gender": "female"
+},
+{
+  "id": "ace-36",
+  "name": "Franz \"Kaffeekanne\" Meier",
+  "faction": "Axis",
+  "plane": "bf110",
+  "signature": "smoke",
+  "archetype": "Trickster",
+  "bio": "Distracts rivals with smoke and questionable tactics.",
+  "attributes": {
+    "manoeuvrability": 63,
+    "gunnery": 88,
+    "engine": 92
+  },
+  "portrait": 35,
+  "legacyId": null,
+  "gender": "male"
+},
+{
+  "id": "ace-37",
+  "name": "Greta \"Sturmkeks\" Weber",
+  "faction": "Axis",
+  "plane": "bf109",
+  "signature": "deadeye",
+  "archetype": "Sharpshooter",
+  "bio": "Cold nerves and immaculate marksmanship.",
+  "attributes": {
+    "manoeuvrability": 82,
+    "gunnery": 99,
+    "engine": 77
+  },
+  "portrait": 36,
+  "legacyId": null,
+  "gender": "female"
+},
+{
+  "id": "ace-38",
+  "name": "Bruno \"Blechdose\" Keller",
+  "faction": "Axis",
+  "plane": "bf110",
+  "signature": "harden",
+  "archetype": "Ironclad",
+  "bio": "A stubborn bruiser who can take a beating.",
+  "attributes": {
+    "manoeuvrability": 54,
+    "gunnery": 95,
+    "engine": 89
+  },
+  "portrait": 37,
+  "legacyId": null,
+  "gender": "male"
+},
+{
+  "id": "ace-39",
+  "name": "Anneliese \"Wolke\" Hartmann",
+  "faction": "Axis",
+  "plane": "he111",
+  "signature": "reverse",
+  "archetype": "Escape Artist",
+  "bio": "Her bomber makes surprisingly audacious escapes.",
+  "attributes": {
+    "manoeuvrability": 64,
+    "gunnery": 91,
+    "engine": 82
+  },
+  "portrait": 38,
+  "legacyId": null,
+  "gender": "female"
+},
+{
+  "id": "ace-40",
+  "name": "Oskar \"Blitzbirne\" Schulte",
+  "faction": "Axis",
+  "plane": "bf109",
+  "signature": "reverse",
+  "archetype": "Wild Card",
+  "bio": "An erratic ace with blistering acceleration.",
+  "attributes": {
+    "manoeuvrability": 96,
+    "gunnery": 75,
+    "engine": 99
+  },
+  "portrait": 39,
+  "legacyId": null,
+  "gender": "male"
+}
 ];
  const names=[[8,"Geraldine \"Ginny\" Featherstone"],[9,"Ivy \"Sparky\" Cranleigh"],[13,"Edith \"Pudding\" Pennyworth"],[17,"Beatrice \"Sprocket\" Wilkins"],[18,"Dorothy \"Dusty\" Weatherby"],[19,"Elsie \"Tinker\" Marlowe"],[23,"Erika \"Die Katze\" Neumann"],[26,"Lotte \"Schwalbe\" Fischer"],[31,"Ingrid \"Teufel\" Falk"]];
  for(const [index,name] of names){roster[index].name=name;}
  roster[9].bio="A reliable old hand who never removes her flying goggles, even at breakfast.";
  roster[19].bio="A battle-hardened veteran who can mend an engine with a teaspoon.";
  roster[23].bio="Her opponents swear she vanishes between passes.";
- const portraitSlots=[1,2,0,5,7,4,6,3,8,9,11,10,16,13,12,14,15,17,18,19,21,22,20,23,28,25,26,30,24,27,29,31];
- roster.forEach((p,i)=>{p.gender=names.some(([idx])=>idx===i)?'female':'male';p.portrait=portraitSlots[i];});
+ const portraitSlots=[1,2,0,5,7,4,6,3,8,9,11,10,16,13,12,14,15,17,18,19,21,22,20,23,28,25,26,30,24,27,29,31,32,33,34,35,36,37,38,39];
+ roster.forEach((p,i)=>{p.gender=p.gender||(names.some(([idx])=>idx===i)?'female':'male');p.portrait=portraitSlots[i];});
  window.WingmanRoster=Object.freeze(roster.map(p=>Object.freeze({...p,attributes:Object.freeze(p.attributes)})));
 })();
