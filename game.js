@@ -1072,6 +1072,8 @@ function plane(type,id,x,y,angle){
     const names={fighter:'SPITFIRE',heavy:'BEAUFIGHTER',bomber:'LANCASTER',
       bf109:'BF 109',bf110:'BF 110',he111:'HE 111'};
     const short=q=>names[q?.type]||'AIRCRAFT';
+    const craftClass=q=>q?.role==='heavy'?'HEAVY FIGHTER':
+      q?.role==='bomber'?(q?.type==='he111'?'MEDIUM BOMBER':'HEAVY BOMBER'):'FIGHTER';
     const white='#f0e6ce',gold='#e2bf82',dim='#b9b8a9';
     g.save();g.textBaseline='middle';g.lineCap='round';
     // A gently shaded cinema matte occupies just 23 logical pixels,
@@ -1086,7 +1088,7 @@ function plane(type,id,x,y,angle){
       const x=right?W-9:9;
       g.textAlign=right?'right':'left';
       g.fillStyle=right?'#e9b09c':gold;g.font='bold 5.3px monospace';
-      g.fillText(right?'HOSTILE AIRCRAFT':'YOUR AIRCRAFT',x,6);
+      g.fillText((right?'HOSTILE • ':'YOU • ')+craftClass(q),x,6,Math.min(W*.32,143));
       g.fillStyle=white;g.font='bold 10px Georgia,serif';
       g.fillText(short(q),x,17,Math.min(W*.32,143));
       const width=Math.min(W*.24,105),start=right?x-width:x;
