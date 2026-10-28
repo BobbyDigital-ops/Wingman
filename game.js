@@ -578,7 +578,7 @@
       c.beginPath();c.ellipse(0,0,15,14,0,0,TAU);
       c.strokeStyle='#b1ecf5c9';c.lineWidth=.75;c.stroke();
     }
-    c.scale(1.22,1.22);
+    c.scale(1.05,1.05);
     aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':'level');
     if(p.hitFlash>0){
       c.beginPath();c.ellipse(0,0,12,8,0,0,TAU);
