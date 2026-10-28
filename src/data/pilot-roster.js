@@ -512,8 +512,7 @@
     },
     "portrait": 31,
     "legacyId": null
-  }
-{
+  },{
   "id": "ace-33",
   "name": "Konrad \"Kartoffel\" Weiss",
   "faction": "Axis",
