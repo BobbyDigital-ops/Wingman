@@ -94,3 +94,7 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
 /* Six selectable RAF/Luftwaffe aircraft without shrinking the control buttons. */
 .plane-picker{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.plane-choice{min-width:0}.plane-choice b{font-size:clamp(8px,1vw,12px);overflow-wrap:anywhere}.plane-choice small{font-size:9px}
 @media(max-height:500px){.plane-choice{padding:3px 2px}.plane-choice small{font-size:8px}.mode-row{margin-top:5px}}
+
+/* v0.8 Phase 1: boost is next to steering, leaving combat buttons unchanged. */
+.control-btn.boost{font-size:10px;background:#376c6599;border-color:#b9e7ccbd}
+@media(pointer:coarse) and (orientation:landscape){.control-cluster.steer{gap:clamp(3px,.8vw,8px)}}

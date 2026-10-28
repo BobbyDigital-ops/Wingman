@@ -6,12 +6,12 @@
   <meta name="theme-color" content="#172939">
   <meta name="description" content="Wingman — a tiny, tactical, single-screen aerial dogfighting game.">
   <title>Wingman · Pixel Dogfights</title>
-  <link rel="stylesheet" href="./styles.css?v=20261027flight2">
+  <link rel="stylesheet" href="./styles.css?v=20261028v08p1">
 </head>
 <body>
   <div class="app">
     <header class="site-header">
-      <strong>WINGMAN</strong><span>PIXEL DOGFIGHTS · PROTOTYPE 0.1</span>
+      <strong>WINGMAN</strong><span>PIXEL DOGFIGHTS · v0.8 · PHASE 1</span>
     </header>
     <main class="game-frame" id="frame">
       <canvas id="game" width="320" height="180" role="img" aria-label="Side-on aerial duel with fighter aircraft"></canvas>
@@ -47,6 +47,7 @@
         <div class="control-cluster steer">
           <button id="left" type="button" class="control-btn" aria-label="Turn counterclockwise">↶</button>
           <button id="right" type="button" class="control-btn" aria-label="Turn clockwise">↷</button>
+          <button id="boost" type="button" class="control-btn boost" aria-label="Hold to boost">BOOST</button>
         </div>
         <div class="control-cluster attack">
           <button id="roll" type="button" class="control-btn roll" aria-label="Defensive barrel roll">ROLL</button>
@@ -58,13 +59,13 @@
       <div id="rotate-hint">Rotate your phone to landscape for the best flying experience ↻</div>
     </main>
     <footer class="site-footer">
-      <span><b>A / D</b> or <b>← / →</b> turn</span>
+      <span><b>A / D</b> turn · <b>W</b> boost</span>
       <span><b>SPACE</b> burst</span>
       <span><b>SHIFT / K</b> special · <b>L</b> roll · <b>B</b> bomb</span>
       <span><b>P</b> pause</span>
     </footer>
   </div>
-  <script src="./src/art/aircraft.js?v=20261027flight2" defer></script>
-  <script src="./game.js?v=20261027flight2" defer></script>
+  <script src="./src/art/aircraft.js?v=20261028v08p1" defer></script>
+  <script src="./game.js?v=20261028v08p1" defer></script>
 </body>
 </html>
