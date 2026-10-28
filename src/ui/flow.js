@@ -53,10 +53,10 @@ function paintIntro(){
  let grad=g.createLinearGradient(0,0,w,0);
  grad.addColorStop(0,'#d2d2b500');grad.addColorStop(.5,'#d6bd8870');grad.addColorStop(1,'#d2d2b500');
  g.fillStyle=grad;g.fillRect(0,h*.66,w,1);
- // Two genuine repository aircraft drawings for an aviation-game splash.
- g.save();g.translate(w*.31,h*.47);g.rotate(-.12);g.scale(3.0,3.0);
+ // Aviation-poster contrails and two enlarged repository aircraft silhouettes.\n g.save();g.strokeStyle='#e7d6b24a';g.lineWidth=3;g.beginPath();g.moveTo(-20,h*.84);g.bezierCurveTo(w*.25,h*.79,w*.48,h*.34,w*.77,h*.36);g.stroke();g.strokeStyle='#cbd5c630';g.lineWidth=8;g.beginPath();g.moveTo(-20,h*.88);g.bezierCurveTo(w*.25,h*.83,w*.50,h*.39,w*.77,h*.41);g.stroke();g.restore();\n // Two genuine repository aircraft drawings for an aviation-game splash.
+ g.save();g.translate(w*.31,h*.53);g.rotate(-.18);g.scale(5.7,5.7);
  window.WingmanSprites.draw(g,'fighter','level');g.restore();
- g.save();g.translate(w*.74,h*.38);g.rotate(Math.PI+.12);g.scale(2.4,2.4);
+ g.save();g.translate(w*.76,h*.34);g.rotate(Math.PI+.14);g.scale(4.6,4.6);
  window.WingmanSprites.draw(g,'bf109','level');g.restore();
 }
 window.WingmanFlow={reset:()=>show('splash'),setMode,show};
