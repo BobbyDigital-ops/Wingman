@@ -161,3 +161,20 @@
  .career-panel:has(.character-roster){max-height:calc(100svh - 16px)}
  .career-panel .character-roster{max-height:none}
 }
+
+/* Audit fix: max-height alone lets the flex item grow beyond the panel in Chromium.
+   Give the card grid a definite scrollport; the faction selector stays outside it. */
+.career-panel:has(.character-roster) .character-roster{
+  height:min(54dvh,520px);
+  max-height:min(54dvh,520px);
+  min-height:120px;
+  flex:0 1 auto;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+@media(pointer:coarse) and (orientation:landscape){
+  .career-panel:has(.character-roster) .character-roster{
+    height:clamp(110px,43svh,240px);
+    max-height:clamp(110px,43svh,240px);
+  }
+}
