@@ -103,6 +103,12 @@ function plane(type,id,x,y,angle){
         state.fliers.push(p);
       }
     }
+    if(state.mode==='campaign'&&state.campaignAirframe?.stats){
+      const base=state.fliers[0].d,rolled=state.campaignAirframe.stats;
+      const safe={speed:clamp(Number(rolled.speed)||base.speed,base.speed*.94,base.speed*1.06),turn:clamp(Number(rolled.turn)||base.turn,base.turn*.94,base.turn*1.06),armour:clamp(Number(rolled.armour)||base.armour,base.armour*.88,base.armour*1.12)};
+      state.fliers[0].d={...base,...safe};
+      state.fliers[0].armour=safe.armour;
+    }
     state.fliers[0].attributes=pilotAttributes(readPilotAttributes());
     if(state.mode==='campaign'&&state.campaignEncounter?.attributes)
       for(const foe of state.fliers.slice(1))foe.attributes=pilotAttributes(state.campaignEncounter.attributes);
@@ -125,10 +131,11 @@ function plane(type,id,x,y,angle){
     document.getElementById('bomb').hidden=!['bomber','he111'].includes(state.selected);
     background=makeBackground();newRound();
   }
-  function startCampaignFight(encounter,aircraft){
+  function startCampaignFight(encounter,aircraft,airframe){
     if(!encounter||!Array.isArray(encounter.types)||!encounter.types.length)return;
     audioUnlock();
     state.selected=aircraft;
+    state.campaignAirframe=airframe?.type===aircraft?airframe:null;
     state.enemyType=encounter.types[0];
     state.campaignEncounter=encounter;
     state.scores=[0,0];state.round=1;state.kills=0;

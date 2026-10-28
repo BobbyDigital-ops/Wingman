@@ -119,19 +119,34 @@ function createProfile(index){
  const chosen=candidates[index];if(!chosen)return;
  const name=document.getElementById('career-name')?.value.trim().slice(0,30)||recruitName(document.getElementById('career-faction')?.value||'Allies',chosen.id);
  const faction=document.getElementById('career-faction')?.value==='Axis'?'Axis':'Allies';
+ airframeOffers=[];
  data={profile:{name,faction,style:chosen.style,attributes:chosen.attributes},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
  save();view='licence';render();
 }
+const BASE_AIRCRAFT={fighter:{speed:82,turn:3.15,hull:100,armour:30},heavy:{speed:75,turn:1.85,hull:125,armour:75},bomber:{speed:66,turn:1.30,hull:140,armour:115},bf109:{speed:84,turn:3.05,hull:96,armour:32},bf110:{speed:77,turn:1.78,hull:125,armour:70},he111:{speed:69,turn:1.35,hull:136,armour:105}};
+function rollAirframe(type){
+ const b=BASE_AIRCRAFT[type];if(!b)return null;
+ const trade=[-1,0,1].sort(()=>Math.random()-.5);
+ return {type,stats:{speed:Math.round(b.speed*(1+trade[0]*.045)*10)/10,
+ turn:Math.round(b.turn*(1+trade[1]*.045)*1000)/1000,
+ hull:b.hull,armour:Math.round(b.armour*(1+trade[2]*.09))}};
+}
+let airframeOffers=[];
+function prepareAirframes(){
+ const types=data?.profile?.faction==='Axis'?AXIS:ALLIES;
+ airframeOffers=types.map(rollAirframe);
+}
 function startRun(aircraftId){
  if(!data||!([...(data.profile.faction==='Allies'?ALLIES:AXIS)].includes(aircraftId)))return;
- data.run={faction:data.profile.faction,aircraft:aircraftId,rank:1,lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null};
+ const airframe=airframeOffers.find(a=>a.type===aircraftId)||rollAirframe(aircraftId);
+ data.run={faction:data.profile.faction,aircraft:aircraftId,airframe,rank:1,lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null};
  data.run.choices=makeChoices(data.run);save();view='ladder';render();
 }
 function fight(index){
  const run=data?.run;if(!run||active||!run.choices)return;
  const choice=run.choices[index];if(!choice)return;
  active=choice;screen.hidden=true;showing=false;
- window.WingmanGame.startCampaignFight(choice,run.aircraft);
+ window.WingmanGame.startCampaignFight(choice,run.aircraft,run.airframe);
 }
 function finishEncounter(won,encounter){
  if(!active||!data?.run)return;
@@ -196,9 +211,10 @@ function render(){
   return;
  }
  if(!run){
+  if(airframeOffers.length!==3)prepareAirframes();
   panel('ROAD TO ACE',`<p>${escape(p.name)} · ${p.faction}. Choose one aircraft for your entire run. Three lives; a defeat costs a life and drops you one rank.</p>
   <p class="career-muted">Win eight ranks of tactical dogfights to challenge the summit. Opponents are named, and past defeats build grudges.</p>
-  <div class="career-planes">${(p.faction==='Allies'?ALLIES:AXIS).map(type=>`<button data-aircraft="${type}">${aircraft[type]}</button>`).join('')}</div>
+  <div class="career-planes">${airframeOffers.map(a=>`<button class="airframe-card" data-aircraft="${a.type}"><strong>${aircraft[a.type]}</strong><small>SPEED ${a.stats.speed}</small><small>TURN ${a.stats.turn}</small><small>HULL ${a.stats.hull}</small><small>ARMOUR ${a.stats.armour}</small><span>LOCK IN AIRCRAFT</span></button>`).join('')}</div>
   <button data-action="licence">VIEW PILOT LICENCE</button>`);
   return;
  }

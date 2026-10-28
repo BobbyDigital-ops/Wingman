@@ -87,7 +87,7 @@ test('Road to Ace starts and saves a locked-aircraft three-life run',async({page
  await page.locator('#career-name').fill('Flight Leader');
  await page.locator('[data-candidate="0"]').click();
  await page.getByRole('button',{name:'ROAD TO ACE'}).last().click();
- await page.getByRole('button',{name:'Spitfire',exact:true}).click();
+ await page.locator('[data-aircraft="fighter"]').click();
  await expect(page.getByText('RANK 1/8')).toBeVisible();
  await expect(page.locator('[data-choice]')).toHaveCount(3);
  await page.locator('[data-choice="0"]').click();
@@ -113,3 +113,5 @@ test('pilot offers random recruits and retains the chosen flight attributes',asy
  await page.reload();await page.locator('#career-license').click();
  await expect(page.getByText('Sky Captain',{exact:true})).toBeVisible();
 });
+
+test('rolled airframe is saved and locked for the run',async({page})=>{await page.goto('/');await page.locator('#career-open').click();await page.locator('[data-candidate="0"]').click();await page.getByRole('button',{name:'ROAD TO ACE'}).last().click();await expect(page.locator('.airframe-card')).toHaveCount(3);await page.locator('[data-aircraft="fighter"]').click();const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')).run);expect(result.airframe.type).toBe('fighter');expect(result.airframe.stats.speed).toBeGreaterThan(0);await page.reload();await page.locator('#career-open').click();await expect(page.getByText('RANK 1/8')).toBeVisible();});
