@@ -160,6 +160,28 @@ function bomber(g,p,is111){
   line(g,nx+.7,-.2,nx+2.2,-.5,'#3b4341',.65);
  }
  roundel(g,tx+6,.4,p.nation,.5);
+ // Tiny but readable defensive glazing and rear-facing dorsal turret.
+ // Four-engine bombers must visually communicate the risk of tailing them.
+ path(g,p.dark,'#26383a',c=>{
+  c.moveTo(-7.8,-2.5);c.lineTo(-6.9,-5.8);
+  c.quadraticCurveTo(-5.2,-7.2,-3.8,-5.8);c.lineTo(-3.2,-2.4);
+ });
+ path(g,p.glass,null,c=>{
+  c.moveTo(-6.9,-3.3);c.lineTo(-6.3,-5.5);
+  c.quadraticCurveTo(-5.3,-6.2,-4.6,-5.3);c.lineTo(-4.3,-3.2);
+ });
+ line(g,-6.7,-5.3,-10.2,-6.7,'#2b3c41',.8);
+ // Sparse fuselage panels and unlit observation windows.
+ for(const x of [-11,-8,0,3,11])line(g,x,1.9,x+1.4,2.05,p.dark,.37);
+ for(const x of [-9,-6]){g.fillStyle='#aac8bd';g.fillRect(x,-.8,1.15,.75);}
+ // Wing panel highlight and non-cartoon engine exhaust staining.
+ strokeDetails(g,p);
+}
+function strokeDetails(g,p){
+ line(g,-2.5,3.8,6.1,4.3,'#dae2ce59',.33);
+ line(g,1.8,-1,11.7,-1.35,'#293b3d5c',.32);
+ g.fillStyle='#252f2e55';
+ for(const x of [-1.1,4.2])g.fillRect(x+2,3.2,3,.75);
 }
 function draw(g,type,variant){
  const p=palettes[type];if(!p)return;
