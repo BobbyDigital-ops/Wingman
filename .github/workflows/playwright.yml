@@ -1,7 +1,7 @@
 name: Playwright Browser Tests
 on:
   push:
-    branches: [main, wingman-playwright-ci, wingman-v07-critical-damage, wingman-v08-phase1-flight, wingman-v08-phase1-tuning, wingman-v08-phase2, wingman-v08-phase3-overhaul, wingman-v08-tactical-rebalance, wingman-v08-top-wrap, wingman-road-to-ace-stage1, wingman-v09-pilot-identities, wingman-v09-pilot-selection, wingman-v09-scenery-and-names, wingman-v09-phase2a, wingman-v09-phase2b, wingman-v09-phase2c-mobile, wingman-v09-phase2d, wingman-v09-phase2e-final]
+    branches: [main, wingman-playwright-ci, wingman-v07-critical-damage, wingman-v08-phase1-flight, wingman-v08-phase1-tuning, wingman-v08-phase2, wingman-v08-phase3-overhaul, wingman-v08-tactical-rebalance, wingman-v08-top-wrap, wingman-road-to-ace-stage1, wingman-v09-pilot-identities, wingman-v09-pilot-selection, wingman-v09-scenery-and-names, wingman-v09-phase2a, wingman-v09-phase2b, wingman-v09-phase2c-mobile, wingman-v09-phase2d, wingman-v09-phase2e-final, wingman-v09-phase3-mobile]
   pull_request:
   workflow_dispatch:
 

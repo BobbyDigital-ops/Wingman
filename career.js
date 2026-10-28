@@ -182,14 +182,17 @@ function appearanceControls(){
 function ladder(run){
  const rows=[];
  for(let rank=MAX_RANK;rank>=1;rank--){
-  if(rank===run.rank){
-    rows.push('<div class="ladder-rung current" id="active-rung"><div class="ladder-rank">RANK '+rank+' · YOUR NEXT CHALLENGE</div><div class="career-options">'+run.choices.map((op,i)=>{
-      const p=byId[op.id],record=data.records[op.id];
-      return '<button class="career-opponent" data-choice="'+i+'"><div class="career-small-photo">'+pilotPortrait(p.faction,p.appearance)+'</div><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+' · '+op.difficulty.toUpperCase()+'</small>'+(op.types.length>1?'<em>1 VS 2</em>':'')+(record?'<em>'+record.wins+'–'+record.losses+(record.losses>record.wins?' · GRUDGE':'')+'</em>':'')+'<span>CHALLENGE →</span></button>';
-    }).join('')+'</div></div>');
-  }else rows.push('<div class="ladder-rung '+(rank<run.rank?'cleared':'locked')+'"><div class="ladder-rank">'+(rank===MAX_RANK?'★ ACE SHOWDOWN':'RANK '+rank)+'</div><span>'+(rank<run.rank?'CLEARED':'LOCKED')+'</span></div>');
+   const current=rank===run.rank;
+   let contents;
+   if(current){
+     contents='<div class="career-options tree-choices">'+run.choices.map((op,i)=>{
+       const p=byId[op.id],record=data.records[op.id];
+       return '<button class="career-opponent tree-node" data-choice="'+i+'"><div class="career-small-photo">'+pilotPortrait(p.faction,p.appearance)+'</div><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+' · '+op.difficulty.toUpperCase()+'</small>'+(op.types.length>1?'<em>1 VS 2</em>':'')+(record?'<em>'+record.wins+'–'+record.losses+(record.losses>record.wins?' · GRUDGE':'')+'</em>':'')+'<span>CHALLENGE →</span></button>';
+     }).join('')+'</div>';
+   }else contents='<div class="tree-rank-state">'+(rank<run.rank?'✓ CLEARED':'🔒 LOCKED')+'</div>';
+   rows.push('<section class="ladder-rung tree-tier '+(current?'current':rank<run.rank?'cleared':'locked')+'" '+(current?'id="active-rung"':'')+'><div class="ladder-rank">'+(rank===MAX_RANK?'★ FINAL ACE':'RANK '+rank)+(current?' · CHOOSE YOUR RIVAL':'')+'</div>'+contents+'</section>');
  }
- return '<div class="ladder-scroll" role="region" aria-label="Full pilot ladder" tabindex="0">'+rows.join('')+'</div>';
+ return '<div class="ladder-scroll campaign-tree" role="region" aria-label="Eight rank branching pilot ladder" tabindex="0"><div class="tree-spine">'+rows.join('')+'</div></div>';
 }
 function render(){
  if(!data){
@@ -223,7 +226,7 @@ function render(){
   return;
  }
  panel('ROAD TO ACE',`<div class="career-stats"><span>${escape(p.name)} · ${aircraft[run.aircraft]}</span><span>RANK ${run.rank}/${MAX_RANK}</span><span>${'♥'.repeat(run.lives)}${'♡'.repeat(3-run.lives)}</span></div>
- <p class="career-muted">Climb the full ladder. Three opponents at your current rank; earlier ranks remain visible below.</p>
+ <p class="career-muted">Choose one of three rival branches to ascend. Cleared ranks remain below; future ranks are locked above.</p>
  ${ladder(run)}<button data-action="licence">VIEW PILOT LICENCE</button>`);
  const marker=screen.querySelector('#active-rung');if(marker)marker.scrollIntoView({block:'center'});
 

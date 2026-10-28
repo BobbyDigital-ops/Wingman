@@ -874,9 +874,9 @@ function plane(type,id,x,y,angle){
       g.fillStyle='#e6d3a0';g.fillText(p.role==='fighter'?'OVERDRIVE':'ABILITY',123,24);
       bar(123,33,48,p.overdriveTime>0?p.overdriveTime/2.8:0,1,p.boosting?'#f4d07c':'#9bd4ad');
       const risk=clamp(p.flightRisk||0,0,1);
-      g.fillStyle='#d8e9d8';g.font='bold 5px monospace';g.fillText('CLIMB',W/2-13,35);
+      g.fillStyle='#d8e9d8';g.font='bold 7px monospace';g.fillText('CLIMB',W/2-13,44);
       // Clear tricolour risk scale: safe green → warning amber → stall red.
-      const meterX=W/2-13,meterY=43,meterW=40;
+      const meterX=W/2-13,meterY=54,meterW=40;
       g.fillStyle='#29434a';g.fillRect(meterX-1,meterY-1,meterW+2,6);
       g.fillStyle='#83c495';g.fillRect(meterX,meterY,13,4);
       g.fillStyle='#e5c16d';g.fillRect(meterX+13,meterY,13,4);
@@ -991,7 +991,7 @@ function plane(type,id,x,y,angle){
     const el=document.getElementById(id);
     el.addEventListener('pointerdown',ev=>{
       ev.preventDefault();
-      el.setPointerCapture(ev.pointerId);
+      try{el.setPointerCapture(ev.pointerId);}catch{}
       el.classList.add('pressed');
       audioUnlock();
       if(key)controls[key]=true;
@@ -1002,8 +1002,12 @@ function plane(type,id,x,y,angle){
       el.classList.remove('pressed');
     };
     el.addEventListener('pointerup',release);
-    el.addEventListener('pointercancel',release);
-    el.addEventListener('lostpointercapture',release);
+    if(key)window.addEventListener('pointerup',release);
+    // Browsers can cancel or transfer pointer capture while the finger stays
+    // down (especially mobile landscape URL bar changes). Keep steering held
+    // until the finger actually lifts, or the page becomes inactive.
+    if(!key){el.addEventListener('pointercancel',release);el.addEventListener('lostpointercapture',release);}
+    else {el.addEventListener('pointercancel',ev=>{if(ev.buttons===0)release(ev);});}
     el.addEventListener('contextmenu',ev=>ev.preventDefault());
   }
   bindButton('left','left');

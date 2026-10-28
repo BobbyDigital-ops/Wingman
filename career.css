@@ -39,3 +39,16 @@
 .airframe-card span{margin-top:auto;color:#f4cd82;font-size:10px}
 
 .pilot-skill-picker{display:grid;gap:5px;color:#e6d4a6;font-size:12px;margin:12px 0}.pilot-skill-picker select{background:#132a38;color:#f9e5b6;padding:10px;border:1px solid #a48c62}
+
+/* Phase 3 campaign ladder: a connected, vertically scrollable branch map. */
+.campaign-tree{background:radial-gradient(circle at 50% 60%,#31475670,#101e2bbd);border:1px solid #768996;scroll-behavior:smooth}
+.tree-spine{display:flex;flex-direction:column;align-items:center;gap:0;padding:16px 8px 22px}
+.tree-tier{position:relative;width:min(100%,590px);text-align:center;padding:17px 8px 23px!important;border:0!important;background:transparent!important}
+.tree-tier:not(:last-child):after{content:'';position:absolute;left:50%;height:22px;width:2px;bottom:-8px;background:repeating-linear-gradient(to bottom,#af9e73 0 5px,transparent 5px 9px)}
+.tree-tier .ladder-rank{display:inline-block;padding:7px 15px;border:1px solid #9b947a;border-radius:22px;background:#1b3440;color:#efdab0;letter-spacing:.08em}
+.tree-rank-state{margin:10px auto 0;padding:7px;width:max-content;min-width:100px;border:1px solid #607887;background:#233846;color:#bbcbd0}
+.tree-tier.current .ladder-rank{border-color:#f1c37b;background:#654b38;color:#ffe9bb}
+.tree-choices{position:relative;margin-top:24px;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px!important}
+.tree-choices:before{content:'';position:absolute;top:-15px;left:16.66%;right:16.66%;height:14px;border-top:2px solid #d3b783;border-left:2px solid #d3b783;border-right:2px solid #d3b783;pointer-events:none}
+.tree-node{min-width:0;min-height:175px;overflow-wrap:anywhere}
+@media(max-width:530px){.tree-choices{grid-template-columns:repeat(3,minmax(0,1fr))}.tree-node{font-size:10px;padding:7px 3px!important}.tree-node .career-small-photo{max-width:100%}}

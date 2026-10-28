@@ -116,3 +116,19 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
 
 /* Three-action phone layout: steer, FIRE, E ability, Q skill; no universal boost or separate bomb. */
 @media(pointer:coarse) and (orientation:landscape){.control-cluster.steer{gap:10px}.control-cluster.attack{gap:9px}}
+
+/* Mobile: always fit the arena to the visible viewport, not the layout viewport.
+ * Avoid the address bar pushing controls out of view when not fullscreen. */
+@media (pointer:coarse){
+ html,body{height:100%;overflow:hidden}
+ .app{height:100svh;min-height:0;padding:0;gap:0;justify-content:flex-start}
+ .site-header,.site-footer{display:none}
+ .game-frame{height:100svh;width:100vw;max-height:none;min-height:0;max-width:none;aspect-ratio:auto;border:0;flex:none;box-shadow:none}
+ .control-layer{position:absolute;inset:0;z-index:12;display:flex;justify-content:space-between;align-items:flex-end;padding:0 max(8px,env(safe-area-inset-right)) max(15px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));touch-action:none}
+ .control-cluster.attack,.control-cluster.steer{display:flex;gap:clamp(6px,1.2vw,13px)}
+ .control-btn,.control-cluster.attack .control-btn{width:clamp(64px,15svh,98px)!important;height:clamp(64px,15svh,98px)!important;min-width:64px;min-height:64px;font-size:clamp(14px,3svh,25px)!important;touch-action:none}
+ #fullscreen-toggle{z-index:15}
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-height:400px){
+ .control-btn,.control-cluster.attack .control-btn{width:clamp(60px,19svh,80px)!important;height:clamp(60px,19svh,80px)!important}
+}
