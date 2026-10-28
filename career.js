@@ -281,7 +281,7 @@ function characterPicker(){
  const members=ROSTER.filter(x=>x.faction===p.faction);
  return '<p class="career-muted">32 defined pilots across both squadrons. Switching an existing career changes identity and ability while retaining earned wins, rank and progression.</p>'+
  '<div class="character-roster" role="group" aria-label="Choose your Wingman pilot">'+members.map(pilot=>{
- const selected=data.profile.rosterId===pilot.id;
+ const selected=data.profile.characterConfirmed===true&&data.profile.rosterId===pilot.id;
  return '<button type="button" data-roster="'+pilot.id+'" class="candidate-card '+(selected?'selected':'')+'" aria-pressed="'+selected+'">'+
  '<div class="candidate-portrait">'+pilotPortrait(pilot.faction,{...appearance(pilot.portrait*47+9),rosterPortrait:pilot.portrait})+'</div>'+
  '<strong>'+escape(pilot.name)+'</strong><small>'+escape(pilot.archetype)+' · '+escape(aircraft[pilot.plane])+'</small>'+
