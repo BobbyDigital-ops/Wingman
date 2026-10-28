@@ -1074,48 +1074,58 @@ function plane(type,id,x,y,angle){
   }
   function bindButton(id,key,action){
     const el=document.getElementById(id);
-    let heldPointer=null;
+    if(!el)return;
+    let pointerId=null;
+    const activeTouches=new Set();
+    function sync(){
+      const held=pointerId!==null||activeTouches.size>0;
+      if(key)controls[key]=held;
+      el.classList.toggle('pressed',held);
+    }
     el.addEventListener('pointerdown',ev=>{
-      if(key&&heldPointer!==null)return;
-      if(key)heldPointer=ev.pointerId;
+      // Touch is managed by real touch events below: pointercancel on a long
+      // press is not a reliable touch release event on Android/Safari.
+      if(ev.pointerType==='touch')return;
+      if(pointerId!==null)return;
       ev.preventDefault();
+      pointerId=ev.pointerId;
       try{el.setPointerCapture(ev.pointerId);}catch{}
-      el.classList.add('pressed');
-      audioUnlock();
-      if(key)controls[key]=true;
+      audioUnlock();sync();
       if(action)action();
     });
-    const release=ev=>{
-      if(key&&ev?.pointerId!==heldPointer)return;
-      if(key){controls[key]=false;heldPointer=null;}
-      el.classList.remove('pressed');
+    const releasePointer=ev=>{
+      if(pointerId===null||ev.pointerId!==pointerId)return;
+      pointerId=null;sync();
     };
-    el.addEventListener('pointerup',release);
-    if(key)window.addEventListener('pointerup',release);
-    // Browsers can cancel or transfer pointer capture while the finger stays
-    // down (especially mobile landscape URL bar changes). Keep steering held
-    // until the finger actually lifts, or the page becomes inactive.
-    if(!key){el.addEventListener('pointercancel',release);el.addEventListener('lostpointercapture',release);}
-    else {el.addEventListener('pointercancel',ev=>{if(ev.buttons===0)release(ev);});}
+    el.addEventListener('pointerup',releasePointer);
+    el.addEventListener('pointercancel',releasePointer);
+    window.addEventListener('pointerup',releasePointer);
+    // Prevent the browser from selecting the arrow glyph or taking over a hold.
+    // Every finger is tracked separately, so steering remains down while
+    // FIRE / SKILL are held with the other thumb.
+    el.addEventListener('touchstart',ev=>{
+      ev.preventDefault();
+      const wasHeld=activeTouches.size>0;
+      for(const touch of ev.changedTouches)activeTouches.add(touch.identifier);
+      audioUnlock();sync();
+      if(action&&!wasHeld)action();
+    },{passive:false});
+    const releaseTouch=ev=>{
+      ev.preventDefault();
+      for(const touch of ev.changedTouches)activeTouches.delete(touch.identifier);
+      sync();
+    };
+    el.addEventListener('touchend',releaseTouch,{passive:false});
+    el.addEventListener('touchcancel',releaseTouch,{passive:false});
+    el.addEventListener('selectstart',ev=>ev.preventDefault());
     el.addEventListener('contextmenu',ev=>ev.preventDefault());
   }
   bindButton('left','left');
   bindButton('right','right');
-  // Universal boost removed; aircraft abilities now use E.
   bindButton('fire',null,()=>triggerBurst(state.fliers[0]));
   bindButton('special',null,()=>triggerSpecial(state.fliers[0]));
   bindButton('roll',null,()=>triggerPilotSkill(state.fliers[0]));
-  // Bomber drops its three-bomb run using E.
-  // On touchscreen, double-tap either turn direction for defensive roll.
-  // Ignore held touches: only two separate presses within the short window.
-  for(const id of ['left','right']){
-    let lastTap=0;
-    document.getElementById(id).addEventListener('pointerdown',()=>{
-      const now=Date.now();
-      if(now-lastTap>70&&now-lastTap<270)triggerPilotSkill(state.fliers[0]);
-      lastTap=now;
-    });
-  }
+  // A dedicated SKILL control replaces the ambiguous double-tap turn gesture.
   const preventKeys=new Set(['ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyA','KeyD','KeyW','ArrowUp','KeyE','KeyK','KeyL','KeyQ','KeyB']);
   document.addEventListener('keydown',e=>{
     if(preventKeys.has(e.code))e.preventDefault();
