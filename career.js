@@ -279,7 +279,7 @@ function characterPicker(){
  if(!data?.profile)return '';
  const p=data.profile;
  const members=ROSTER.filter(x=>x.faction===p.faction);
- return '<p class="career-muted">32 defined pilots across both squadrons. Switching an existing career changes identity and ability while retaining earned wins, rank and progression.</p>'+
+ return '<p class="career-muted">40 defined pilots across both squadrons. Switching an existing career changes identity and ability while retaining earned wins, rank and progression.</p>'+
  '<div class="character-roster" role="group" aria-label="Choose your Wingman pilot">'+members.map(pilot=>{
  const selected=data.profile.characterConfirmed===true&&data.profile.rosterId===pilot.id;
  return '<button type="button" data-roster="'+pilot.id+'" class="candidate-card '+(selected?'selected':'')+'" aria-pressed="'+selected+'">'+
@@ -293,8 +293,8 @@ function render(){
  if(data&&view==='character'){panel('CHOOSE YOUR PILOT',characterPicker());return;}
  if(!data||view==='select'){
   if(!candidates.length)candidates=generateCandidates();
-  panel('SELECT YOUR ACE',`<p class="career-muted">Choose one of 32 predefined pilots. Each has a fixed identity, aircraft, stats and signature skill. The opposing squadron supplies your rivals.</p>
-  <div class="candidate-identity"><label>SQUADRON <select id="career-faction"><option value="Allies" ${selectFaction==='Allies'?'selected':''}>RAF — 20 PILOTS</option><option value="Axis" ${selectFaction==='Axis'?'selected':''}>LUFTWAFFE — 12 PILOTS</option></select></label></div>
+  panel('SELECT YOUR ACE',`<p class="career-muted">Choose one of 40 predefined pilots. Each has a fixed identity, aircraft, stats and signature skill. The opposing squadron supplies your rivals.</p>
+  <div class="candidate-identity"><label>SQUADRON <select id="career-faction"><option value="Allies" ${selectFaction==='Allies'?'selected':''}>RAF — 20 PILOTS</option><option value="Axis" ${selectFaction==='Axis'?'selected':''}>LUFTWAFFE — 20 PILOTS</option></select></label></div>
   <div id="candidate-picker">${candidatePicker()}</div>
   ${data?'<button data-action="licence">BACK TO CURRENT PILOT</button>':''}`);
   return;
