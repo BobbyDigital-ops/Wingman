@@ -184,3 +184,58 @@ h1,h2{margin:0;font-weight:900;letter-spacing:.16em;color:#f4e1b1;text-shadow:3p
  .menu-card{box-shadow:0 7px 25px #06101aaf}
  .control-btn{box-shadow:inset 0 1px 0 #ffffff38,0 2px 0 #0f263d6b}
 }
+
+/* Phase 8.1 mobile correction: touch targets should be reachable, never
+   enormous decorative circles taking a fifth of the battlefield. This
+   override deliberately comes AFTER the legacy coarse-pointer rules. */
+@media (pointer:coarse){
+ .control-layer{
+   align-items:flex-end;
+   padding:0 max(12px,env(safe-area-inset-right))
+       max(12px,env(safe-area-inset-bottom))
+       max(12px,env(safe-area-inset-left));
+ }
+ .control-layer .control-cluster{
+   display:flex;align-items:center;justify-content:center;
+   gap:clamp(7px,1.3vw,13px);
+ }
+ .control-layer .control-btn,
+ .control-layer .control-cluster.attack .control-btn{
+   box-sizing:border-box;
+   display:grid!important;place-items:center!important;
+   width:clamp(48px,12svh,64px)!important;
+   height:clamp(48px,12svh,64px)!important;
+   min-width:0!important;min-height:0!important;
+   padding:0!important;margin:0!important;
+   flex:none;line-height:1!important;text-align:center!important;
+   font-size:clamp(17px,3svh,23px)!important;
+   border-width:2px;border-radius:50%;
+   touch-action:none!important;
+ }
+ .control-layer .control-btn.roll,
+ .control-layer .control-cluster.attack .control-btn.roll{
+   display:grid!important;place-items:center!important;
+   font-size:clamp(10px,2.3svh,13px)!important;
+   letter-spacing:0!important;
+ }
+ .control-layer .control-btn.fire,
+ .control-layer .control-cluster.attack .control-btn.fire{
+   font-size:clamp(11px,2.5svh,15px)!important;
+ }
+ .control-layer .control-btn.special{
+   font-size:clamp(20px,3.5svh,27px)!important;
+ }
+ /* These are utility controls below the HUD, not HUD-overlapping overlays. */
+ #fullscreen-toggle,#menu-return{
+   top:calc(15.2% + 8px)!important;
+   min-height:40px!important;
+   height:40px!important;
+   padding:0 9px!important;
+   display:grid;place-items:center;
+   font-size:13px!important;
+   line-height:1!important;
+ }
+ #fullscreen-toggle{right:max(9px,env(safe-area-inset-right));width:40px!important}
+ #menu-return{right:calc(max(9px,env(safe-area-inset-right)) + 48px);min-width:59px!important}
+ #menu-return[hidden]{display:none!important}
+}

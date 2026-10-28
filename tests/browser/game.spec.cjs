@@ -141,7 +141,8 @@ test('mobile landscape controls stay onscreen, hold steering and render at incre
   });
   expect(dimensions.canvasPixels).toBeGreaterThan(dimensions.screenWidth*1.4);
   for(const b of dimensions.controls){
-    expect(b.size).toBeGreaterThanOrEqual(60);
+    expect(b.size).toBeGreaterThanOrEqual(44);
+    expect(b.size).toBeLessThanOrEqual(68);
     expect(b.bottom).toBeLessThanOrEqual(dimensions.screenHeight+1);
     expect(b.left).toBeGreaterThanOrEqual(0);
     expect(b.right).toBeLessThanOrEqual(dimensions.screenWidth+1);
@@ -198,4 +199,31 @@ test('Phase 8 arenas render distinct cached landscape colours without JS excepti
   }
   expect(new Set(signatures).size).toBe(4);
   expect(errors).toEqual([]);
+});
+
+test('mobile buttons use centred labels and utilities do not cover the top HUD',async({page})=>{
+ await page.goto('/');
+ if(!(await page.evaluate(()=>matchMedia('(pointer: coarse)').matches)))return;
+ await page.locator('#start').click();
+ const ui=await page.evaluate(()=>{
+   const frame=document.getElementById('frame').getBoundingClientRect();
+   const dims=id=>{
+     const el=document.getElementById(id),r=el.getBoundingClientRect(),css=getComputedStyle(el);
+     return {x:r.left,y:r.top,width:r.width,height:r.height,display:css.display,
+             align:css.alignItems,justify:css.justifyItems,font:parseFloat(css.fontSize)};
+   };
+   return {frame:{top:frame.top,height:frame.height},
+     skill:dims('roll'),left:dims('left'),right:dims('right'),
+     menu:dims('menu-return'),full:dims('fullscreen-toggle')};
+ });
+ for(const key of ['left','right','skill']){
+   expect(ui[key].display).toBe('grid');
+   expect(ui[key].align).toBe('center');
+   expect(ui[key].justify).toBe('center');
+   expect(ui[key].width).toBeLessThanOrEqual(68);
+ }
+ expect(ui.skill.font).toBeLessThanOrEqual(14);
+ expect(ui.menu.y).toBeGreaterThanOrEqual(ui.frame.top+ui.frame.height*.152-2);
+ expect(ui.full.y).toBeGreaterThanOrEqual(ui.frame.top+ui.frame.height*.152-2);
+ expect(ui.menu.x+ui.menu.width).toBeLessThanOrEqual(ui.full.x-4);
 });
