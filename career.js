@@ -169,7 +169,7 @@ function generateCandidates(){
   attributes:{...p.attributes}
  }));
 }
-let selectFaction='Allies';
+let selectFaction=data?.profile?.faction==='Axis'?'Axis':'Allies';
 function candidatePicker(){
  return '<div class="character-roster">'+candidates.map((c,i)=>
  '<button type="button" data-candidate="'+i+'" class="candidate-card" aria-label="Choose '+escape(c.roster.name)+'">'+
