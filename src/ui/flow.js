@@ -99,7 +99,12 @@ function paintPlane(canvas,type,scale){
  // The flight renderer still uses the exact original model geometry.
  const artSlot=paintedPlaneTypes.indexOf(type);
  if(artSlot>=0&&paintedArtImage.complete&&paintedArtImage.naturalWidth>=516){
-  g.drawImage(paintedArtImage,artSlot*86,84,86,60,0,0,w,h);
+  // Preserve the painting's proportions, particularly in the wide
+  // featured hangar canvas. Never stretch an aircraft into a long shape.
+  const aspect=86/60;
+  const drawHeight=h,drawWidth=Math.min(w,h*aspect);
+  g.drawImage(paintedArtImage,artSlot*86,84,86,60,
+    (w-drawWidth)/2,(h-drawHeight)/2,drawWidth,drawHeight);
   return;
  }
  g.save();g.translate(w*.5,h*.52);
