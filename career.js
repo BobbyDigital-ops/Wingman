@@ -489,14 +489,14 @@ function characterPicker(){
  if(!data?.profile)return '';
  const p=data.profile;
  const members=ROSTER.filter(x=>x.faction===p.faction);
- return '<p class="career-muted">40 defined pilots across both squadrons. Switching an existing career changes identity and ability while retaining earned wins, rank and progression.</p>'+
+ return '<p class="career-muted">SELECT YOUR PILOT — tap a portrait to confirm. Switching identity retains your current career progress and medals.</p>'+
  '<div class="character-roster" role="group" aria-label="Choose your Wingman pilot">'+members.map(pilot=>{
  const selected=data.profile.characterConfirmed===true&&data.profile.rosterId===pilot.id;
  return '<button type="button" data-roster="'+pilot.id+'" class="candidate-card '+(selected?'selected':'')+'" aria-pressed="'+selected+'">'+
  '<div class="candidate-portrait">'+pilotPortrait(pilot.faction,{...appearance(pilot.portrait*47+9),rosterPortrait:pilot.portrait})+'</div>'+
  '<strong>'+escape(pilot.name)+'</strong><small>'+escape(pilot.archetype)+' · '+escape(aircraft[pilot.plane])+'</small>'+
  '<p class="character-bio">'+escape(pilot.bio)+'</p><small>TURN '+pilot.attributes.manoeuvrability+' · GUNS '+pilot.attributes.gunnery+' · ENGINE '+pilot.attributes.engine+'</small>'+
- '<span>'+escape(PILOT_SKILLS.find(x=>x[0]===pilot.signature)?.[1]||'SPECIAL')+'</span></button>';
+ '<span>CONFIRM PILOT · '+escape(PILOT_SKILLS.find(x=>x[0]===pilot.signature)?.[1]||'SPECIAL')+'</span></button>';
  }).join('')+'</div><button type="button" data-action="licence">BACK TO LICENCE</button>';
 }
 function render(){
@@ -523,11 +523,11 @@ function render(){
   return;
  }
  if(!run){
-  if(airframeOffers.length!==3)prepareAirframes();
-  panel('ROAD TO ACE',`<p>${escape(p.name)} · ${p.faction}. Choose your aircraft before every sortie. Three lives; a defeat costs a life and drops you one rank.</p>
-  <p class="career-muted">Win eight ranks against recurring rival pilots. Earn decorations, survive with three lives and defeat the final ace with two escorts.</p>
-  <div class="career-planes">${airframeOffers.map(a=>`<button class="airframe-card" data-aircraft="${a.type}"><strong>${aircraft[a.type]}</strong><small>SPEED ${a.stats.speed}</small><small>TURN ${a.stats.turn}</small><small>HULL ${a.stats.hull}</small><small>ARMOUR ${a.stats.armour}</small><span>BEGIN CAMPAIGN</span></button>`).join('')}</div>
-  <button data-action="licence">VIEW PILOT LICENCE</button>`);
+  panel('READY FOR YOUR FIRST SORTIE',`<div class="career-onboarding"><div class="onboard-step">1 <strong>PILOT CONFIRMED</strong><span>${escape(p.name)} · ${escape(p.faction)}</span></div>
+  <div class="onboard-step">2 <strong>START ROAD TO ACE</strong><span>Eight ranks, three lives, recurring rivals</span></div>
+  <div class="onboard-step">3 <strong>PICK AN AIRCRAFT EACH MISSION</strong><span>Preferred: ${escape(aircraft[p.plane])} · +10% hull, armour and damage</span></div></div>
+  <button class="career-primary" data-action="begin-run">START ROAD TO ACE ▶</button>
+  <button data-action="character">CHANGE PILOT</button><button data-action="licence">PILOT LICENCE</button>`);
   return;
  }
  if(view==='sortie'&&pendingChoice!==null){
@@ -590,6 +590,7 @@ screen.addEventListener('click',e=>{
  }
  if(el.dataset.candidate!==undefined)createProfile(Number(el.dataset.candidate));
  if(action==='ladder'){view=data?.run?'ladder':'licence';if(data&&!data.run)view='ladder';render();}
+ if(action==='begin-run')startRun(data.profile.plane);
  if(action==='licence'){view='licence';render();}
  if(action==='portrait'&&data?.profile){
   const style=data.profile.style||(data.profile.style=appearance(0));
