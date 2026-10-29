@@ -8,6 +8,22 @@ function show(view){
    const el=$(id);if(el)el.hidden=name!==view;
  }
 }
+function syncChallenge(){
+ const selected=document.querySelector('[data-mode-choice].selected')?.dataset.modeChoice==='challenge';
+ const setting=$('challenge-setting'),difficulty=$('difficulty-select'),hint=$('challenge-description');
+ if(setting)setting.hidden=!selected;
+ const info={
+  intercept:{difficulty:'ace',message:'ACE AI · DESTROY THE FIGHTER WITHIN 45 SECONDS'},
+  crosswind:{difficulty:'standard',message:'STANDARD AI · STRONG WIND · WIN WITHIN 75 SECONDS'},
+  noarmour:{difficulty:'standard',message:'STANDARD AI · ZERO STARTING ARMOUR · WIN WITHIN 90 SECONDS'},
+  heavy:{difficulty:'ace',message:'ACE AI · INTERCEPT HEAVY FIGHTER WITHIN 90 SECONDS'}
+ }[$('challenge-select')?.value||'intercept'];
+ if(difficulty){
+  difficulty.disabled=!!selected;
+  if(selected)difficulty.value=info?.difficulty||'ace';
+ }
+ if(hint)hint.textContent=info?.message||'';
+}
 function setMode(kind){
  const preset={
    duel:['duel','2','ffa'],
@@ -26,6 +42,7 @@ function setMode(kind){
    button.classList.toggle('selected',selected);
    button.setAttribute('aria-pressed',String(selected));
  }
+ syncChallenge();
 }
 function requestImmersive(force=false){
  const frame=document.querySelector('.app'); // fullscreen the whole game workspace, including career
@@ -57,7 +74,8 @@ $('splash-continue')?.addEventListener('click',()=>{
  show('mode');
 });
 $('mode-back')?.addEventListener('click',()=>show('splash'));
-$('mode-next')?.addEventListener('click',()=>show('options'));
+$('mode-next')?.addEventListener('click',()=>{syncChallenge();show('options');});
+$('challenge-select')?.addEventListener('change',syncChallenge);
 $('options-back')?.addEventListener('click',()=>show('mode'));
 for(const choice of document.querySelectorAll('[data-mode-choice]')){
  choice.addEventListener('click',()=>setMode(choice.dataset.modeChoice));
