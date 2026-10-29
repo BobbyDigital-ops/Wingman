@@ -22,14 +22,14 @@ const api=()=>P.WingmanUIBridge;
 const confirmButton=(label,action,cl='red')=>'<button type="button" class="btn '+cl+'" data-action="'+action+'">'+label+'</button>';
 const rankTitles=['FIRST SORTIE','ROOKIE','REGULAR','EXPERIENCED','VETERAN','ELITE','ACE FLIGHT','FINAL ACE'];
 function pById(id){return roster.find(p=>p.id===id)}
-function rivalFor(c){const current=pById(c.id);if(current)return current;const n=Number(String(c.id).replace('pilot-',''));const faction=['bf109','bf110','he111'].includes(c.types?.[0])?'Axis':'Allies';const candidates=roster.filter(p=>p.faction===faction);const base=candidates[(Number.isFinite(n)?n:0)%candidates.length];return base?{...base,name:c.label||base.name}:null;}
+function rivalFor(c){const current=pById(c.id);if(current)return current;const n=Number(String(c.id).replace('pilot-',''));const faction=['bf109','bf110','he111'].includes(c.types?.[0])?'Axis':'Allies';const candidates=roster.filter(p=>p.faction===faction&&p.gender!=='female');const base=candidates[(Number.isFinite(n)?n:0)%candidates.length];return base?{...base,name:c.label||base.name}:null;}
 function player(){const saved=playerSave();return pById(saved?.profile?.rosterId)||null}
 function pilotShort(p){return p?.name?.match(/"([^"]+)"/)?.[1]||p?.name?.split(' ')[0]||'PILOT'}
 function atlas(p){
  if(!p)return '';
  const german=p.faction==='Axis',src=german?P.WingmanGermanPortraitAtlas:P.WingmanRosterPortraitAtlas;
  if(!src)return '';
- const cols=german?4:8,rows=german?5:4,n=german?(p.portrait-20):p.portrait;
+ const cols=german?4:8,rows=german?5:4,n=german?roster.filter(q=>q.faction==='Axis').findIndex(q=>q.id===p.id):p.portrait;
  const x=(n%cols)/(cols-1)*100,y=Math.floor(n/cols)/(rows-1)*100;
  return '<span class="atlas-portrait" role="img" aria-label="'+esc(p.name)+' portrait" style="display:block;width:100%;height:100%;background-image:url('+src+');background-size:'+(cols*100)+'% '+(rows*100)+'%;background-position:'+x+'% '+y+'%"></span>';
 }
