@@ -60,6 +60,10 @@ test('Phase 6 honours and five separate local records survive reloading',async({
  await expect(board).toContainText('CHALLENGE');
  expect(await page.evaluate(()=>window.WingmanArcade.data.total)).toBe(5);
  await expect(board.locator('.arcade-honour.earned')).not.toHaveCount(0);
+ await board.locator('.arcade-top-list summary').click();
+ await expect(board.locator('.arcade-top-grid')).toBeVisible();
+ await expect(board.locator('.arcade-top-category')).toHaveCount(5);
+ await expect(board.locator('.arcade-top-category li')).toHaveCount(5);
 });
 test('Phase 6 local records do not block touch controls or operation selection on mobile',async({page})=>{
  await page.goto('/');
