@@ -20,7 +20,7 @@ const state={screen:'home',history:[],mode:'duel',plane:'fighter',faction:'Allie
 const app=document.querySelector('#viewport'),status=document.querySelector('#pilot-status');
 const plane=id=>aircraft.find(a=>a.id===id)||aircraft[0];
 const pilot=id=>pilots.find(x=>x.id===id)||pilots[0];
-const chosenPilot=()=>pilot(state.pilotId);
+const chosenPilot=()=>state.pilotId?pilot(state.pilotId):null;
 const mode=()=>modes.find(m=>m.id===state.mode)||modes[0];
 const safe=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function callsign(p){return p?.name?.match(/"([^"]+)"/)?.[1]||p?.name?.split(' ')[0]||'PILOT'}
