@@ -91,3 +91,13 @@ npm run balance:tournament
 # Or save full per-fixture telemetry:
 node tests/balance-tournament.cjs --reps=2 --seconds=75 --output=wingman-tournament.json
 ```
+
+## Release verification — completed
+
+- **63/63** Node engine, physics, career ability and tournament-determinism unit tests passing.
+- **102/102** Playwright browser cases passing across desktop Chromium and Pixel 7 landscape browser emulation, including menus, all six aircraft, all four modes, all eight career ranks, saves, portrait rendering and scrolling.
+- **720 original + 720 revised** matched AI sorties completed without nonfinite physics. The original and revised matrices used matching seeds and the corrected equal-start benchmark.
+- Verified the Vercel production deployment serves HTTP 200 for the updated `game.js`, `career.js` and `index.html` with fresh asset versions.
+- These checks do not certify subjective human play feel, physical-device FPS, iOS, online multiplayer or historical simulation accuracy.
+
+The code changes, source-level tournament runner and its regression checks are committed to `main`. All pilot portraits, pilot identities, career progression and aircraft silhouettes have been preserved.
