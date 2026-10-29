@@ -631,5 +631,5 @@ screen.addEventListener('change',e=>{
 });
 nav.addEventListener('click',()=>show(data?'ladder':'select'));licenceBtn.addEventListener('click',()=>show('licence'));
 document.getElementById('career-open-mobile')?.addEventListener('click',()=>show(data?'ladder':'select'));
-window.WingmanCareer={finishEncounter,open:show,cancelEncounter:()=>{active=null;}};
+window.WingmanCareer={restartRun:()=>{active=null;pendingChoice=null;pendingAircraft=null;startRun(data?.profile?.plane);},finishEncounter,open:show,cancelEncounter:()=>{active=null;}};
 })();
