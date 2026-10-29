@@ -7,8 +7,8 @@ const career=()=>{try{return JSON.parse(localStorage.getItem('wingman-road-to-ac
 let iframe,cover,syncing=false,lastResult='',resultSeen=false;
 const broadcast=data=>iframe?.contentWindow?.postMessage(data,location.origin);
 const visible=el=>!!el&&!(el.hidden||el.classList.contains('hidden'));
-function show(){if(cover)cover.hidden=false}
-function hide(){if(cover)cover.hidden=true}
+function show(){if(cover){cover.hidden=false;cover.style.display='block'}}
+function hide(){if(cover){cover.hidden=true;cover.style.display='none'}}
 function openCareer(screen='ladder'){window.WingmanCareer?.open?.(screen);show()}
 const click=(query,scope=document)=>{const el=scope.querySelector(query);if(!el)return false;el.click();return true};
 const setValue=(id,value)=>{const el=by(id);if(!el)return;el.value=String(value);el.dispatchEvent(new Event('change',{bubbles:true}))};
