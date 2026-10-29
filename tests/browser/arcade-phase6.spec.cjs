@@ -28,6 +28,9 @@ test('Phase 6 every special operation can be selected and launched in landscape'
  for(const id of ['intercept','crosswind','noarmour','heavy']){
   await page.locator('#challenge-select').selectOption(id);
   expect(await page.locator('#challenge-select').inputValue()).toBe(id);
+  await expect(page.locator('#difficulty-select')).toBeDisabled();
+  expect(await page.locator('#difficulty-select').inputValue()).toBe(id==='intercept'||id==='heavy'?'ace':'standard');
+  await expect(page.locator('#challenge-description')).toContainText('AI');
   const start=page.locator('#start');await start.scrollIntoViewIfNeeded();
   await start.click();
   await expect(page.locator('#menu')).toHaveClass(/hidden/);
