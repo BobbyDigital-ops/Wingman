@@ -192,3 +192,85 @@
   border-radius:3px;padding:3px 5px;font-weight:700;font-size:9px;
   overflow-wrap:anywhere;opacity:1;
 }
+
+
+/* PHASES 4+5 · Squadron dossier and cinema-grade campaign polish.
+   Keep artwork intact and portrait proportions unchanged. */
+:root{--wm-brass:#e2bd83;--wm-ink:#071923;--wm-highlight:#f1d7a4}
+#wm-audio-toggle{margin-left:auto;min-width:115px;border-color:#a38c69;color:#f4dcaa;background:linear-gradient(145deg,#314b55,#172c37);font:700 10px monospace;letter-spacing:.06em}
+#wm-audio-toggle.muted{color:#b4bfc0;border-color:#5e7379}
+#wm-audio-toggle:focus-visible{outline:3px solid #f1c98e;outline-offset:2px}
+.career-panel{
+ position:relative;
+ background:radial-gradient(ellipse at 86% 0%,#344c56 0%,transparent 52%),
+ linear-gradient(145deg,#233c4a,#101e29 68%,#091923);
+ border:1px solid #c4a574;
+ outline:1px solid #564a38;
+ outline-offset:-6px;
+ box-shadow:0 28px 88px #000c,inset 0 0 0 3px #1a3442;
+}
+.career-panel:before{
+ content:"";pointer-events:none;position:absolute;inset:10px;
+ border:1px solid #bfaa7544;z-index:0;
+}
+.career-head h2{font-family:Georgia,serif;letter-spacing:.09em;text-transform:uppercase;text-shadow:0 2px 12px #0009}
+.career-head{border-bottom:1px solid #af966d7d;padding-bottom:12px}
+.career-panel h3{font:700 12px Georgia,serif;letter-spacing:.15em;color:#e8cb92}
+.career-service,.career-medals{margin-top:18px;padding:12px;background:linear-gradient(125deg,#0b222f,#1b3340);border:1px solid #8a795e70}
+.career-medals{background:linear-gradient(120deg,#102330,#26383b,#10232c)}
+.career-service h3,.career-medals h3{margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid #8e82654b}
+.medal-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.medal{min-width:0;min-height:84px;display:flex;align-items:center;flex-direction:column;justify-content:center;
+ text-align:center;padding:8px 7px;border:1px solid #b69b6670;background:linear-gradient(165deg,#354d53,#1d2d35);
+ transition:transform .16s,filter .16s;gap:4px}
+.medal span{display:grid;place-items:center;font-family:Georgia,serif;font-size:23px;color:#f4d49a;
+ filter:drop-shadow(0 3px 5px #0008)}
+.medal strong{font:700 10px Georgia,serif;color:#f6e3ba;letter-spacing:.06em}
+.medal small{font:9px/1.35 sans-serif;color:#b6cbd0}
+.medal.locked{opacity:.38;filter:grayscale(1)}
+.medal.earned{background:linear-gradient(155deg,#51503a,#303b36 48%,#203a44);border-color:#e3c083;box-shadow:inset 0 1px 12px #e5c88d24}
+.career-log-entry{display:grid;grid-template-columns:78px minmax(0,1fr) 145px;gap:9px;align-items:center;
+ padding:8px 5px;border-bottom:1px solid #c3b18a32;font-size:11px}
+.career-log-entry:last-child{border-bottom:0}
+.career-log-entry>span{color:#e8c184;font:700 10px monospace}
+.career-log-entry strong{color:#e2e7db;overflow-wrap:anywhere;font:700 11px Georgia,serif}
+.career-log-entry small{color:#a2bac0;text-align:right;font:10px monospace}
+.career-outcome-opponent{font:13px Georgia,serif;color:#d9c597}
+.award-celebration{margin:14px 0;padding:10px;border:1px solid #dfb879;
+ background:linear-gradient(120deg,#4a442d,#233b3f)}
+.award-celebration>strong{color:#f4d59c;font:700 10px monospace;letter-spacing:.11em}
+.earned-ribbons{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.earned-ribbons span{padding:7px 10px;border:1px solid #d3b57d;color:#fff1ce;
+ background:linear-gradient(110deg,#6a5543,#304b4a);font:700 10px Georgia,serif;box-shadow:0 3px 8px #0006}
+.final-tribute{margin:14px 0 18px;padding:22px 17px;text-align:center;
+ background:radial-gradient(ellipse at top,#53533b90,transparent 75%),linear-gradient(160deg,#203b40,#0a1d2a);
+ border:1px solid #debb7c;box-shadow:inset 0 0 32px #d6b97919,0 12px 28px #0006}
+.final-tribute .final-laurel{font:28px Georgia,serif;letter-spacing:.6em;color:#e8ce9d}
+.final-tribute h3{font-size:clamp(20px,4.2vw,35px);margin:4px 0;letter-spacing:.08em;color:#f9e0a9;text-shadow:0 3px 16px #000a}
+.final-tribute p{color:#d0d5cc;font:14px/1.55 Georgia,serif}
+.final-tribute b{color:#f0cc8d}
+.route-tier.current .route-opponent:has(.rival-final){
+ border-color:#e3c081!important;background:linear-gradient(155deg,#5b473c,#213e47)!important;
+ box-shadow:inset 0 0 20px #d0a96a38,0 0 12px #e1a65a3a}
+.route-opponent .rival-final{display:block;color:#fff0c2!important;background:#5d433b66;border:1px solid #c99d5b;
+ padding:5px 4px;font:700 10px/1.3 Georgia,serif;letter-spacing:.04em;overflow-wrap:anywhere;opacity:1}
+.route-opponent .rival-mission{display:block;color:#a8bec2;letter-spacing:.08em;font-size:9px}
+.route-tier.current .route-rank{color:#ffe7b5}
+.route-node:focus-visible{outline:2px solid #f3d097!important;outline-offset:2px}
+@media(max-width:700px){
+ .medal-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .career-log-entry{grid-template-columns:65px minmax(0,1fr);gap:5px}
+ .career-log-entry small{grid-column:2;text-align:left}
+ .career-service,.career-medals{padding:8px}
+ .final-tribute{padding:14px 10px}
+ .medal{min-height:68px;padding:5px}
+ #wm-audio-toggle{margin-left:0;min-width:0}
+}
+@media(max-width:450px){
+ .medal-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .career-head h2{letter-spacing:.02em}
+ .career-panel{outline-offset:-3px}
+}
+@media(prefers-reduced-motion:reduce){
+ .medal,.career-panel button{transition:none!important}
+}
