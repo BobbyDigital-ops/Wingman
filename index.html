@@ -43,8 +43,10 @@
             <button type="button" class="mode-choice selected" data-mode-choice="duel" aria-pressed="true"><strong>1 VS 1</strong><span>Classic Duel</span><small>ONE RIVAL · BEST OF THREE</small></button>
             <button type="button" class="mode-choice" data-mode-choice="survival" aria-pressed="false"><strong>SURVIVAL</strong><span>Endless Aces</span><small>FIGHT UNTIL YOU FALL</small></button>
             <button type="button" class="mode-choice" data-mode-choice="triple" aria-pressed="false"><strong>FREE FOR ALL</strong><span>Three Aircraft</span><small>EVERY PILOT FOR THEMSELVES</small></button>
-            <button type="button" class="mode-choice" data-mode-choice="teams" aria-pressed="false"><strong>2 VS 2</strong><span>Wingmen</span><small>FIGHT ALONGSIDE A FRIENDLY AI</small></button>
+            <button type="button" class="mode-choice" data-mode-choice="teams" aria-pressed="false"><strong>2 VS 2</strong><span>Wingmen</span><small>PROTECT YOUR SQUADRON PARTNER</small></button>
+            <button type="button" class="mode-choice mode-challenges" data-mode-choice="challenge" aria-pressed="false"><strong>CHALLENGES</strong><span>Special Operations</span><small>FOUR UNIQUE MISSION RULES</small></button>
           </div>
+          <details id="arcade-records-panel" class="arcade-records-panel"><summary>✦ PILOT HONOURS & LOCAL LEADERBOARDS</summary><div id="arcade-records" aria-live="polite"></div></details>
           <div class="flow-actions"><button type="button" class="front-secondary" id="mode-back">BACK</button><button type="button" class="front-action" id="mode-next">CONTINUE ▶</button></div>
         </section>
         <section class="front-panel setup-panel" id="options-panel" hidden aria-label="Choose aircraft and battle options">
@@ -65,12 +67,13 @@
             <div class="setup-controls">
               <p class="setup-label">FLIGHT CONDITIONS</p>
               <div class="mode-row">
+                <label class="challenge-setting" id="challenge-setting" hidden>SPECIAL OPERATION <select id="challenge-select"><option value="intercept">ACE INTERCEPT · 45S</option><option value="crosswind">CROSSWIND DUEL · 75S</option><option value="noarmour">IRON NERVES · NO ARMOUR</option><option value="heavy">HEAVY HUNTER · 90S</option></select></label>
                 <label>AI DIFFICULTY <select id="difficulty-select"><option value="rookie">ROOKIE</option><option value="standard" selected>STANDARD</option><option value="ace">ACE</option></select></label>
                 <label>THEATRE <select id="arena-select"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">HOME FRONT (STORM)</option></select></label>
                 <select id="hud-style" hidden aria-hidden="true"><option value="arcade" selected>Combat</option></select>
                 <label class="flow-advanced" hidden>OPPONENTS <select id="pilots-select"><option value="2">1 AI · DUEL</option><option value="3">2 AI · TRIPLE</option><option value="4">3 AI · FOUR-PLANE</option></select></label>
                 <label class="flow-advanced" hidden>BATTLE <select id="team-select"><option value="ffa">FREE FOR ALL</option><option value="teams">2v2 TEAMS</option></select></label>
-                <label class="flow-advanced" hidden>MODE <select id="mode-select"><option value="duel">DUEL</option><option value="survival">SURVIVAL</option></select></label>
+                <label class="flow-advanced" hidden>MODE <select id="mode-select"><option value="duel">DUEL</option><option value="survival">SURVIVAL</option><option value="challenge">CHALLENGE</option></select></label>
               </div>
               <p class="setup-hint">A / D STEER · SPACE FIRE · E ABILITY · Q SKILL</p>
             </div>
@@ -82,7 +85,7 @@
         <div class="menu-card result-card">
           <p class="eyebrow">AFTER ACTION REPORT · OPERATIONS COMMAND</p>
           <h2 id="result-title">VICTORY</h2>
-          <p id="result-detail"></p>
+          <p id="result-detail"></p><div id="arcade-after-action" class="arcade-after-action" aria-live="polite"></div>
           <button class="start-button" id="rematch" type="button">FLY AGAIN <span aria-hidden="true">▶</span></button>
           <button class="text-button" id="change-plane" type="button">Change aircraft</button>
         </div>
@@ -116,10 +119,11 @@
   <script src="./assets/art/wingman-german-painted-atlas.js?v=20261029painted20" defer></script>
   <script src="./src/art/scenery.js?v=20261028phase8bfix1" defer></script>
   <script src="./src/audio/soundscape.js?v=20261029phase45release1" defer></script>
-  <script src="./game.js?v=20261029phase45release1" defer></script>
+  <script src="./game.js?v=20261029phase6a" defer></script>
   <script src="./src/data/pilot-roster.js?v=20261029roster40" defer></script>
   <script src="./src/data/pilot-ai.js?v=20261029phase3a" defer></script>
+  <script src="./src/data/arcade-records.js?v=20261029phase6a" defer></script>
   <script src="./career.js?v=20261029phase45release1" defer></script>
-  <script src="./src/ui/flow.js?v=20261028crisp2" defer></script>
+  <script src="./src/ui/flow.js?v=20261029phase6a" defer></script>
 </body>
 </html>
