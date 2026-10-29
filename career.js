@@ -316,7 +316,7 @@ function show(which='ladder'){
  }
  showing=true;view=which;screen.hidden=false;menu.classList.add('hidden');result.classList.add('hidden');render();
 }
-function close(){pendingChoice=null;showing=false;screen.hidden=true;window.WingmanGame?.showMenu();}
+function close(){pendingChoice=null;pendingAircraft=null;showing=false;screen.hidden=true;window.WingmanGame?.showMenu();}
 const ATTRS=['manoeuvrability','gunnery','engine'];
 let candidates=[];
 let selectedSkill='roll';
@@ -376,9 +376,10 @@ function startRun(aircraftId){
  data.run.choices=makeChoices(data.run);save();view='ladder';render();
 }
 let pendingChoice=null;
+let pendingAircraft=null;
 function fight(index){
  if(!data?.run||active||!data.run.choices?.[index])return;
- pendingChoice=index;view='sortie';render();
+ pendingChoice=index;pendingAircraft=data.profile.plane;view='sortie';render();
 }
 function launchSortie(type){
  const run=data?.run;if(!run||pendingChoice===null||active)return;
@@ -388,7 +389,7 @@ function launchSortie(type){
  if(scaled){choice.attributes=scaled.attributes;choice.signature=scaled.signature;choice.archetype=scaled.archetype;choice.personality=scaled.tactic;}
  choice.playerAptitude=type===data.profile.plane?{hull:1.1,armour:1.1,damage:1.1}:null;
  choice.playerAircraft=type;run.aircraft=type;run.airframe=null;
- pendingChoice=null;save();active=choice;showing=false;screen.hidden=true;
+ pendingChoice=null;pendingAircraft=null;save();active=choice;showing=false;screen.hidden=true;
  window.WingmanGame.startCampaignFight(choice,type,null);
 }
 function finishEncounter(won,encounter){
@@ -532,13 +533,21 @@ function render(){
  }
  if(view==='sortie'&&pendingChoice!==null){
   const encounter=run.choices[pendingChoice],types=run.faction==='Allies'?ALLIES:AXIS;
-  panel('CHOOSE AIRCRAFT — RANK '+run.rank,`<p><strong>${escape(encounter.mission||'DOGFIGHT')}</strong> against ${escape(encounter.label)}. Choose a plane for this mission.</p>
-  <p class="career-muted">Pilot's preferred aircraft: <b>${escape(aircraft[p.plane])}</b>. +10% hull, armour and weapon damage when flying that type.</p>
-  <div class="career-planes">${types.map(type=>{const b=BASE_AIRCRAFT[type],preferred=type===p.plane;
-   return `<button class="airframe-card ${preferred?'preferred-plane':''}" data-sortie-plane="${type}"><strong>${escape(aircraft[type])}</strong>
-   <small>HULL ${Math.round(b.hull*(preferred?1.1:1))}</small><small>ARMOUR ${Math.round(b.armour*(preferred?1.1:1))}</small>
-   <small>${preferred?'★ SPECIALIST +10% GUN DAMAGE / HULL / ARMOUR':'STANDARD AIRCRAFT'}</small><span>FLY THIS SORTIE</span></button>`}).join('')}</div>
-  <button data-action="sortie-back">BACK TO MISSIONS</button>`);
+  const selected=types.includes(pendingAircraft)?pendingAircraft:types[0];
+  const choices=types.map(type=>{
+   const pref=type===p.plane,chosen=type===selected;
+   if(window.WingmanGrid?.card)return window.WingmanGrid.card(type,{career:true,preferred:pref,selected:chosen}).outerHTML;
+   const b=BASE_AIRCRAFT[type];
+   return '<button type="button" data-sortie-plane="'+type+'" class="airframe-card '+(chosen?'selected':'')+'">'+
+    escape(aircraft[type])+' · HULL '+b.hull+' · ARMOUR '+b.armour+'</button>';
+  }).join('');
+  panel('SELECT AIRCRAFT — RANK '+run.rank,`<div class="wg-career-prep">
+   <p class="wg-career-intro"><b>${escape(encounter.mission||'DOGFIGHT')}</b> · Opposing pilot: ${escape(encounter.label)}.<br>
+   Your specialist aircraft is <b>${escape(aircraft[p.plane])}</b>. +10% hull, armour and gun damage when flying it.</p>
+   <div class="wg-cards" role="group" aria-label="Choose aircraft for this career sortie">${choices}</div>
+   <div class="wg-career-actions"><button data-action="sortie-back">← BACK TO MISSIONS</button>
+    <button class="wg-career-confirm" data-action="confirm-sortie-aircraft">CONFIRM AIRCRAFT &amp; FLY ▶</button></div>
+   </div>`);
   return;
  }
  panel('ROAD TO ACE',`<div class="career-stats"><span>${escape(p.name)} · ${aircraft[run.aircraft]}</span><span>RANK ${run.rank}/${MAX_RANK}</span><span>${'♥'.repeat(run.lives)}${'♡'.repeat(3-run.lives)}</span></div>
@@ -600,8 +609,18 @@ screen.addEventListener('click',e=>{
  }
  if(el.dataset.aircraft)startRun(el.dataset.aircraft);
  if(el.dataset.choice!==undefined)fight(Number(el.dataset.choice));
- if(el.dataset.sortiePlane)launchSortie(el.dataset.sortiePlane);
- if(action==='sortie-back'){pendingChoice=null;view='ladder';render();}
+ if(el.dataset.sortiePlane&&view==='sortie'){
+  pendingAircraft=el.dataset.sortiePlane;
+  screen.querySelectorAll('[data-sortie-plane]').forEach(button=>{
+   const yes=button.dataset.sortiePlane===pendingAircraft;
+   button.classList.toggle('selected',yes);
+   button.setAttribute('aria-pressed',String(yes));
+   const badge=button.querySelector('.wg-selected-label');
+   if(badge)badge.textContent=yes?'✓ SELECTED':'SELECT';
+  });
+ }
+ if(action==='confirm-sortie-aircraft'&&pendingAircraft)launchSortie(pendingAircraft);
+ if(action==='sortie-back'){pendingChoice=null;pendingAircraft=null;view='ladder';render();}
 });
 screen.addEventListener('change',e=>{
  if(e.target.id==='career-skill'){selectedSkill=e.target.value;}
