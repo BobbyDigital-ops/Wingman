@@ -681,3 +681,16 @@ body:has(#career-screen:not([hidden])) #touch-controls{
  .arcade-honour{font-size:8px;padding:3px 4px}
  .mode-cards .mode-challenges{min-height:42px;grid-column:1/-1}
 }
+
+.arcade-top-list{margin-top:8px;padding-top:7px;border-top:1px solid #c5ac7957;color:#d4cbd0}
+.arcade-top-list summary{cursor:pointer;list-style:disclosure-closed;color:#e0c991;font:700 10px Georgia,serif}
+.arcade-top-list[open] summary{list-style:disclosure-open}
+.arcade-top-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:9px 0}
+.arcade-top-category{background:#152e3c;border:1px solid #627a77;padding:7px;min-width:0}
+.arcade-top-category>strong{color:#efc88f;font:700 10px Georgia,serif;letter-spacing:.04em}
+.arcade-top-category ol{margin:6px 0 0;padding:0 0 0 18px}
+.arcade-top-category li{padding:2px 0;border-bottom:1px solid #8e9fa536;display:list-item;font:10px monospace;color:#e4e5d9}
+.arcade-top-category li b{color:#e6ce9e;margin-right:7px;font-variant-numeric:tabular-nums}
+.arcade-top-category li span{color:#a6c0c5;font-size:9px}
+.arcade-top-category small{display:block;margin-top:4px;color:#829da7;font:9px monospace}
+@media(max-width:570px){.arcade-top-grid{grid-template-columns:1fr}.arcade-top-category li{font-size:9px}}
