@@ -68,6 +68,7 @@
   const palette={sky:'#95c7df',ink:'#243945',cream:'#f2e1ad',red:'#e88469'};
 
   function audioUnlock(){
+    if(window.WingmanAudio){window.WingmanAudio.unlock();return;}
     try{
       const Ctx=window.AudioContext||window.webkitAudioContext;
       if(Ctx&&!audio){audio=new Ctx();}
@@ -75,6 +76,7 @@
     }catch(_){}
   }
   function sound(type){
+    if(window.WingmanAudio){window.WingmanAudio.play(type);return;}
     if(!audio||audio.state!=='running')return;
     try{
       const t=audio.currentTime,osc=audio.createOscillator(),gain=audio.createGain();
@@ -209,7 +211,7 @@ function plane(type,id,x,y,angle){
     state.arena=Number(document.getElementById('arena-select')?.value||0);
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
     document.getElementById('bomb')?.setAttribute('hidden','');
-    background=makeBackground();newRound();
+    background=makeBackground();newRound();window.WingmanAudio?.startEngine();
   }
   function startCampaignFight(encounter,aircraft,airframe){
     if(!encounter||!Array.isArray(encounter.types)||!encounter.types.length)return;
@@ -225,7 +227,7 @@ function plane(type,id,x,y,angle){
     state.arena=encounter.arena||0;
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
     document.getElementById('bomb')?.setAttribute('hidden','');
-    background=makeBackground();newRound();
+    background=makeBackground();newRound();window.WingmanAudio?.startEngine();
   }
   window.WingmanGame={startCampaignFight,showMenu:()=>showMenu()};
   const menuReturn=document.getElementById('menu-return');
@@ -242,6 +244,7 @@ function plane(type,id,x,y,angle){
     fullscreenButton.title=full?'Exit full screen':'Full screen';
   }});
   function showMenu(){
+    window.WingmanAudio?.stopEngine();
     if(state.mode==='campaign')window.WingmanCareer?.cancelEncounter?.();
     state.campaignEncounter=null;state.campaignAirframe=null;
     state.phase='menu';state.paused=false;controls.left=false;controls.right=false;controls.boost=false;
@@ -253,9 +256,11 @@ function plane(type,id,x,y,angle){
   }
   function endRound(winner){
     if(state.phase!=='playing')return;
+    if(state.mode==='campaign')window.WingmanAudio?.stopEngine();
     if(state.mode==='campaign'){
       state.phase='result';sound('boom');
       const won=winner===0;
+      sound(won?'victory':'defeat');
       ui.resultTitle.textContent=won?'SORTIE WON':'SHOT DOWN';
       ui.resultDetail.textContent=won?'Enemy pilots defeated.':'Your aircraft was lost.';
       ui.result.classList.remove('hidden');
@@ -269,6 +274,7 @@ function plane(type,id,x,y,angle){
     if((state.mode==='survival'&&winner!==0)||(state.mode!=='survival'&&(state.scores[0]>=2||state.scores[1]>=2))){
       state.phase='result';
       const won=state.mode==='survival'?state.kills>0:state.scores[0]>=2;
+      window.WingmanAudio?.stopEngine();sound(won?'victory':'defeat');
       ui.resultTitle.textContent=won?'VICTORY!':'DEFEAT';
       ui.resultDetail.textContent=(won?'You outflew the enemy. ':'The enemy won this duel. ')+
         (state.mode==='survival'?'Aircraft shot down: '+state.kills:'Final score: '+state.scores[0]+'–'+state.scores[1])+'.';
@@ -858,6 +864,7 @@ function plane(type,id,x,y,angle){
       summonFinalAce(dt);
       if(state.mode==='survival'&&state.time<=0){endRound(1);return;}
       const user=state.fliers[0];
+      window.WingmanAudio?.flight(user?.speed||0,(user?.health||0)/(user?.d?.hull||1));
       updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);
       for(const p of state.fliers.slice(1)){
         if(p.alive){const target=nearestEnemy(p);const steer=target?aiInput(p,target):0;updatePlane(p,dt,steer,p.aiBoost);}
