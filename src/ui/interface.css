@@ -866,7 +866,7 @@ body:has(#career-screen:not([hidden])) #touch-controls{
 .wingman-front .flow-actions>.front-secondary{background:#0c2639!important;color:#fff0d3!important;border:1px solid #f0d4ac!important}
 .career-screen{
  background:linear-gradient(92deg,#071c29e0,#1b3643bf),
- url('assets/art/wingman-menu-scene.svg') center /cover no-repeat!important;
+ url('../../assets/art/wingman-menu-scene.svg') center /cover no-repeat!important;
 }
 .career-panel{
  background:linear-gradient(160deg,#e5d1abbf,#d4c49fdd 13%,#193340ef 48%,#0c2533f2),
