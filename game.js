@@ -417,7 +417,7 @@ function plane(type,id,x,y,angle){
     state.supportCharge=0;state.supportTime=11;state.supportUses++;
     for(let i=0;i<count;i++){
       const type=allied[(allied.indexOf(state.selected)+i+1)%allied.length];
-      const p=plane(type,10+i,clamp(hero.x-(i+1)*29,20,W-20),
+      const p=plane(type,state.fliers.length,clamp(hero.x-(i+1)*29,20,W-20),
         clamp(hero.y+(i===0?-22:24),25,H-22),hero.angle);
       p.team=0;p.support=true;p.supportTime=11;p.spawnSafe=.8;
       p.aiSkillLevel=.42;p.aiName=i===0?'WINGMAN ONE':'WINGMAN TWO';
