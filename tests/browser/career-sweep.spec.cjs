@@ -175,7 +175,7 @@ test('named 1v2 branches exist only on ranks 3 5 and 7, with two distinct enemy 
   expect(lanes).toHaveLength(3);
   for(const [i,choice] of lanes.entries()){
    const double=(rank===3||rank===5||rank===7)&&i===2;
-   expect(choice.types).toHaveLength(double?2:1);
+   expect(choice.types).toHaveLength(rank===8?3:double?2:1);
    if(double){
     expect(choice.wingman).toBeTruthy();
     expect(choice.wingman.id).not.toBe(choice.id);
@@ -184,7 +184,16 @@ test('named 1v2 branches exist only on ranks 3 5 and 7, with two distinct enemy 
     expect(choice.wingman.plane).toBe(choice.types[1]);
     expect(choice.wingman.signature).toBeTruthy();
     await expect(page.locator('#active-rung [data-choice="2"] .rival-wingman')).toContainText(choice.wingman.name);
-   }else expect(choice.wingman).toBeNull();
+    }else expect(choice.wingman).toBeNull();
+   if(rank===8){
+     expect(choice.finalBoss).toBe(true);
+     expect(choice.wingmen).toHaveLength(2);
+     expect(choice.opponents).toHaveLength(3);
+     expect(choice.opponents[2].id).toBe(choice.id);
+     expect(new Set(choice.opponents.map(p=>p.id)).size).toBe(3);
+     expect(choice.bossId).toBe(choice.id);
+     await expect(page.locator('#active-rung [data-choice="'+i+'"] .rival-final')).toContainText('1v3');
+   }
    const profile=await page.evaluate(({id,rank})=>{
     const p=window.WingmanRoster.find(x=>x.id===id);
     const v=window.WingmanPilotAI.level(p,rank);
@@ -194,7 +203,7 @@ test('named 1v2 branches exist only on ranks 3 5 and 7, with two distinct enemy 
    expect(choice.signature).toBe(profile.signature);
    expect(choice.personality).toBe(profile.tactic);
   }
-  // Verify the player actually launches a 1v2 encounter, not just a label.
+  // Verify player can launch each challenge tier, including the 1v3 finale.
   const pick=(rank===3||rank===5||rank===7)?2:0;
   await page.locator('#active-rung [data-choice="'+pick+'"]').click();
   await expect(page.locator('#menu-return')).toBeVisible();
@@ -216,4 +225,52 @@ test('a recurring rival grows in proficiency without changing name, archetype or
  for(const stat of ['gunnery','manoeuvrability','engine'])
    expect(observed.ace.attributes[stat]).toBeGreaterThan(observed.rookie.attributes[stat]);
  expect(observed.ace.reaction).toBeLessThan(observed.rookie.reaction);
+});
+
+test('career records decorations, streaks, final-ace ceremony and persistent service history',async({page})=>{
+ await newPilot(page,'Allies',1,'heavy');
+ for(let rank=1;rank<=8;rank++){
+  const pick=rank===3||rank===5||rank===7?2:0;
+  await page.locator('#active-rung [data-choice="'+pick+'"]').click();
+  await page.evaluate(()=>window.WingmanCareer.finishEncounter(true,{label:'QA Victory',types:['fighter']}));
+  const saved=await state(page);
+  expect(saved.streak).toBe(rank);
+  expect(saved.bestStreak).toBe(rank);
+  expect(saved.service).toHaveLength(rank);
+  expect(saved.service[rank-1].rank).toBe(rank);
+  if(rank<8)await page.locator('[data-action="ladder"]').click();
+ }
+ const result=await state(page);
+ expect(result.completed).toBe(1);
+ expect(result.run).toBeNull();
+ expect(result.medals).toContain('wingman-legend');
+ expect(result.medals).toContain('triple-ace');
+ expect(result.medals).toContain('veteran');
+ expect(result.medals).toContain('double-trouble');
+ await expect(page.locator('.final-tribute')).toContainText('WINGMAN');
+ await expect(page.locator('.career-service .career-log-entry')).toHaveCount(8);
+ await page.reload();
+ if(await page.locator('#career-license').isVisible())await page.locator('#career-license').click();
+ else await page.locator('#career-open-mobile').click();
+ await expect(page.locator('.medal.earned')).toHaveCount(result.medals.length);
+ await expect(page.locator('.career-service')).toBeVisible();
+});
+test('final ace identity is constant across all three approaches, and nemesis returns later in career',async({page})=>{
+ await newPilot(page,'Allies',1,'fighter');
+ // Force a fully versioned saved rank-eight run to verify its three approach variants.
+ await page.evaluate(key=>{
+  const d=JSON.parse(localStorage.getItem(key));
+  d.run.rank=8;d.run.visits=7;d.run.choices=null;
+  d.records['ace-21']={wins:1,losses:3};
+  localStorage.setItem(key,JSON.stringify(d));
+ },KEY);
+ await page.reload();
+ await page.locator('#career-open').click();
+ const saved=await state(page);
+ expect(saved.run.rank).toBe(8);
+ const choices=saved.run.choices;
+ expect(choices.every(x=>x.finalBoss&&x.types.length===3)).toBe(true);
+ expect(new Set(choices.map(x=>x.id)).size).toBe(1);
+ expect(choices[0].label).toContain('Otto');
+ expect(new Set(choices.map(x=>x.wingmen.map(y=>y.id).join(','))).size).toBeGreaterThan(1);
 });
