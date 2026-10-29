@@ -46,7 +46,7 @@ function launch(){
     console
   };
   const instrumented=code.replace('  // All scenery is painted once;',
-    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,triggerRoll,triggerPilotSkill,hit,steerPlane,updatePlane,controls,aiInput,assignCampaignAI,startCampaignFight,summonFinalAce,bossWaiting,update,newRound,endRound,battleOutcomeAfterDeath,nearestEnemy,sessionScore,CHALLENGES,tailMagnet,shoot,rollWind,updateWind,projectiles,PLANES,wrappedDelta,combatDistance,interceptPoint};\n  // All scenery is painted once;');
+    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,triggerRoll,triggerPilotSkill,hit,steerPlane,updatePlane,controls,aiInput,assignCampaignAI,startCampaignFight,summonFinalAce,bossWaiting,callSupport,updateSupport,update,newRound,endRound,battleOutcomeAfterDeath,nearestEnemy,sessionScore,CHALLENGES,tailMagnet,shoot,rollWind,updateWind,projectiles,PLANES,wrappedDelta,combatDistance,interceptPoint};\n  // All scenery is painted once;');
   const artCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/aircraft.js'),'utf8');
   vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
   const sceneryCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/scenery.js'),'utf8');
@@ -1021,4 +1021,32 @@ test('revised Spitfire Overdrive offers a clearly stronger but bounded speed adv
   'boost should have a noticeable acceleration effect: '+ordinary.speed+' -> '+overdrive.speed);
  assert.ok(overdrive.speed<=overdrive.cap*2.11,'Overdrive must have a hard speed ceiling');
  assert.ok(Number.isFinite(overdrive.speed));
+});
+
+test('career tactical reserve lets player call one wingman early or wait for two, each for thirty seconds',()=>{
+ const g=launch(),match={id:'ace-21',label:'test',rank:8,types:['bf109'],arena:0};
+ g.internals.startCampaignFight(match,'fighter',null);
+ const st=g.internals.state;
+ g.internals.updateSupport(28);
+ assert.ok(st.supportCharge>=45&&st.supportCharge<100,'one wingman charged early');
+ assert.equal(g.internals.callSupport(),true);
+ assert.equal(st.fliers.filter(p=>p.support).length,1);
+ assert.equal(st.supportTime,30);
+ assert.equal(g.internals.callSupport(),false,'one deployment only');
+ g.internals.updateSupport(30);
+ assert.equal(st.fliers.filter(p=>p.support).length,0);
+ assert.equal(g.internals.callSupport(),false,'cannot call again this sortie');
+ g.internals.startCampaignFight(match,'fighter',null);
+ g.internals.updateSupport(65);
+ assert.equal(st.supportCharge,100);
+ assert.equal(g.internals.callSupport(),true);
+ assert.equal(st.fliers.filter(p=>p.support).length,2);
+ assert.equal(st.supportTime,30);
+ assert.ok(st.fliers.filter(p=>p.support).every(p=>p.team===0));
+});
+test('career reserve is disabled in arcade dogfights',()=>{
+ const g=launch();g.listeners.get('start:click')();
+ g.internals.updateSupport(100);
+ assert.equal(g.internals.state.supportCharge,0);
+ assert.equal(g.internals.callSupport(),false);
 });
