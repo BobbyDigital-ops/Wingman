@@ -1,0 +1,126 @@
+/* Wingman aircraft grid — playable in arcade and Road to Ace.
+   All six painted thumbnails use the actual approved grid mockup artwork. */
+:root{--wg-brass:#d5af70;--wg-paper:#f3e0bb;--wg-navy:#071b2b;--wg-art:url('../../assets/art/wingman-menu-scene.svg')}
+.wingman-front #options-panel.setup-panel{width:min(98%,1200px)!important;max-width:1200px!important;
+ background:linear-gradient(120deg,#0b2838f6,#071a28ec),url('../../assets/art/wingman-menu-scene.svg') center/cover!important;
+ border:2px solid #bda16e!important;box-shadow:0 0 0 5px #091b27e8,inset 0 0 0 1px #d5c08b88,0 20px 45px #000b!important}
+.wingman-front #options-panel.setup-panel>h2{font:900 clamp(27px,5.3svh,54px)/.93 Impact,'Arial Narrow',sans-serif!important;
+ color:#fff0cb!important;margin-bottom:clamp(4px,1svh,10px)!important;letter-spacing:.04em!important;
+ text-shadow:0 3px #071a26!important}
+.wg-flight-prep{display:flex;flex-direction:column;gap:clamp(6px,1.1svh,12px);flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#94744e #142d3c}
+#wingman-grid-mount{width:100%;min-height:0;flex:0 0 auto}
+.wg-main{display:flex;flex-direction:column;gap:clamp(6px,1.1svh,10px);width:100%;text-align:left}
+.wg-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 12px;background:#153547d7;border:1px solid #b5a27885;flex:none}
+.wg-heading{display:grid;gap:2px}
+.wg-heading strong{font:900 clamp(15px,2vw,22px) 'Arial Narrow',Impact,sans-serif;letter-spacing:.07em;color:#ffe7bb}
+.wg-heading small{font:11px Arial,sans-serif;color:#bbcbd0}
+.wg-tabs{display:flex;align-items:center;gap:7px}
+.wg-tab{border:2px solid #ac9e7d;color:#efd9af;background:linear-gradient(#294454,#0b2739);
+ padding:8px 16px;font:900 clamp(11px,1.35vw,15px) 'Arial Narrow',Impact,sans-serif;letter-spacing:.04em;
+ white-space:nowrap;box-shadow:inset 0 1px #fff3a529,0 3px 0 #09131d}
+.wg-tab.active{border-color:#ffe2a6;background:linear-gradient(#f3d892,#bf8749);color:#182d37;text-shadow:0 1px #ffe8b3}
+.wg-cards,.career-screen .wg-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(6px,1vw,14px);width:100%;min-height:0}
+.wg-card.plane-choice,.career-screen .wg-card.plane-choice{all:unset;box-sizing:border-box;min-width:0;display:flex;flex-direction:column;
+ background:linear-gradient(165deg,#18394a,#081e2d);border:2px solid #79949c;color:#ffe9c3;
+ text-align:left;overflow:hidden;cursor:pointer;position:relative;
+ box-shadow:inset 0 0 0 3px #061a27,0 5px 9px #0007}
+.wg-card.plane-choice:hover,.career-screen .wg-card.plane-choice:hover{border-color:#e3ba79;filter:brightness(1.09)}
+.wg-card.plane-choice:focus-visible,.career-screen .wg-card.plane-choice:focus-visible{outline:3px solid #fff2a4;outline-offset:3px}
+.wg-card.plane-choice.selected,.career-screen .wg-card.plane-choice.selected{border:3px solid #ffdb84;
+ box-shadow:0 0 0 2px #ac803a,0 0 17px #ffd16f7d,inset 0 0 0 2px #fff2b54b}
+.wg-card-art{height:clamp(75px,17svh,165px);display:flex;align-items:flex-start;justify-content:flex-start;
+ border-bottom:2px solid #9daeb4;background-image:var(--wg-art);background-repeat:no-repeat;
+ background-size:300% 200%;position:relative;flex:none;image-rendering:auto}
+.wg-card-art:after{content:"";position:absolute;inset:0;pointer-events:none;
+ background:linear-gradient(0deg,#061d3048,transparent 40%),inset 0 0 10px #000}
+.wg-card-art small{position:relative;z-index:1;font:800 clamp(7px,.8vw,11px) 'Arial Narrow',sans-serif;
+ background:#0c2837a9;padding:5px 8px;color:#f2ddba;letter-spacing:.08em}
+.wg-art-0{background-position:0 0}.wg-art-1{background-position:50% 0}.wg-art-2{background-position:100% 0}
+.wg-art-3{background-position:0 100%}.wg-art-4{background-position:50% 100%}.wg-art-5{background-position:100% 100%}
+.wg-card-copy{display:flex;flex-direction:column;gap:clamp(4px,.8svh,9px);padding:clamp(7px,1.1vw,13px);flex:1;min-width:0}
+.wg-card-title{display:flex;align-items:center;gap:6px;justify-content:space-between}
+.wg-card-title strong{font:900 clamp(19px,2.1vw,30px)/.94 Impact,'Arial Narrow',sans-serif;
+ overflow-wrap:anywhere;color:#f8e7c3;letter-spacing:.018em}
+.wg-selected-label{padding:5px 6px;border:1px solid #85969a;background:#254353;color:#bed0d3;font:800 11px 'Arial Narrow',sans-serif;white-space:nowrap}
+.wg-card.selected .wg-selected-label{color:#152a32;background:#efd18d;border-color:#ffe7ae}
+.wg-role{color:#bfc9c5;font:800 clamp(10px,1vw,13px) 'Arial Narrow',sans-serif;letter-spacing:.13em;
+ padding-bottom:6px;border-bottom:1px solid #6e929a74}
+.wg-stats{display:grid;gap:clamp(3px,.6svh,9px);margin:4px 0;min-width:0}
+.wg-stat{display:grid;grid-template-columns:minmax(52px,73px) minmax(0,1fr) 31px;
+ align-items:center;gap:7px;min-width:0}
+.wg-stat>span{font:900 clamp(10px,1.1vw,13px) 'Arial Narrow',sans-serif;letter-spacing:.03em;white-space:nowrap}
+.wg-stat>b{font:700 clamp(10px,1vw,13px) 'Arial Narrow',sans-serif;color:#f5dbac;text-align:right}
+.wg-meter{display:block;background:#041728;border:1px solid #77919b;height:8px;overflow:hidden}
+.wg-meter>i{display:block;height:100%;background:linear-gradient(90deg,#a97438,#f7cb75)}
+.wg-ability{margin-top:auto;padding:6px 8px;background:#2d4447;border:1px solid #82735e;
+ color:#efdcbf;font:800 clamp(10px,1.1vw,13px) 'Arial Narrow',sans-serif;letter-spacing:.035em}
+.wg-ability b{color:#fff4d9}.wg-ability:first-letter{color:#e3b568}
+.wg-preferred-tag{color:#0c2532;background:#f1cb83;font:900 10px 'Arial Narrow',sans-serif;padding:7px 8px;letter-spacing:.02em}
+.wg-card[hidden],.wg-card[hidden].plane-choice{display:none!important}
+.wg-note{padding:5px 11px;color:#d3b987;background:#0b2839b8;border-left:3px solid #c9a06b;
+ font:800 clamp(10px,1.15vw,13px) 'Arial Narrow',sans-serif;letter-spacing:.04em}
+.wg-flight-conditions{display:flex;flex-direction:column;gap:5px;text-align:left;background:#0c2a3bda;border:1px solid #66859299;
+ padding:clamp(7px,1vw,12px);flex:0 0 auto}
+.wg-flight-conditions .setup-label{margin:0 0 3px;color:#f6d9a1!important}
+.wg-setting-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.wg-setting-list label{display:flex;flex-direction:column;gap:4px;min-width:0;color:#dec69f;
+ font:800 11px 'Arial Narrow',sans-serif}
+.wg-setting-list select{min-width:0;max-width:100%;height:29px;padding:4px;border:1px solid #a5aaa2;background:#173648;color:#f7e8c8;
+ font:700 12px 'Arial Narrow',sans-serif}
+.wg-setting-list #challenge-setting:not([hidden]){grid-column:span 3}
+.wg-setting-list #challenge-setting[hidden],.wg-setting-list label[hidden]{display:none!important}
+.wg-setting-list #challenge-description{color:#d7d5cc;font:10px Arial,sans-serif}
+.wg-flight-conditions .setup-hint{margin:0;color:#b6c6c8;font-size:10px}
+.wingman-front #options-panel>.flow-actions{margin-top:6px!important;background:#081b29e7!important}
+.wingman-front #options-panel>.flow-actions #start{background:linear-gradient(#dd4835,#a12421)!important;border:2px solid #f5d19b!important;color:#fff3d6!important}
+.career-screen .wg-career-prep{display:flex;flex-direction:column;gap:12px}
+.career-screen .wg-cards{margin:10px 0}
+.career-screen .wg-card-art{height:clamp(110px,19svh,170px)}
+.career-screen .wg-career-actions{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.career-screen .wg-career-actions button{min-height:41px}
+.career-screen .wg-career-intro{border-left:3px solid #dec187;padding-left:12px;color:#cedcdb}
+.career-screen .wg-career-confirm{background:#b73327;border:2px solid #e2c18c;padding:10px 22px;color:#ffefda;
+ font:900 19px Impact,'Arial Narrow',sans-serif;letter-spacing:.07em;box-shadow:0 3px 0 #351b14}
+.career-screen .wg-card .wg-selected-label{font-size:10px}
+@media(max-height:580px) and (orientation:landscape){
+ .wingman-front #options-panel.setup-panel{padding:5px 9px!important;overflow:hidden!important}
+ .wingman-front #options-panel.setup-panel .flow-step{display:none!important}
+ .wingman-front #options-panel.setup-panel>h2{font-size:clamp(21px,5svh,30px)!important;margin:1px 0!important}
+ .wg-flight-prep{gap:4px}
+ .wg-main{gap:4px}
+ .wg-toolbar{padding:2px 7px;min-height:22px}
+ .wg-heading strong{font-size:12px}.wg-heading small{display:none}
+ .wg-tab{padding:4px 9px;font-size:10px}
+ .wg-card-art{height:clamp(51px,13svh,72px)}
+ .wg-card-art small{font-size:7px;padding:2px 4px}
+ .wg-card-copy{padding:4px 6px;gap:2px}
+ .wg-card-title strong{font-size:clamp(13px,2.3vw,20px)}
+ .wg-selected-label{font-size:8px;padding:2px 3px}
+ .wg-role{font-size:8px;padding-bottom:2px}
+ .wg-stats{gap:2px;margin:1px 0}
+ .wg-stat{grid-template-columns:minmax(42px,65px) minmax(0,1fr) 24px;gap:3px}
+ .wg-stat>span,.wg-stat>b{font-size:9px}
+ .wg-meter{height:5px}
+ .wg-ability{padding:3px 5px;font-size:9px}
+ .wg-note{display:none}
+ .wg-flight-conditions{padding:3px 6px;gap:1px}
+ .wg-flight-conditions .setup-label{display:none}
+ .wg-setting-list{gap:5px}
+ .wg-setting-list label{font-size:9px;gap:1px}
+ .wg-setting-list select{height:22px;font-size:10px;padding:2px}
+ .wg-flight-conditions .setup-hint{display:none}
+ .wingman-front #options-panel>.flow-actions{padding:2px 2px 0!important;margin:2px 0 0!important;min-height:35px!important}
+ .wingman-front #options-panel>.flow-actions button{height:29px!important;min-height:29px!important}
+ .career-screen .wg-card-art{height:clamp(56px,14svh,85px)}
+ .career-screen .wg-card-copy{gap:3px;padding:5px}
+ .career-screen .wg-card-title strong{font-size:17px}
+}
+@media(max-width:560px) and (orientation:portrait){
+ .wg-cards{grid-template-columns:1fr}
+ .wg-toolbar{flex-wrap:wrap}
+ .wg-tabs{width:100%}.wg-tab{flex:1}
+ .wg-card-art{height:150px}
+ .wg-setting-list{grid-template-columns:1fr 1fr}
+ .wg-setting-list #challenge-setting:not([hidden]){grid-column:span 2}
+ .career-screen .wg-cards{grid-template-columns:1fr}
+}
