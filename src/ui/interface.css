@@ -694,3 +694,6 @@ body:has(#career-screen:not([hidden])) #touch-controls{
 .arcade-top-category li span{color:#a6c0c5;font-size:9px}
 .arcade-top-category small{display:block;margin-top:4px;color:#829da7;font:9px monospace}
 @media(max-width:570px){.arcade-top-grid{grid-template-columns:1fr}.arcade-top-category li{font-size:9px}}
+
+.setup-panel .challenge-setting small{display:block;margin-top:5px;padding:4px 7px;border-left:2px solid #b99c69;background:#1d3840;color:#e6cb98;font:700 9px/1.4 monospace;letter-spacing:.035em}
+.setup-panel #difficulty-select:disabled{cursor:not-allowed;opacity:.82;border-color:#ac9362;color:#ead9b5}
