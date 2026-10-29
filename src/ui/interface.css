@@ -647,3 +647,37 @@ body:has(#career-screen:not([hidden])) #touch-controls{
  .career-panel .candidate-card strong{font-size:10px!important}
  .career-panel .career-route-map{height:min(43svh,225px)!important}
 }
+
+/* Phase 6: special operations and transparent device-local scorekeeping. */
+.mode-cards .mode-challenges{grid-column:1 / -1;min-height:59px;background:linear-gradient(105deg,#34413e,#173640);border-color:#a99065}
+.mode-cards .mode-challenges strong{color:#f3d9a4}
+.mode-cards .mode-challenges.selected{background:linear-gradient(95deg,#5a513b,#264d52);border-color:#f4d394}
+.challenge-setting[hidden]{display:none!important}
+.setup-panel .challenge-setting{grid-column:1/-1;border-left:3px solid #d3ae70;padding-left:8px}
+.arcade-records-panel{margin:10px auto 5px;width:min(100%,610px);background:#0b1f2bd9;border:1px solid #967e56aa;text-align:left}
+.arcade-records-panel summary{cursor:pointer;padding:9px 12px;color:#e8ce9f;font:700 11px Georgia,serif;letter-spacing:.07em;list-style:disclosure-closed}
+.arcade-records-panel[open] summary{border-bottom:1px solid #957c5388;list-style:disclosure-open}
+#arcade-records{padding:9px 11px;max-height:160px;overflow-y:auto;scrollbar-width:thin}
+.arcade-scores{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.arcade-record{padding:6px 4px;background:#203746;border:1px solid #506b76;display:flex;flex-direction:column;gap:3px;align-items:center}
+.arcade-record span{color:#c1c6b5;font-size:8px;letter-spacing:.04em}
+.arcade-record b{color:#f2d49b;font:700 15px Georgia,serif;font-variant-numeric:tabular-nums}
+.arcade-summary{margin:9px 0 7px;color:#bdcece;font:10px monospace;text-align:center;line-height:1.4}
+.arcade-honours{display:flex;gap:5px;flex-wrap:wrap}
+.arcade-honour{font:700 9px Georgia,serif;letter-spacing:.025em;color:#efdcaf;padding:4px 5px;border:1px solid #ba956b79;background:#3e4539}
+.arcade-honour.locked{opacity:.4;filter:grayscale(1)}
+.arcade-after-action{margin:9px 0 11px}
+.arcade-after-score{display:grid;gap:5px;padding:9px 10px;background:#142b36ed;border:1px solid #ad9463;color:#cfddd9;font:11px monospace}
+.arcade-after-score b{font:700 20px Georgia,serif;letter-spacing:.07em;color:#f7d89c}
+.arcade-new-honours{display:flex;gap:5px;flex-wrap:wrap;padding-top:6px}
+.arcade-new-honour{display:block;padding:5px 8px;background:#4c4932;color:#fbe3ab;border:1px solid #c9aa6a;font:700 10px Georgia,serif}
+@media(max-width:650px){
+ .arcade-records-panel{margin:4px auto}
+ .arcade-records-panel summary{padding:6px 8px;font-size:10px}
+ .arcade-scores{grid-template-columns:repeat(5,minmax(0,1fr));gap:2px}
+ .arcade-record{padding:3px 2px}
+ .arcade-record span{font-size:6px}
+ .arcade-record b{font-size:11px}
+ .arcade-honour{font-size:8px;padding:3px 4px}
+ .mode-cards .mode-challenges{min-height:42px;grid-column:1/-1}
+}
