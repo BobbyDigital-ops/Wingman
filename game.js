@@ -660,6 +660,18 @@ function plane(type,id,x,y,angle){
          dropHeight>=32&&dropHeight<=112&&aligned&&range<155)
         triggerSpecial(p);
     }
+    // Wingmen in the final mission make complementary attack passes. They
+    // spread vertically instead of flying directly on top of each other.
+    // This changes steering decisions, never aircraft damage or hitboxes.
+    if(rankAI&&state.campaignEncounter?.finalBoss&&p.id<=2&&
+       (p.aiMode==='intercept'||p.aiMode==='attack')){
+      const wing=state.fliers.find(other=>other.id>0&&other.id!==p.id&&other.id<=2&&other.alive);
+      const side=p.id===1?-1:1;
+      if(wing&&combatDistance(p,wing)<85){
+        ty+=side*(16+12*(p.aiSkillLevel||0));
+        tx+=target.vx*(side<0?.16:-.14);
+      }
+    }
     // Never clamp x to screen edges: crossing the seam is a normal path.
     ty=clamp(ty,48,H-43);
     const facing=Math.abs(angleDiff(targetAngle,p.angle));
