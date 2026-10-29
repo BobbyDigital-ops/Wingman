@@ -766,3 +766,34 @@ body:has(#career-screen:not([hidden])) #touch-controls{
  .setup-panel .plane-choice b{font-size:9px!important;letter-spacing:0!important}
  .setup-panel .plane-choice small{display:none!important}
 }
+
+/* Actual public-domain aircraft photos in hangar cards. Keep a painted
+   local canvas beneath each photograph in case of network failure. */
+.aircraft-photo-frame{position:relative;isolation:isolate}
+.aircraft-photo-frame .hangar-real-photo{position:absolute;z-index:2;pointer-events:none;
+ opacity:0;visibility:hidden;transition:opacity .24s ease;
+ object-fit:cover;object-position:center center;border:1px solid #e4cba09a;
+ box-shadow:inset 0 0 8px #0008;box-sizing:border-box;
+ filter:sepia(.13) contrast(1.08) saturate(.78)}
+.aircraft-photo-frame .hangar-real-photo.ready{opacity:1;visibility:visible}
+.aircraft-photo-frame .hangar-real-hero{inset:0;width:100%;height:100%;object-position:center 48%}
+.aircraft-photo-frame .hangar-real-tile{top:5px;left:4px;right:4px;
+ width:calc(100% - 8px);height:clamp(42px,8.5svh,70px);object-position:50% 44%}
+@media(max-width:900px) and (orientation:landscape){
+ .aircraft-photo-frame .hangar-real-tile{height:clamp(30px,6.6svh,45px)}
+}
+/* Road to Ace v2: remove redundant run-locked aircraft selection, lead the
+   player through pilot confirmation, mission, aircraft, then launch. */
+.career-onboarding{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:17px 0}
+.onboard-step{padding:12px;border:1px solid #b39b7188;background:#1b3542;
+ display:flex;flex-direction:column;gap:5px;font:13px Georgia,serif;color:#d9dfe0}
+.onboard-step strong{font:700 13px Georgia,serif;letter-spacing:.03em;color:#f2d7a5}
+.onboard-step span{font:11px/1.35 sans-serif;color:#b4cbd1}
+.career-panel .airframe-card.preferred-plane{
+ border:2px solid #ebc98a!important;background:linear-gradient(135deg,#5a513b,#263f48)!important;
+ box-shadow:inset 0 0 18px #deb47034,0 0 10px #e6c08936}
+.career-panel .airframe-card span{color:#f7d9a6;font-weight:700}
+.career-panel .candidate-card span{background:#8e7448bb;border:1px solid #d0b47e;
+ color:#ffebc7;padding:5px 7px;text-align:center;font:700 10px Georgia,serif}
+@media(max-width:700px){.career-onboarding{grid-template-columns:1fr;gap:5px;margin:9px 0}
+ .onboard-step{padding:6px 10px}}
