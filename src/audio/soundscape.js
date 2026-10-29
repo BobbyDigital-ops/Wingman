@@ -5,14 +5,15 @@
  let muted=false,lastFire=0,lastHit=0,lastFlight=0;
  try{muted=localStorage.getItem('wingman-audio-muted')==='true';}catch{}
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
- const button=document.getElementById('wm-audio-toggle');
+ const buttons=['wm-audio-toggle','wm-audio-toggle-mobile'].map(id=>document.getElementById(id)).filter(Boolean);
  function sync(){
-  if(!button)return;
-  button.textContent=muted?'♪ SOUND OFF':'♫ SOUND ON';
-  button.setAttribute('aria-pressed',String(!muted));
-  button.setAttribute('aria-label',muted?'Enable Wingman sound':'Mute Wingman sound');
-  button.title=muted?'Enable sound':'Mute sound';
-  button.classList.toggle('muted',muted);
+  for(const button of buttons){
+   button.textContent=muted?'♪ SOUND OFF':'♫ SOUND ON';
+   button.setAttribute('aria-pressed',String(!muted));
+   button.setAttribute('aria-label',muted?'Enable Wingman sound':'Mute Wingman sound');
+   button.title=muted?'Enable sound':'Mute sound';
+   button.classList.toggle('muted',muted);
+  }
  }
  function unlock(){
   const AC=window.AudioContext||window.webkitAudioContext;
@@ -109,7 +110,7 @@
   if(muted)stopEngine();
   sync();
  }
- button?.addEventListener('click',()=>{if(muted){setMuted(false);unlock();play('medal');}else setMuted(true);});
+ for(const button of buttons)button.addEventListener('click',()=>{if(muted){setMuted(false);unlock();play('medal');}else setMuted(true);});
  sync();
  window.WingmanAudio={unlock,play,startEngine,flight,stopEngine,setMuted,get muted(){return muted;}};
 })();
