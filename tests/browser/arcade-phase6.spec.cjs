@@ -52,7 +52,7 @@ test('Phase 6 honours and five separate local records survive reloading',async({
  await page.locator('#splash-continue').click();
  const panel=page.locator('#arcade-records-panel');
  await expect(panel).toBeVisible();
- await panel.locator('summary').click();
+ await panel.locator(':scope > summary').click();
  const board=page.locator('#arcade-records');
  await expect(board).toContainText('1,180');
  await expect(board).toContainText('SURVIVAL');
@@ -68,7 +68,7 @@ test('Phase 6 honours and five separate local records survive reloading',async({
 test('Phase 6 local records do not block touch controls or operation selection on mobile',async({page})=>{
  await page.goto('/');
  await page.locator('#splash-continue').click();
- await page.locator('#arcade-records-panel summary').click();
+ await page.locator('#arcade-records-panel > summary').click();
  await expect(page.locator('#arcade-records')).toBeVisible();
  const button=page.locator('#mode-next');
  await button.scrollIntoViewIfNeeded();
