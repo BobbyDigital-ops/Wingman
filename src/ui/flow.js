@@ -13,11 +13,14 @@ function setMode(kind){
    duel:['duel','2','ffa'],
    survival:['survival','2','ffa'],
    triple:['duel','3','ffa'],
-   teams:['duel','4','teams']
+   teams:['duel','4','teams'],
+   challenge:['challenge','2','ffa']
  }[kind]||['duel','2','ffa'];
  for(const [id,value] of [['mode-select',preset[0]],['pilots-select',preset[1]],['team-select',preset[2]]]){
    const el=$(id);if(el)el.value=value;
  }
+ const special=$('challenge-setting');
+ if(special)special.hidden=kind!=='challenge';
  for(const button of document.querySelectorAll('[data-mode-choice]')){
    const selected=button.dataset.modeChoice===kind;
    button.classList.toggle('selected',selected);
@@ -47,6 +50,7 @@ document.addEventListener('fullscreenchange',()=>{
   button.setAttribute('aria-label',full?'Exit full screen':'Enter full screen');
  }
 });
+$('arcade-records-panel')?.addEventListener('toggle',()=>window.WingmanArcade?.render?.());
 $('splash-continue')?.addEventListener('click',()=>{
  // Keep briefings free of the browser's fullscreen instructional toast.
  // Enter immersive mode only as the player launches a sortie.
