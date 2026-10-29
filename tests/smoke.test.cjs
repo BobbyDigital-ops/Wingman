@@ -986,3 +986,39 @@ test('Phase 6 squadron target choices distribute enemy pilots and protect living
  state.fliers[2].alive=false;
  assert.equal(game.internals.nearestEnemy(state.fliers[3]),undefined);
 });
+
+test('preferred-aircraft career bonus changes the actual hull, armour and gun damage by exactly 10%',()=>{
+ const game=launch();
+ const rival={id:'ace-21',label:'Otto',rank:2,types:['bf109'],difficulty:'standard',
+  attributes:{manoeuvrability:65,gunnery:65,engine:65},signature:'roll',arena:0,
+  playerAircraft:'fighter',playerAptitude:{hull:1.1,armour:1.1,damage:1.1}};
+ game.internals.startCampaignFight(rival,'fighter',null);
+ const hero=game.internals.state.fliers[0],base=game.internals.PLANES.fighter;
+ assert.equal(hero.d.hull,Math.round(base.hull*1.1));
+ assert.equal(hero.d.armour,Math.round(base.armour*1.1));
+ assert.equal(hero.d.damage,Math.round(base.damage*1.1*100)/100);
+ assert.equal(hero.health,hero.d.hull);
+ assert.equal(hero.armour,hero.d.armour);
+ assert.equal(game.internals.PLANES.fighter.hull,base.hull,'never mutate shared airframe definitions');
+ const normal={...rival,playerAptitude:null,playerAircraft:'heavy'};
+ game.internals.startCampaignFight(normal,'heavy',null);
+ const heavy=game.internals.state.fliers[0];
+ assert.equal(heavy.d.damage,game.internals.PLANES.heavy.damage);
+ assert.equal(heavy.d.armour,game.internals.PLANES.heavy.armour);
+ assert.equal(heavy.d.hull,game.internals.PLANES.heavy.hull);
+});
+test('revised Spitfire Overdrive offers a clearly stronger but bounded speed advantage',()=>{
+ function fly(boost){
+  const game=launch();game.listeners.get('start:click')();
+  const p=game.internals.state.fliers[0];
+  p.angle=0;p.y=100;p.speed=62;p.vx=62;p.vy=0;
+  if(boost)p.overdriveTime=20;
+  for(let n=0;n<180;n++)game.internals.updatePlane(p,1/60,0,boost);
+  return {speed:p.speed,cap:p.d.speed,health:p.health,alive:p.alive};
+ }
+ const ordinary=fly(false),overdrive=fly(true);
+ assert.ok(overdrive.speed>ordinary.speed*1.12,
+  'boost should have a noticeable acceleration effect: '+ordinary.speed+' -> '+overdrive.speed);
+ assert.ok(overdrive.speed<=overdrive.cap*2.11,'Overdrive must have a hard speed ceiling');
+ assert.ok(Number.isFinite(overdrive.speed));
+});
