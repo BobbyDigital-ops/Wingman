@@ -33,20 +33,15 @@ test('20 German pilots have fixed unique matched gender, painted faces and no du
  expect(new Set(result.pilots.map(p=>p.portrait)).size).toBe(20);
  expect(new Set(result.fingerprints).size).toBe(20);
  for(const pilot of result.pilots)expect(pilot.gender,pilot.name).toBe(pilot.expected);
- expect(result.pilots[3].name).toMatch(/^Klara /);
+ expect(result.pilots[3].name).toMatch(/^Erika /);
  expect(result.pilots[5].name).toMatch(/^Hanna /);
- expect(result.pilots[11].name).toMatch(/^Gisela /);
+ expect(result.pilots[11].name).toMatch(/^Ingrid /);
 });
 test('all German candidates render distinct artwork rather than repeated images',async({page})=>{
  await page.goto('/');
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
  else await page.locator('#career-open-mobile').click();
- const faction=page.locator('[data-faction="Axis"]');
- if(await faction.count())await faction.click();
- else {
-   const axis=page.getByRole('button',{name:/LUFTWAFFE|GERMAN|AXIS/i}).first();
-   if(await axis.count())await axis.click();
- }
+ await page.locator('#career-faction').selectOption('Axis');
  const portraits=page.locator('.candidate-portrait .german-painted');
  await expect(portraits).toHaveCount(20);
  const layout=await portraits.evaluateAll(items=>items.map(s=>{
