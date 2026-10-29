@@ -29,11 +29,12 @@ function load(){try{
  const chosen=ROSTER.find(p=>p.id===o.profile.rosterId);
  if(chosen&&chosen.faction==='Axis'){
   const oldNames={
-   'ace-24':'Kurt "Korken" Weber',
-   'ace-26':'Hans "Bratwurst" Fischer',
-   'ace-32':'Günther "Käsekopf" Hoffmann'
+   'ace-24':['Kurt "Korken" Weber','Klara "Korken" Weber'],
+   'ace-26':['Hans "Bratwurst" Fischer'],
+   'ace-27':['Lotte "Schwalbe" Fischer'],
+   'ace-32':['Günther "Käsekopf" Hoffmann','Gisela "Käsekopf" Hoffmann']
   };
-  if(oldNames[chosen.id]===o.profile.name)o.profile.name=chosen.name;
+  if(oldNames[chosen.id]?.includes(o.profile.name))o.profile.name=chosen.name;
   o.profile.gender=chosen.gender;
  }
  o.records=o.records&&typeof o.records==='object'?o.records:{};
