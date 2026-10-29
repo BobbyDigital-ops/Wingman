@@ -338,12 +338,12 @@ function generateCandidates(){
 let selectFaction=data?.profile?.faction==='Axis'?'Axis':'Allies';
 function candidatePicker(){
  return '<div class="character-roster">'+candidates.map((c,i)=>
- '<button type="button" data-candidate="'+i+'" class="candidate-card" aria-label="Choose '+escape(c.roster.name)+'">'+
+ '<button type="button" data-candidate="'+i+'" class="candidate-card" aria-label="Confirm '+escape(c.roster.name)+' as your pilot">'+
  '<div class="candidate-portrait">'+pilotPortrait(c.roster.faction,{...c.style,rosterPortrait:c.roster.portrait})+'</div>'+
  '<strong>'+escape(c.roster.name)+'</strong><small>'+escape(c.roster.archetype)+' · '+escape(aircraft[c.roster.plane])+'</small>'+
  '<p class="character-bio">'+escape(c.roster.bio)+'</p>'+
  '<small>TURN '+c.attributes.manoeuvrability+' · GUNS '+c.attributes.gunnery+' · ENGINE '+c.attributes.engine+'</small>'+
- '<span>'+escape(PILOT_SKILLS.find(x=>x[0]===c.roster.signature)?.[1]||'SPECIAL')+'</span></button>').join('')+'</div>';
+ '<span>CONFIRM PILOT · '+escape(PILOT_SKILLS.find(x=>x[0]===c.roster.signature)?.[1]||'SPECIAL')+'</span></button>').join('')+'</div>';
 }
 function createProfile(index){
  const chosen=candidates[index];if(!chosen)return;
@@ -352,7 +352,7 @@ function createProfile(index){
  const faction=chosen.roster.faction;
  airframeOffers=[];
  data={profile:{name,faction,rosterId:chosen.roster.id,plane:chosen.roster.plane,style:chosen.style,attributes:chosen.attributes,skill:chosen.roster.signature,characterConfirmed:true,gender:chosen.roster.gender},wins:0,losses:0,kills:0,records:{},best:0,completed:0,streak:0,bestStreak:0,medals:[],service:[],run:null};
- save();view='licence';render();
+ save();view='ladder';render();
 }
 const BASE_AIRCRAFT={fighter:{speed:82,turn:3.15,hull:130,armour:40},heavy:{speed:75,turn:1.98,hull:160,armour:78},bomber:{speed:66,turn:1.30,hull:180,armour:124},bf109:{speed:87,turn:3.02,hull:125,armour:42},bf110:{speed:78,turn:1.91,hull:160,armour:75},he111:{speed:69,turn:1.35,hull:175,armour:116}};
 function rollAirframe(type){
@@ -368,26 +368,28 @@ function prepareAirframes(){
  airframeOffers=types.map(rollAirframe);
 }
 function startRun(aircraftId){
- if(!data||!([...(data.profile.faction==='Allies'?ALLIES:AXIS)].includes(aircraftId)))return;
- const airframe=airframeOffers.find(a=>a.type===aircraftId)||rollAirframe(aircraftId);
- data.run={faction:data.profile.faction,aircraft:aircraftId,airframe,rank:1,lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null};
+ if(!data?.profile)return;
+ const allowed=data.profile.faction==='Allies'?ALLIES:AXIS;
+ if(!allowed.includes(aircraftId))return;
+ data.run={faction:data.profile.faction,aircraft:aircraftId,airframe:null,rank:1,
+  lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null};
  data.run.choices=makeChoices(data.run);save();view='ladder';render();
 }
+let pendingChoice=null;
 function fight(index){
- const run=data?.run;if(!run||active||!run.choices)return;
- const choice=run.choices[index];if(!choice)return;
- // Existing saved choices also gain the same rank progression without resetting the run.
+ if(!data?.run||active||!data.run.choices?.[index])return;
+ pendingChoice=index;view='sortie';render();
+}
+function launchSortie(type){
+ const run=data?.run;if(!run||pendingChoice===null||active)return;
+ if(!(run.faction==='Allies'?ALLIES:AXIS).includes(type))return;
+ const choice=run.choices[pendingChoice];if(!choice)return;
  const lead=byId[choice.id],scaled=lead?window.WingmanPilotAI?.level(lead,run.rank):null;
  if(scaled){choice.attributes=scaled.attributes;choice.signature=scaled.signature;choice.archetype=scaled.archetype;choice.personality=scaled.tactic;}
- if(choice.types?.length===2&&!choice.wingman){
-  const wing=CATALOG.find(p=>p.faction!==run.faction&&p.id!==choice.id&&p.plane===choice.types[1]);
-  const veteran=wing&&window.WingmanPilotAI?.level(wing,run.rank);
-  if(wing)choice.wingman={id:wing.id,name:wing.name,plane:wing.plane,
-   attributes:veteran?.attributes||wing.attributes,signature:veteran?.signature||wing.signature,
-   archetype:wing.archetype,personality:veteran?.tactic};
- }
- active=choice;screen.hidden=true;showing=false;
- window.WingmanGame.startCampaignFight(choice,run.aircraft,run.airframe);
+ choice.playerAptitude=type===data.profile.plane?{hull:1.1,armour:1.1,damage:1.1}:null;
+ choice.playerAircraft=type;run.aircraft=type;run.airframe=null;
+ pendingChoice=null;save();active=choice;showing=false;screen.hidden=true;
+ window.WingmanGame.startCampaignFight(choice,type,null);
 }
 function finishEncounter(won,encounter){
  if(!active||!data?.run)return;
@@ -517,19 +519,30 @@ function render(){
    <p>NEMESIS <b>${nemesis?escape(byId[nemesis[0]]?.name||'Unknown'):'None yet'}</b></p>
    <p>ACE RUNS COMPLETED <b>${data.completed}</b></p><p>SERVICE RANK <b>${rankTitle(data.best||1)}</b></p><p>LONGEST STREAK <b>${data.bestStreak||0}</b></p></div></div>
    ${medalMarkup()}${serviceMarkup()}
-   <button class="career-primary" data-action="ladder">ROAD TO ACE</button><button data-action="character">CHOOSE CHARACTER & NAME</button><button data-action="select">START A NEW PILOT</button>`);
+   <button class="career-primary" data-action="ladder" >START / CONTINUE CAMPAIGN</button><button data-action="character">CHOOSE CHARACTER & NAME</button><button data-action="select">START A NEW PILOT</button>`);
   return;
  }
  if(!run){
   if(airframeOffers.length!==3)prepareAirframes();
-  panel('ROAD TO ACE',`<p>${escape(p.name)} · ${p.faction}. Choose one aircraft for your entire run. Three lives; a defeat costs a life and drops you one rank.</p>
+  panel('ROAD TO ACE',`<p>${escape(p.name)} · ${p.faction}. Choose your aircraft before every sortie. Three lives; a defeat costs a life and drops you one rank.</p>
   <p class="career-muted">Win eight ranks against recurring rival pilots. Earn decorations, survive with three lives and defeat the final ace with two escorts.</p>
-  <div class="career-planes">${airframeOffers.map(a=>`<button class="airframe-card" data-aircraft="${a.type}"><strong>${aircraft[a.type]}</strong><small>SPEED ${a.stats.speed}</small><small>TURN ${a.stats.turn}</small><small>HULL ${a.stats.hull}</small><small>ARMOUR ${a.stats.armour}</small><span>LOCK IN AIRCRAFT</span></button>`).join('')}</div>
+  <div class="career-planes">${airframeOffers.map(a=>`<button class="airframe-card" data-aircraft="${a.type}"><strong>${aircraft[a.type]}</strong><small>SPEED ${a.stats.speed}</small><small>TURN ${a.stats.turn}</small><small>HULL ${a.stats.hull}</small><small>ARMOUR ${a.stats.armour}</small><span>BEGIN CAMPAIGN</span></button>`).join('')}</div>
   <button data-action="licence">VIEW PILOT LICENCE</button>`);
   return;
  }
+ if(view==='sortie'&&pendingChoice!==null){
+  const encounter=run.choices[pendingChoice],types=run.faction==='Allies'?ALLIES:AXIS;
+  panel('CHOOSE AIRCRAFT — RANK '+run.rank,`<p><strong>${escape(encounter.mission||'DOGFIGHT')}</strong> against ${escape(encounter.label)}. Choose a plane for this mission.</p>
+  <p class="career-muted">Pilot's preferred aircraft: <b>${escape(aircraft[p.plane])}</b>. +10% hull, armour and weapon damage when flying that type.</p>
+  <div class="career-planes">${types.map(type=>{const b=BASE_AIRCRAFT[type],preferred=type===p.plane;
+   return `<button class="airframe-card ${preferred?'preferred-plane':''}" data-sortie-plane="${type}"><strong>${escape(aircraft[type])}</strong>
+   <small>HULL ${Math.round(b.hull*(preferred?1.1:1))}</small><small>ARMOUR ${Math.round(b.armour*(preferred?1.1:1))}</small>
+   <small>${preferred?'★ SPECIALIST +10% GUN DAMAGE / HULL / ARMOUR':'STANDARD AIRCRAFT'}</small><span>FLY THIS SORTIE</span></button>`}).join('')}</div>
+  <button data-action="sortie-back">BACK TO MISSIONS</button>`);
+  return;
+ }
  panel('ROAD TO ACE',`<div class="career-stats"><span>${escape(p.name)} · ${aircraft[run.aircraft]}</span><span>RANK ${run.rank}/${MAX_RANK}</span><span>${'♥'.repeat(run.lives)}${'♡'.repeat(3-run.lives)}</span></div>
- <p class="career-muted">Choose one of three tactical routes. On rank eight, every route faces the final ace and two named escorts — defeat all three.</p>
+ <p class="career-muted">Choose a mission, then choose a suitable aircraft for that sortie. Rank eight ends against the final three-aircraft squadron.</p>
  ${ladder(run)}<div class="career-bottom-actions"><button data-action="licence">VIEW PILOT LICENCE</button><button data-action="character">CHOOSE CHARACTER</button></div>`);
  const marker=screen.querySelector('#active-rung'),list=screen.querySelector('.ladder-scroll');
   // Only centre the active rank inside the ladder itself. scrollIntoView()
@@ -586,6 +599,8 @@ screen.addEventListener('click',e=>{
  }
  if(el.dataset.aircraft)startRun(el.dataset.aircraft);
  if(el.dataset.choice!==undefined)fight(Number(el.dataset.choice));
+ if(el.dataset.sortiePlane)launchSortie(el.dataset.sortiePlane);
+ if(action==='sortie-back'){pendingChoice=null;view='ladder';render();}
 });
 screen.addEventListener('change',e=>{
  if(e.target.id==='career-skill'){selectedSkill=e.target.value;}
