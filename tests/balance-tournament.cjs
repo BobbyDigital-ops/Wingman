@@ -17,8 +17,8 @@ function launch(){
  src=edit(src,'  function releaseBomb(p){','  function releaseBomb(p){if(state.bench)window.s.bombs[p.id]++;');
  src=edit(src,'            state.bullets.push({\n              x:muzzleX',
  '            if(state.bench)window.s.shots[p.id]++;\n            state.bullets.push({\n              x:muzzleX');
- src=edit(src,'          if(hitBody||hitWing){\n            hit(target,b.damage',
- '          if(hitBody||hitWing){\n            if(state.bench)window.s.hits[b.owner]++;\n            hit(target,b.damage');
+ src=edit(src,'          if(hitBody||hitWing){\n            if(b.owner===0&&state.session)state.session.hits++;\n            hit(target,b.damage',
+ '          if(hitBody||hitWing){\n            if(state.bench)window.s.hits[b.owner]++;\n            if(b.owner===0&&state.session)state.session.hits++;\n            hit(target,b.damage');
  src=edit(src,'  function emit(x,y,count,color,power){','  function emit(x,y,count,color,power){if(state.bench)return;');
  src=edit(src,'  function endRound(winner){','  function endRound(winner){if(state.bench){state.benchWinner=winner;state.phase="result";return;}');
  const api=[
