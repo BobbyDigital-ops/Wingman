@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="./styles.css?v=20261028phase8c">
   <link rel="stylesheet" href="./career.css?v=20261029careerux2">
   <link rel="stylesheet" href="./src/ui/interface.css?v=20261029poster-v1">
+  <link rel="stylesheet" href="./src/ui/aircraft-grid.css?v=20261029grid1">
 </head>
 <body>
   <div class="app">
@@ -51,23 +52,13 @@
         </section>
         <section class="front-panel setup-panel" id="options-panel" hidden aria-label="Choose aircraft and battle options">
           <p class="flow-step">02 / PREPARE YOUR SORTIE</p><h2>PREPARE FOR TAKEOFF</h2>
-          <div class="setup-columns">
-            <div>
-              <p class="setup-label">SELECT AIRCRAFT</p>
-              <div class="wm-featured-aircraft"><div class="wm-featured-scene"><canvas id="wm-featured-plane" width="780" height="230" aria-hidden="true"></canvas></div><div class="wm-featured-info"><strong id="wm-featured-name">SPITFIRE</strong><span id="wm-featured-description">RAF / AGILE FIGHTER / OVERDRIVE</span><div class="wm-specs" aria-label="Aircraft handling characteristics"><label>SPEED <i id="wm-stat-speed"></i></label><label>TURN <i id="wm-stat-turn"></i></label><label>ARMOUR <i id="wm-stat-armour"></i></label></div></div></div>
-              <div class="plane-picker" role="group" aria-label="Choose aircraft">
-                <button class="plane-choice selected" type="button" data-plane="fighter" aria-pressed="true"><canvas class="wm-aircraft-card-canvas" data-aircraft-art="fighter" width="340" height="110" aria-hidden="true"></canvas><b>SPITFIRE</b><small>RAF · Overdrive</small></button>
-                <button class="plane-choice" type="button" data-plane="heavy" aria-pressed="false"><canvas class="wm-aircraft-card-canvas" data-aircraft-art="heavy" width="340" height="110" aria-hidden="true"></canvas><b>BEAUFIGHTER</b><small>RAF · Shield</small></button>
-                <button class="plane-choice" type="button" data-plane="bomber" aria-pressed="false"><canvas class="wm-aircraft-card-canvas" data-aircraft-art="bomber" width="340" height="110" aria-hidden="true"></canvas><b>LANCASTER</b><small>RAF · Rear turrets</small></button>
-                <button class="plane-choice" type="button" data-plane="bf109" aria-pressed="false"><canvas class="wm-aircraft-card-canvas" data-aircraft-art="bf109" width="340" height="110" aria-hidden="true"></canvas><b>BF 109E EMIL</b><small>Messerschmitt · Fighter</small></button>
-                <button class="plane-choice" type="button" data-plane="bf110" aria-pressed="false"><canvas class="wm-aircraft-card-canvas" data-aircraft-art="bf110" width="340" height="110" aria-hidden="true"></canvas><b>BF 110</b><small>Zerstörer · Shield</small></button>
-                <button class="plane-choice" type="button" data-plane="he111" aria-pressed="false"><canvas class="wm-aircraft-card-canvas" data-aircraft-art="he111" width="340" height="110" aria-hidden="true"></canvas><b>HE 111</b><small>Heinkel · Turrets</small></button>
-              </div>
-            </div>
-            <div class="setup-controls">
+
+          <div class="wg-flight-prep">
+            <div id="wingman-grid-mount"></div>
+            <div class="wg-flight-conditions">
               <p class="setup-label">FLIGHT CONDITIONS</p>
-              <div class="mode-row">
-                <label class="challenge-setting" id="challenge-setting" hidden>SPECIAL OPERATION <select id="challenge-select"><option value="intercept">ACE INTERCEPT · 45S</option><option value="crosswind">CROSSWIND DUEL · 75S</option><option value="noarmour">IRON NERVES · NO ARMOUR</option><option value="heavy">HEAVY HUNTER · 90S</option></select><small id="challenge-description">ACE ENEMY · DEFEAT THE FIGHTER BEFORE 45S</small></label>
+              <div class="wg-setting-list">
+                <label id="challenge-setting" class="challenge-setting" hidden>SPECIAL OPERATION <select id="challenge-select"><option value="intercept">ACE INTERCEPT · 45S</option><option value="crosswind">CROSSWIND DUEL · 75S</option><option value="noarmour">IRON NERVES · NO ARMOUR</option><option value="heavy">HEAVY HUNTER · 90S</option></select><small id="challenge-description">ACE ENEMY · DEFEAT THE FIGHTER BEFORE 45S</small></label>
                 <label>AI DIFFICULTY <select id="difficulty-select"><option value="rookie">ROOKIE</option><option value="standard" selected>STANDARD</option><option value="ace">ACE</option></select></label>
                 <label>THEATRE <select id="arena-select"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">HOME FRONT (STORM)</option></select></label>
                 <select id="hud-style" hidden aria-hidden="true"><option value="arcade" selected>Combat</option></select>
@@ -122,6 +113,8 @@
   <script src="./assets/art/wingman-german-painted-atlas.js?v=20261029painted20" defer></script>
   <script src="./src/art/scenery.js?v=20261028phase8bfix1" defer></script>
   <script src="./src/audio/soundscape.js?v=20261029phase45release1" defer></script>
+  <script src="./src/ui/aircraft-grid-art.js?v=20261029grid1" defer></script>
+  <script src="./src/ui/aircraft-grid.js?v=20261029grid1" defer></script>
   <script src="./game.js?v=20261029support-choice-v1" defer></script>
   <script src="./src/data/pilot-roster.js?v=20261029rosterfaces2" defer></script>
   <script src="./src/data/pilot-ai.js?v=20261029phase3a" defer></script>
