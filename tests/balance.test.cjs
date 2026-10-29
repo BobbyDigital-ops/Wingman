@@ -8,7 +8,7 @@ test('mirrored 6-aircraft tournament runs actual projectile/AI physics determini
  const opts={reps:1,seconds:12,wind:'off',arenaFilter:'alpine',difficultyFilter:'standard'};
  const first=tournament(opts),second=tournament(opts);
  assert.equal(first.meta.games,30);
- assert.deepEqual(first.matches,second.matches,'identical seeded fixtures must yield identical flight results');
+ assert.equal(JSON.stringify(first.matches),JSON.stringify(second.matches),'identical seeded fixtures must yield identical flight results');
  assert.equal(Object.keys(first.pairs).length,15);
  assert.ok(first.matches.every(x=>!x.bad&&Number.isFinite(x.seconds)&&x.seconds>0));
  assert.ok(first.matches.some(x=>x.hits[0]+x.hits[1]>0),'real bullets must strike at least one aircraft');
