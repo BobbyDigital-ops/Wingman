@@ -25,7 +25,7 @@ function launch(){
  'window.balance={',
  'setup(a,b,difficulty,arena,wind){',
  'state.bench=false;state.mode="duel";state.participants=2;state.teams=false;state.selected=a;state.enemyType=b;state.difficulty=difficulty;state.arena=arena;',
- 'newRound();',
+ 'newRound();state.fliers.forEach(p=>p.aiBombDelay=4.5);',
  'if(wind==="off")state.wind={active:false,base:0,current:0,elapsed:0};',
  'else if(wind==="on")state.wind={active:true,base:12,current:12,elapsed:0};',
  'state.bench=true;state.benchWinner=null;window.s={shots:[0,0],hits:[0,0],bombs:[0,0]};',
