@@ -114,6 +114,7 @@ function paintPlane(canvas,type,large=false){
  if(!canvas)return;
  if(window.WingmanHangarArt?.paint){
   window.WingmanHangarArt.paint(canvas,type,large);
+  window.WingmanAircraftPhotos?.apply(canvas,type);
   return;
  }
  if(!window.WingmanSprites)return;
