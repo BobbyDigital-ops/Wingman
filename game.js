@@ -111,7 +111,7 @@ function plane(type,id,x,y,angle){
       critical:false,criticalCause:'',flightRisk:0,climbLoad:0,aiRecoveryTime:0,tailAssist:0,
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boostCharge:100,boosting:false,aiBoost:false,
       spawnSafe:1.0,smokeTimer:0,hitFlash:0,alive:true,aiThink:0,
-      energy:85,rollTime:0,rollRecovery:0,stallTime:0,wallGrace:0,armourTime:0,bombCooldown:0,climbAssist:0,
+      energy:85,rollTime:0,rollDuration:0,rollRecovery:0,skillFeedback:'',skillFeedbackTime:0,stallTime:0,wallGrace:0,armourTime:0,bombCooldown:0,climbAssist:0,
       swoopTime:0,swoop:null,turnVelocity:0,damageCause:'',damageNotice:0,muzzleFlash:0};
   }
 
@@ -496,11 +496,16 @@ function plane(type,id,x,y,angle){
       battleOutcomeAfterDeath(p);
     }
   }
+  const PILOT_SKILL_NAMES={roll:'BARREL ROLL',reverse:'IMMELMANN TURN',smoke:'SMOKESCREEN',harden:'IRON HIDE',deadeye:'DEAD EYE',cut:'ENGINE CUT',dive:'POWER DIVE'};
   function triggerPilotSkill(p){
-    if(!p||!p.alive||p.skillCooldown>0||state.phase!=='playing'||state.paused)return;
+    if(!p||!p.alive||state.phase!=='playing'||state.paused)return false;
     const kind=p.pilotSkill||'roll';
+    if(p.skillCooldown>0){
+      if(p.id===0){p.skillFeedback='SKILL RECHARGING · '+Math.ceil(p.skillCooldown)+'s';p.skillFeedbackTime=.8;}
+      return false;
+    }
     const durations={reverse:16,roll:7,smoke:20,harden:22,deadeye:17,cut:15,dive:16};
-    if(kind==='roll'){triggerRoll(p);if(p.rollTime<=0)return;}
+    if(kind==='roll'){if(!triggerRoll(p))return false;}
     else if(kind==='reverse'){
       const right=Math.cos(p.angle)>=0,up=p.y>H*.5;
       p.swoop={kind:'reverse',startAngle:p.angle,direction:up?(right?-1:1):(right?1:-1),elapsed:0,duration:.43};
@@ -511,13 +516,18 @@ function plane(type,id,x,y,angle){
     else if(kind==='deadeye'){p.deadeyeTime=4;}
     else if(kind==='cut'){p.engineCutTime=1.4;p.speed*=.72;}
     else if(kind==='dive'){p.diveTime=.85;p.energy=Math.min(100,p.energy+12);}
-    p.skillCooldown=durations[kind]||14;sound('special');
+    else return false;
+    p.skillCooldown=durations[kind]||14;
+    if(p.id===0){p.skillFeedback=PILOT_SKILL_NAMES[kind]||'PILOT SKILL';p.skillFeedbackTime=1.25;}
+    sound('special');
+    return true;
   }
   function triggerRoll(p){
-    if(!p||!p.alive||state.phase!=='playing'||state.paused||p.rollTime>0||p.rollRecovery>0)return;
+    if(!p||!p.alive||state.phase!=='playing'||state.paused||p.rollTime>0||p.rollRecovery>0)return false;
     p.rollTime=p.role==='fighter'?.5:p.role==='heavy'?.48:.45;
+    p.rollDuration=p.rollTime;
     p.rollRecovery=(p.id===0?.70:1.35)+(p.role==='bomber'?.35:0);
-    sound('special');
+    return true;
   }
   function crossTopEdge(p){
     // Fly fully out above the playfield, then return on the opposite heading.
@@ -906,6 +916,7 @@ function plane(type,id,x,y,angle){
     p.boosting=!!(p.role==='fighter'&&p.overdriveTime>0&&!p.swoop);
     p.boostCharge=100;
     p.rollTime=Math.max(0,p.rollTime-dt);
+    p.skillFeedbackTime=Math.max(0,(p.skillFeedbackTime||0)-dt);
     p.rollRecovery=Math.max(0,p.rollRecovery-dt);
     steerPlane(p,steer,dt);
     if(p.burstLeft>0){
@@ -1239,7 +1250,13 @@ function plane(type,id,x,y,angle){
   function aircraft(p){
     const c=modelCtx;
     c.save();c.translate(p.x,p.y);c.rotate(p.angle);
-    if(p.rollTime>0)c.scale(1,Math.max(.2,Math.abs(Math.cos(p.rollTime*22))));
+    if(p.rollTime>0){
+      // Full visible roll, without changing the hitbox or the duration of evasion.
+      const progress=1-p.rollTime/(p.rollDuration||.5);
+      c.scale(1,Math.cos(progress*TAU));
+      c.strokeStyle='#dcece0b3';c.lineWidth=.65;
+      c.beginPath();c.ellipse(0,0,p.d.radius+3,4,0,0,TAU);c.stroke();
+    }
     if(p.armourTime>0){
       c.beginPath();c.ellipse(0,0,10,8,0,0,TAU);
       c.strokeStyle='#b1ecf5c9';c.lineWidth=.75;c.stroke();
@@ -1294,6 +1311,17 @@ function plane(type,id,x,y,angle){
     // Minimal cinema-frame combat overlay, not a dashboard: the aircraft and sky
     // own the screen. Vital data appears as small edge markings and typography.
     const p=state.fliers[0],e=state.fliers.find(f=>f.id>0&&f.alive)||state.fliers[1],cx=W*.5;
+    const skillButton=document.getElementById('roll');
+    if(skillButton&&p){
+      const kind=PILOT_SKILL_NAMES[p.pilotSkill]||'BARREL ROLL';
+      const short={roll:'ROLL',reverse:'REVERSE',smoke:'SMOKE',harden:'HARDEN',deadeye:'DEADEYE',cut:'ENGINE CUT',dive:'DIVE'}[p.pilotSkill]||'ROLL';
+      const cool=Math.max(0,p.skillCooldown||0);
+      const label=cool>0?short+' '+Math.ceil(cool)+'s':short;
+      if(skillButton.textContent!==label)skillButton.textContent=label;
+      skillButton.setAttribute('aria-label',kind+(cool>0?' recharging, '+Math.ceil(cool)+' seconds':' ready'));
+      skillButton.classList.toggle('on-cooldown',cool>0);
+      skillButton.classList.toggle('skill-active',!!(p.rollTime>0||p.swoop||p.smokescreen>0||p.hardenTime>0||p.deadeyeTime>0||p.engineCutTime>0||p.diveTime>0));
+    }
     const names={fighter:'SPITFIRE',heavy:'BEAUFIGHTER',bomber:'LANCASTER',
       bf109:'EMIL (BF 109)',bf110:'ZERSTÖRER',he111:'HEINKEL HE 111'};
     const short=q=>names[q?.type]||'AIRCRAFT';
@@ -1350,6 +1378,11 @@ function plane(type,id,x,y,angle){
     g.fillText(score,cx,17,Math.max(52,W*.20));
     g.fillStyle='#d4c4a6';g.font='bold 5.8px monospace';
     g.fillText(Math.max(0,Math.ceil(state.time))+'s  /  '+(ARENAS[state.arena]||'ALPINE'),cx,27);
+    if(p?.skillFeedbackTime>0){
+      g.save();g.textAlign='center';g.font='bold 7px monospace';
+      g.fillStyle=p.skillFeedback.includes('RECHARGING')?'#e0b4a6':'#f7e1aa';
+      g.fillText(p.skillFeedback,cx,51,Math.min(W*.47,180));g.restore();
+    }
     if(state.recordMode==='survival'){
       g.fillStyle='#dbe7a4';g.font='bold 6px monospace';
       g.fillText('CLEARED '+(state.session?.roundsWon||0)+'  ·  DAMAGE CARRIES',cx,35);
