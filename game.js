@@ -193,8 +193,10 @@ function plane(type,id,x,y,angle){
     state.time=state.mode==='survival'?70:state.mode==='campaign'?(state.campaignEncounter?.finalBoss?165:120):90;state.impactLock=0;state.phase='playing';state.paused=false;
     if(menuReturn)menuReturn.hidden=false;
     if(fullscreenButton)fullscreenButton.hidden=false;
-    state.banner=state.campaignEncounter?.finalBoss?'FINAL SCRAMBLE — THE ESCORTS':
-      state.mode==='campaign'?(state.campaignEncounter?.mission||'RIVAL INTERCEPT'):
+    const callsign=state.campaignEncounter?.label?.match(/"([^"]+)"/)?.[1]||
+      state.campaignEncounter?.label?.split(' ')[0]||'RIVAL';
+    state.banner=state.campaignEncounter?.finalBoss?'FINAL SCRAMBLE — TWO ESCORTS':
+      state.mode==='campaign'?(state.campaignEncounter?.mission||'RIVAL INTERCEPT')+' • '+callsign:
       state.wind.active?(state.wind.base>0?'CROSSWIND →':'← CROSSWIND'):'ROUND '+state.round;
     state.bannerTime=state.campaignEncounter?.finalBoss?4:1.5;
     controls.left=false;controls.right=false;controls.boost=false;
@@ -1346,10 +1348,11 @@ function plane(type,id,x,y,angle){
     }
     if(state.bannerTime>0){
       // Announcements live below the speed gauges, not on top of them.
-      g.fillStyle='#172f3cc7';g.fillRect(W/2-52,100,104,13);
-      g.strokeStyle='#bb9f6fa1';g.strokeRect(W/2-52,100,104,13);
+      const bannerWidth=Math.min(240,W*.57);
+      g.fillStyle='#172f3cd9';g.fillRect(W/2-bannerWidth/2,100,bannerWidth,15);
+      g.strokeStyle='#bb9f6fa1';g.strokeRect(W/2-bannerWidth/2,100,bannerWidth,15);
       g.font='bold 7px monospace';g.textAlign='center';g.fillStyle='#ffe0ad';
-      g.fillText(state.banner,W/2,103,100);g.textAlign='left';
+      g.fillText(state.banner,W/2,107,bannerWidth-12);g.textAlign='left';
     }
     if(state.paused&&state.phase==='playing'){
       g.fillStyle='#172738bb';g.fillRect(W/2-64,75,128,29);
