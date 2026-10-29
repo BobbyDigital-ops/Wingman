@@ -22,7 +22,7 @@ const plane=id=>aircraft.find(a=>a.id===id)||aircraft[0];
 const pilot=id=>pilots.find(x=>x.id===id)||pilots[0];
 const chosenPilot=()=>pilot(state.pilotId);
 const mode=()=>modes.find(m=>m.id===state.mode)||modes[0];
-const safe=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;':'&quot;',"'":'&#39;'}[c]));
+const safe=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function callsign(p){return p?.name?.match(/"([^"]+)"/)?.[1]||p?.name?.split(' ')[0]||'PILOT'}
 function button(label,action,style='navy',extra=''){return '<button class="btn btn-'+style+'" '+extra+' data-action="'+action+'">'+label+'</button>'}
 function sceneTitle(h,subtitle){return '<div class="screen-head"><h1>'+h+'</h1><p>'+subtitle+'</p></div>'}
