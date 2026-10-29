@@ -520,7 +520,7 @@ function plane(type,id,x,y,angle){
   function assignCampaignAI(p,encounter,offset=0){
     const rank=clamp(Number(encounter.rank)||1,1,8);
     const wing=offset>0?encounter.wingman:null;
-    const raw=wing||{id:encounter.id,name:encounter.label,plane:encounter.types[0],
+    const raw=wing||{id:encounter.id,name:encounter.label,plane:encounter.types?.[0]||p.type,
       attributes:encounter.attributes,signature:encounter.signature,
       archetype:encounter.archetype,personality:encounter.personality};
     const personality=window.WingmanPilotAI?.level(raw,rank);
