@@ -153,12 +153,17 @@ function plane(type,id,x,y,angle){
     ];
     if(state.mode==='campaign'&&state.campaignEncounter){
       const encounter=state.campaignEncounter;
-      state.fliers[1]=plane(encounter.types[0],1,W*.78,H*.52,Math.PI+.15);
-      if(encounter.types.length===2){
-        state.fliers.push(plane(encounter.types[1],2,W*.68,H*.36,Math.PI+.28));
-        state.fliers[0].team=0;
-        state.fliers[1].team=1;
-        state.fliers[2].team=1;
+      state.fliers=[plane(state.selected,0,W*.22,H*.45,-.14)];
+      const starts=[[.78,.52,Math.PI+.15],[.68,.36,Math.PI+.28],[.86,.42,Math.PI+.08]];
+      encounter.types.slice(0,3).forEach((type,index)=>{
+        const [x,y,angle]=starts[index],foe=plane(type,index+1,W*x,H*y,angle);
+        foe.team=1;state.fliers.push(foe);
+      });
+      state.fliers[0].team=0;
+      state.bossCountdown=encounter.finalBoss?20:0;
+      state.bossReinforcementLaunched=!encounter.finalBoss;
+      if(encounter.finalBoss&&state.fliers[3]){
+        state.fliers[3].alive=false;state.fliers[3].queued=true;state.fliers[3].spawnSafe=0;
       }
     }else if(state.participants>2){
       const pool=Object.keys(PLANES).filter(t=>t!==state.selected);
@@ -178,18 +183,18 @@ function plane(type,id,x,y,angle){
     state.fliers[0].pilotSkill=readPilotSkill();
     if(state.mode==='campaign'&&state.campaignEncounter){
       const enc=state.campaignEncounter;
-      for(const [i,foe] of state.fliers.slice(1).entries()){
-        if(enc.attributes)foe.attributes=pilotAttributes(enc.attributes);
-        assignCampaignAI(foe,enc,i);
-      }
+      for(const [i,foe] of state.fliers.slice(1).entries())assignCampaignAI(foe,enc,i);
     }
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.trails=[];state.blasts=[];state.visualClock=0;
     state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
-    state.time=state.mode==='survival'?70:state.mode==='campaign'?120:90;state.impactLock=0;state.phase='playing';state.paused=false;
+    state.time=state.mode==='survival'?70:state.mode==='campaign'?(state.campaignEncounter?.finalBoss?165:120):90;state.impactLock=0;state.phase='playing';state.paused=false;
     if(menuReturn)menuReturn.hidden=false;
     if(fullscreenButton)fullscreenButton.hidden=false;
-    state.banner=state.wind.active?(state.wind.base>0?'CROSSWIND →':'← CROSSWIND'):'ROUND '+state.round;state.bannerTime=1.5;
+    state.banner=state.campaignEncounter?.finalBoss?'FINAL SCRAMBLE — THE ESCORTS':
+      state.mode==='campaign'?(state.campaignEncounter?.mission||'RIVAL INTERCEPT'):
+      state.wind.active?(state.wind.base>0?'CROSSWIND →':'← CROSSWIND'):'ROUND '+state.round;
+    state.bannerTime=state.campaignEncounter?.finalBoss?4:1.5;
     controls.left=false;controls.right=false;controls.boost=false;
   }
   function startMatch(){
@@ -215,7 +220,7 @@ function plane(type,id,x,y,angle){
     state.campaignEncounter=encounter;
     state.scores=[0,0];state.round=1;state.kills=0;
     state.mode='campaign';state.participants=encounter.types.length+1;
-    state.teams=encounter.types.length===2;
+    state.teams=encounter.types.length>1;
     state.difficulty=encounter.difficulty||'standard';
     state.arena=encounter.arena||0;
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
@@ -283,6 +288,21 @@ function plane(type,id,x,y,angle){
     p.burstLeft=p.d.burst;p.shotTimer=0;
   }
   function opponents(p){return state.fliers.filter(other=>other.alive&&other.id!==p.id&&(!state.teams||other.team!==p.team));}
+  function bossWaiting(){return state.mode==='campaign'&&!!state.campaignEncounter?.finalBoss&&state.fliers.some(p=>p.queued);}
+  function summonFinalAce(dt){
+    if(!bossWaiting())return;
+    state.bossCountdown=Math.max(0,(state.bossCountdown||0)-dt);
+    if(state.bossCountdown>0&&!state.fliers.some(p=>p.id>0&&p.id<3&&!p.alive))return;
+    const boss=state.fliers.find(p=>p.queued);
+    if(!boss)return;
+    boss.queued=false;boss.alive=true;boss.health=boss.d.hull;boss.armour=boss.d.armour;
+    boss.x=W*.85;boss.y=H*.38;boss.angle=Math.PI+.12;boss.speed=boss.d.speed*.8;
+    boss.vx=Math.cos(boss.angle)*boss.speed;boss.vy=Math.sin(boss.angle)*boss.speed;
+    boss.spawnSafe=2.5;boss.aiThink=0;
+    state.bossReinforcementLaunched=true;
+    state.banner='THE LEGEND ARRIVES — '+(boss.aiName?.match(/"([^"]+)"/)?.[1]||'FINAL ACE').toUpperCase();
+    state.bannerTime=4;sound('boss');
+  }
   function nearestEnemy(p){return opponents(p).sort((a,b)=>combatDistance(p,a)-combatDistance(p,b))[0];}
   function triggerSpecial(p){
     if(!p||!p.alive||p.specialCooldown>0||state.phase!=='playing'||state.paused)return;
@@ -338,7 +358,7 @@ function plane(type,id,x,y,angle){
     if(p.health<=0){
       p.alive=false;emit(p.x,p.y,28,'#ffc47e',75);emit(p.x,p.y,16,'#625765',35);
       if(state.blasts.length<12)state.blasts.push({x:p.x,y:p.y,r:p.d.radius+8,life:.65,max:.65,large:true});
-      if(state.participants===2||p.id===0||opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
+      if(state.participants===2||p.id===0||!bossWaiting()&&opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
     }
   }
   function triggerPilotSkill(p){
@@ -404,7 +424,7 @@ function plane(type,id,x,y,angle){
       if(p.y>=H-13){
         p.y=H-13;p.health=0;p.alive=false;
         p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
-        if(p.id===0||state.participants===2||opponents(state.fliers[0]).every(q=>!q.alive))endRound(p.id===0?1:0);
+        if(p.id===0||state.participants===2||!bossWaiting()&&opponents(state.fliers[0]).every(q=>!q.alive))endRound(p.id===0?1:0);
       }
       // Reversals can consume existing climb reserve, never create altitude.
       p.climbLoad=Math.max(0,p.climbLoad-dt*25)+Math.max(0,oldY-p.y);
@@ -488,7 +508,7 @@ function plane(type,id,x,y,angle){
     if(p.y>=H-13){
       p.y=H-13;p.health=0;p.alive=false;
       p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
-      if(p.id===0||state.participants===2||opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
+      if(p.id===0||state.participants===2||!bossWaiting()&&opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
     }
   }
   function tailMagnet(p,steer){
@@ -519,7 +539,7 @@ function plane(type,id,x,y,angle){
   const AI_STYLES=['hunter','duellist','guardian','trickster','sniper','interceptor','survivor','brawler'];
   function assignCampaignAI(p,encounter,offset=0){
     const rank=clamp(Number(encounter.rank)||1,1,8);
-    const wing=offset>0?encounter.wingman:null;
+    const wing=encounter.opponents?.[offset]||(offset>0?encounter.wingman:null);
     const raw=wing||{id:encounter.id,name:encounter.label,plane:encounter.types?.[0]||p.type,
       attributes:encounter.attributes,signature:encounter.signature,
       archetype:encounter.archetype,personality:encounter.personality};
@@ -835,6 +855,7 @@ function plane(type,id,x,y,angle){
     if(state.phase==='playing'){
       updateWind(dt);
       state.time-=dt;
+      summonFinalAce(dt);
       if(state.mode==='survival'&&state.time<=0){endRound(1);return;}
       const user=state.fliers[0];
       updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);
@@ -846,7 +867,7 @@ function plane(type,id,x,y,angle){
       const enemies=state.fliers.slice(1);
       if(state.participants>2){
         if(!user.alive)endRound(1);
-        else if(opponents(user).every(p=>!p.alive))endRound(0);
+        else if(!bossWaiting()&&opponents(user).every(p=>!p.alive))endRound(0);
         else if(state.time<=0)endRound(1);
       }else if(state.time<=0){
         const enemy=enemies[0];
@@ -1085,7 +1106,8 @@ function plane(type,id,x,y,angle){
     c.fillStyle='#1e3341d9';c.fillRect(p.x-7,p.y-14,14,5.5);
     c.font='bold 5px sans-serif';c.textAlign='center';c.textBaseline='top';
     c.fillStyle=p.id===0?'#ffe7b4':p.team===0?'#a6d5fa':p.id===1?'#ffc2b8':'#ffc989';
-    c.fillText(p.id===0?'P1':'AI'+p.id,p.x,p.y-13.6);
+    const call=p.aiName?.match(/"([^"]+)"/)?.[1]||'';
+    c.fillText(p.id===0?'P1':state.mode==='campaign'?(p.id===3&&state.campaignEncounter?.finalBoss?'ACE':call.slice(0,9)||'AI'+p.id):'AI'+p.id,p.x,p.y-13.6);
   }
   function drawModels(){
     if(!modelCanvas.width||!modelCanvas.height)return;
@@ -1103,7 +1125,7 @@ function plane(type,id,x,y,angle){
   function drawHud(){
     // Minimal cinema-frame combat overlay, not a dashboard: the aircraft and sky
     // own the screen. Vital data appears as small edge markings and typography.
-    const p=state.fliers[0],e=state.fliers[1],cx=W*.5;
+    const p=state.fliers[0],e=state.fliers.find(f=>f.id>0&&f.alive)||state.fliers[1],cx=W*.5;
     const names={fighter:'SPITFIRE',heavy:'BEAUFIGHTER',bomber:'LANCASTER',
       bf109:'EMIL (BF 109)',bf110:'ZERSTÖRER',he111:'HEINKEL HE 111'};
     const short=q=>names[q?.type]||'AIRCRAFT';
@@ -1145,7 +1167,9 @@ function plane(type,id,x,y,angle){
     }
     identification(p,false);identification(e,true);
     // Score painted as unobtrusive typographic overlay.
-    const score=state.mode==='survival'?'WAVE '+state.round:
+    const score=state.mode==='campaign'&&state.campaignEncounter?.finalBoss?
+      'FINAL • '+(state.bossReinforcementLaunched?'1 v 3':'ESCORTS'):
+      state.mode==='survival'?'WAVE '+state.round:
       state.mode==='campaign'&&state.participants===3?'1 v 2':
       state.participants>2?(state.teams?'2 v 2':state.participants+' ACES'):
       state.scores[0]+' : '+state.scores[1];
