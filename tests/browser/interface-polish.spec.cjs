@@ -461,16 +461,16 @@ test('legacy saved pilot must explicitly pick a character without wiping progres
 test('Phase 5 original soundscape has an accessible persistent mute setting',async({page})=>{
  const errors=[];page.on('pageerror',err=>errors.push(err.message));
  await page.goto('/');
- const button=page.locator('#wm-audio-toggle');
+ const button=page.locator('#wm-audio-toggle:visible, #wm-audio-toggle-mobile:visible').first();
  await expect(button).toBeVisible();
  await expect(button).toHaveAttribute('aria-pressed','true');
  await button.click();
  await expect(button).toHaveAttribute('aria-pressed','false');
  expect(await page.evaluate(()=>localStorage.getItem('wingman-audio-muted'))).toBe('true');
  await page.reload();
- await expect(page.locator('#wm-audio-toggle')).toHaveAttribute('aria-pressed','false');
- await page.locator('#wm-audio-toggle').click();
- await expect(page.locator('#wm-audio-toggle')).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('#wm-audio-toggle:visible, #wm-audio-toggle-mobile:visible').first()).toHaveAttribute('aria-pressed','false');
+ await page.locator('#wm-audio-toggle:visible, #wm-audio-toggle-mobile:visible').first().click();
+ await expect(page.locator('#wm-audio-toggle:visible, #wm-audio-toggle-mobile:visible').first()).toHaveAttribute('aria-pressed','true');
  expect(await page.evaluate(()=>Boolean(window.WingmanAudio?.startEngine&&window.WingmanAudio?.play))).toBe(true);
  expect(errors).toEqual([]);
 });
