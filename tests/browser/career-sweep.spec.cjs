@@ -36,7 +36,7 @@ test('RAF and Luftwaffe can both select a character, retain career on reload and
   expect(saved.profile.characterConfirmed).toBe(true);
   expect(saved.run.rank).toBe(1);
   expect(saved.run.lives).toBe(3);
-  expect(saved.run.aircraft).toBe(faction==='Allies'?'fighter':'bf109');
+  expect(saved.run.aircraft).toBe(saved.profile.plane);
   const rivals=await page.locator('#active-rung .route-opponent strong').allTextContents();
   expect(rivals).toHaveLength(3);
   expect(new Set(rivals).size).toBe(3);
@@ -128,8 +128,7 @@ test('all 40 pilots have valid unique identity-and-skill profiles and unique art
 test('abandoning an active career sortie via MENU unlocks the same tier without charging a life',async({page})=>{
  await newPilot(page,'Allies',0);
  const before=await state(page);
- await page.locator('#active-rung [data-choice="0"]').click();
- await expect(page.locator('#menu-return')).toBeVisible();
+ await launchChoice(page,0);
  await page.locator('#menu-return').click();
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
  else await page.locator('#career-open-mobile').click();
