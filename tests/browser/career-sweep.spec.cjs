@@ -247,7 +247,7 @@ test('career records decorations, streaks, final-ace ceremony and persistent ser
  expect(result.medals).toContain('triple-ace');
  expect(result.medals).toContain('veteran');
  expect(result.medals).toContain('double-trouble');
- await expect(page.locator('.final-tribute')).toContainText('WINGMAN');
+ await expect(page.locator('.final-tribute')).toContainText('Wingman Legend');
  await expect(page.locator('.career-service .career-log-entry')).toHaveCount(8);
  await page.reload();
  if(await page.locator('#career-license').isVisible())await page.locator('#career-license').click();
