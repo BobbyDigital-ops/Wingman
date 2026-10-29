@@ -50,3 +50,14 @@ Automated verification does not substitute for human skill/feel tuning or physic
 2. Test whether 2v2 post-death wingman spectating feels exciting or should switch to a quick end-state.
 3. Add genuinely new mission objectives, e.g., convoy defence or bomber escort, before another expansion.
 4. Profile an actual Android phone before adding factions or a remote multiplayer backend.
+
+## Final Phase 6 verification
+**Complete result:** 79/79 engine and scorebook unit tests passed; 120/120 Playwright browser checks passed, with no failures on the final release commit.
+
+- Unit checks cover the original six-aircraft physics, actual seeded battle tournament, pilot personalities, three-aircraft final career boss, Survival partial repairs, squadron victory after player death, FFA eliminations, challenge win conditions and timeouts, and persisted scores/achievements.
+- Playwright tested desktop Chromium and emulated mobile landscape, including all five operation modes, four challenge selections, challenge AI-difficulty locking, the top-ten local score table, saved honours, touch controls, menus, careers, portraits and aircraft.
+- During development, the scorebook tester exposed invalid nonfinite-value handling, corrected before release. The expanded top-ten leaderboard introduced an ambiguous nested summary selector in the new browser tests, also corrected. No code-level regressions remained in the final full run.
+- Actual Android device FPS, audio mix, internet-based multiplayer and human perception of escalating Survival difficulty are not proved by these browser tests.
+
+## Production verification
+Vercel's release deployment was READY, and returned HTTP 200 for the latest index, game logic, flow controls, local scorebook and styles. Code remains on the repository's main branch.
