@@ -171,3 +171,24 @@
 @media(max-height:550px){.grid-plane-card>img{height:105px!important}.plane-ability small{font-size:11px}.utilities{top:4px;right:6px}.section-header,.wm-live-aircraft .aircraft-head{min-height:70px!important;padding-top:36px!important}.operation-ref{min-height:66px!important}.operation-copy strong{font-size:22px!important}.operation-copy span{font-size:11px!important}}
 
 .utilities [hidden]{display:none!important}
+
+/* Layout correction: intrinsic operation rows cannot overlap footer controls. */
+.poster-operations .operations-main{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);align-items:stretch}
+.poster-operations .operation-area{min-width:0;gap:16px}
+.poster-operations .operation-list{height:auto!important;display:flex;flex-direction:column;flex:none;gap:8px}
+.poster-operations .operation-ref{flex:none;min-height:96px!important}
+.poster-operations .screen-actions{margin-top:0!important;position:static;flex:none;flex-wrap:wrap}
+.utilities .btn:before,.utilities .btn:after{display:none!important}
+.utilities .btn{background-image:none!important;padding:9px 16px!important;min-height:40px;font-family:Arial,sans-serif;font-size:12px;letter-spacing:.02em}
+.career-back-row{display:flex;flex-wrap:wrap;gap:8px}.career-back-row .btn{flex:1;min-width:120px}
+.route-copy strong{font-size:clamp(12px,1.25vw,19px);line-height:1.2;white-space:normal}
+.licence-screen{background:radial-gradient(ellipse at top,#315363,#071c2a);padding-bottom:24px}
+.licence-card{max-width:960px;margin:28px auto 20px;background:#e9dfc4;color:#132c3a;border:7px double #8c7950;border-radius:14px;box-shadow:0 18px 45px #0007;padding:24px}
+.licence-title{display:flex;justify-content:space-between;gap:16px;border-bottom:3px solid #243d48;padding-bottom:15px;letter-spacing:.14em}
+.licence-body{display:grid;grid-template-columns:190px 1fr;gap:28px;padding:24px 0}
+.licence-photo{height:230px;border:5px solid #fff7df;box-shadow:0 2px 8px #0005}
+.licence-details h2{font-size:34px;margin:7px 0}.licence-details p{font-size:14px}
+.licence-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}.licence-stats strong{display:block;font-size:30px}.licence-stats small{font:11px Arial}
+.licence-seal{border-top:2px solid #8b7952;border-bottom:2px solid #8b7952;padding:12px;display:flex;justify-content:space-between}
+.licence-honours{padding-top:15px}.licence-actions{max-width:960px;margin:auto;display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap}
+@media(max-width:700px){.licence-card{margin:16px;padding:14px}.licence-body{grid-template-columns:100px 1fr;gap:14px}.licence-photo{height:125px}.licence-details h2{font-size:23px}.licence-title{font-size:11px}.licence-actions{margin:16px}.poster-operations .operation-ref{min-height:90px!important}}
