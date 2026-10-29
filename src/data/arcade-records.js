@@ -81,9 +81,20 @@
   const summary=['duel','survival','triple','teams','challenge'].map(mode=>
    '<div class="arcade-record"><span>'+escape(({duel:'DUEL',survival:'SURVIVAL',triple:'FREE FOR ALL',teams:'SQUADRON',challenge:'CHALLENGE'})[mode])+'</span><b>'+top(mode).toLocaleString()+'</b></div>').join('');
   const medals=ACHIEVEMENTS.map(a=>'<span class="arcade-honour '+(data.unlocks.includes(a.id)?'earned':'locked')+'" title="'+escape(a.description)+'">'+(data.unlocks.includes(a.id)?'✦ ':'◇ ')+escape(a.name)+'</span>').join('');
+  const titles={duel:'CLASSIC DUEL',survival:'SURVIVAL',triple:'FREE FOR ALL',teams:'WINGMEN',challenge:'SPECIAL OPERATIONS'};
+  const topList=Object.entries(titles).map(([mode,label])=>{
+   const entries=board(mode);
+   return '<section class="arcade-top-category"><strong>'+label+'</strong>'+
+    (entries.length?'<ol>'+entries.slice(0,10).map(r=>
+     '<li><b>'+r.score.toLocaleString()+'</b><span>'+escape(r.aircraft.toUpperCase())+' · '+
+     escape(r.challenge?String(r.challenge).toUpperCase():String(r.difficulty).toUpperCase())+
+     (r.mode==='survival'?' · '+r.waves+' WAVES':'')+'</span></li>').join('')+'</ol>':
+     '<small>NO FLIGHTS LOGGED</small>')+'</section>';
+  }).join('');
   element.innerHTML='<div class="arcade-scores">'+summary+'</div>'+
-   '<div class="arcade-summary">SORTIES '+data.total+' · WINS '+data.wins+' · BEST SURVIVAL '+data.bestSurvival+' WAVES · '+data.unlocks.length+'/'+ACHIEVEMENTS.length+' HONOURS</div>'+
-   '<div class="arcade-honours">'+medals+'</div>';
+   '<div class="arcade-summary">DEVICE-LOCAL SCORES ONLY · SORTIES '+data.total+' · WINS '+data.wins+' · BEST SURVIVAL '+data.bestSurvival+' WAVES · '+data.unlocks.length+'/'+ACHIEVEMENTS.length+' HONOURS</div>'+
+   '<div class="arcade-honours">'+medals+'</div>'+
+   '<details class="arcade-top-list"><summary>VIEW TOP 10 SCORES BY MODE</summary><div class="arcade-top-grid">'+topList+'</div></details>';
  }
  function resetView(){data=read();render();}
  window.WingmanArcade={finish,board,top,render,resetView,get data(){return data;},ACHIEVEMENTS,KEY,groupKey};
