@@ -364,6 +364,11 @@ function plane(type,id,x,y,angle){
     if(p.health<=0){
       p.alive=false;emit(p.x,p.y,28,'#ffc47e',75);emit(p.x,p.y,16,'#625765',35);
       if(state.blasts.length<12)state.blasts.push({x:p.x,y:p.y,r:p.d.radius+8,life:.65,max:.65,large:true});
+      if(p.id!==0&&state.mode==='campaign'){
+        state.banner='ENEMY DOWN — '+(p.aiName?.match(/"([^"]+)"/)?.[1]||'HOSTILE');
+        state.bannerTime=1.9;
+      }
+      sound('boom');
       if(state.participants===2||p.id===0||!bossWaiting()&&opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
     }
   }
@@ -899,6 +904,16 @@ function plane(type,id,x,y,angle){
             heavy:p.health<p.d.hull*.35});
         }
       }
+      for(const p of state.fliers){
+        if(!p.alive||!p.boosting||p.role!=='fighter')continue;
+        p.contrailClock=(p.contrailClock||0)+dt;
+        if(p.contrailClock>.07){
+          p.contrailClock=0;
+          state.trails.push({x:p.x-Math.cos(p.angle)*(p.d.radius+3),
+           y:p.y-Math.sin(p.angle)*(p.d.radius+3),vx:-p.vx*.065,vy:-p.vy*.065,
+           age:0,life:.42,heavy:false,contrail:true});
+        }
+      }
       if(state.trails.length>100)state.trails.splice(0,state.trails.length-100);
     }
     for(let i=state.trails.length-1;i>=0;i--){
@@ -1087,7 +1102,7 @@ function plane(type,id,x,y,angle){
     // physics. Larger bombers communicate their imposing defensive role.
     c.scale(p.role==='bomber'?.69:p.role==='heavy'?.64:.61,
             p.role==='bomber'?.69:p.role==='heavy'?.64:.61);
-    aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':'level');
+    aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':p.health<p.d.hull*.70?'worn':'level');
     if(p.boosting){
       // Cool air streaks, not a jet flame: WWII engines don't have afterburners.
       c.strokeStyle='#d7eff6a0';c.lineWidth=.65;
@@ -1186,6 +1201,14 @@ function plane(type,id,x,y,angle){
     g.fillText(score,cx,17,Math.max(52,W*.20));
     g.fillStyle='#d4c4a6';g.font='bold 5.8px monospace';
     g.fillText(Math.max(0,Math.ceil(state.time))+'s  /  '+(ARENAS[state.arena]||'ALPINE'),cx,27);
+    if(bossWaiting()){
+      const remain=Math.ceil(state.bossCountdown||0);
+      g.fillStyle='#f4c793';g.font='bold 6.6px monospace';
+      g.fillText('FINAL ACE INBOUND • '+remain+'s',cx,36);
+    }else if(state.mode==='campaign'&&state.campaignEncounter?.finalBoss){
+      g.fillStyle='#f3c49b';g.font='bold 6.6px monospace';
+      g.fillText('FINAL ACE ENGAGED',cx,36);
+    }
     // A narrow, unboxed airspeed scale sits centrally near the ground.
     // It stays clear of the thumb controls at either side.
     if(p){
@@ -1232,9 +1255,9 @@ function plane(type,id,x,y,angle){
     drawWind();
     for(const t of state.trails){
       const fade=1-t.age/t.life;
-      g.globalAlpha=fade*.26;
-      g.fillStyle=t.heavy?'#242e34':'#53616a';
-      g.beginPath();g.ellipse(t.x,t.y,1.3+t.age*2.8,1+t.age*1.7,0,0,TAU);g.fill();
+      g.globalAlpha=fade*(t.contrail?.39:.26);
+      g.fillStyle=t.contrail?'#d8ece1':t.heavy?'#242e34':'#53616a';
+      g.beginPath();g.ellipse(t.x,t.y,t.contrail?.9+t.age*1.7:1.3+t.age*2.8,t.contrail?.45+t.age*.9:1+t.age*1.7,0,0,TAU);g.fill();
     }
     g.globalAlpha=1;
     // Light under-aircraft shadows create altitude clues.
