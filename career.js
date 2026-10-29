@@ -347,12 +347,15 @@ function candidatePicker(){
 }
 function createProfile(index){
  const chosen=candidates[index];if(!chosen)return;
- if(data&&!window.confirm('Create a new pilot? This replaces your current career and Road to Ace progress.'))return;
+ if(data&&!data.awaitingPilotSelection&&!window.confirm('Create a new pilot? This replaces your current career and Road to Ace progress.'))return;
+  const retained=data?.awaitingPilotSelection?data:null;
  const name=chosen.roster.name;
  const faction=chosen.roster.faction;
  airframeOffers=[];
  data={profile:{name,faction,rosterId:chosen.roster.id,plane:chosen.roster.plane,style:chosen.style,attributes:chosen.attributes,skill:chosen.roster.signature,characterConfirmed:true,gender:chosen.roster.gender},wins:0,losses:0,kills:0,records:{},best:0,completed:0,streak:0,bestStreak:0,medals:[],service:[],run:null};
- save();view='ladder';render();
+ if(retained){for(const key of ['wins','losses','kills','records','best','completed','streak','bestStreak','medals','service'])if(retained[key]!==undefined)data[key]=retained[key];}
+  data.awaitingPilotSelection=false;
+  save();view='ladder';render();
 }
 const BASE_AIRCRAFT={fighter:{speed:82,turn:3.15,hull:130,armour:40},heavy:{speed:75,turn:1.98,hull:160,armour:78},bomber:{speed:66,turn:1.30,hull:180,armour:124},bf109:{speed:87,turn:3.02,hull:125,armour:42},bf110:{speed:78,turn:1.91,hull:160,armour:75},he111:{speed:69,turn:1.35,hull:175,armour:116}};
 function rollAirframe(type){
@@ -631,5 +634,12 @@ screen.addEventListener('change',e=>{
 });
 nav.addEventListener('click',()=>show(data?'ladder':'select'));licenceBtn.addEventListener('click',()=>show('licence'));
 document.getElementById('career-open-mobile')?.addEventListener('click',()=>show(data?'ladder':'select'));
-window.WingmanCareer={restartRun:()=>{active=null;pendingChoice=null;pendingAircraft=null;startRun(data?.profile?.plane);},finishEncounter,open:show,cancelEncounter:()=>{active=null;}};
+function restartCampaign(){
+  if(!data)return false;
+  active=null;pendingChoice=null;pendingAircraft=null;airframeOffers=[];
+  data.run=null;data.awaitingPilotSelection=true;
+  selectFaction=data.profile?.faction||'Allies';candidates=generateCandidates();
+  save();view='select';render();return true;
+ }
+ window.WingmanCareer={restartCampaign,restartRun:()=>{active=null;pendingChoice=null;pendingAircraft=null;startRun(data?.profile?.plane);},finishEncounter,open:show,cancelEncounter:()=>{active=null;}};
 })();

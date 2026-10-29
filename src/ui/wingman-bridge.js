@@ -15,7 +15,15 @@ const setValue=(id,value)=>{const el=by(id);if(!el)return;el.value=String(value)
 function choosePilot(id){
  const p=window.WingmanRoster?.find(p=>p.id===id);if(!p)return false;
  const saved=career();
- if(saved?.profile?.rosterId===id)return true;
+ if(saved?.awaitingPilotSelection){
+   openCareer('select');setValue('career-faction',p.faction);
+   const cards=Array.from(by('career-screen')?.querySelectorAll('[data-candidate]')||[]);
+   const card=cards.find(el=>el.textContent.includes(p.name));
+   if(!card)return false;
+   card.click();
+   return career()?.profile?.rosterId===id&&!career()?.awaitingPilotSelection;
+  }
+  if(saved?.profile?.rosterId===id)return true;
  if(saved?.profile?.faction===p.faction){
   openCareer('character');
   return click('[data-roster="'+id+'"]',by('career-screen'));
@@ -95,6 +103,7 @@ function mount(){
  sync();
 }
 window.WingmanUIBridge={show,hide,choosePilot,beginCareer,startCareer,startArcade,continueCareer,
+  restartCampaign(){const ok=window.WingmanCareer?.restartCampaign?.();if(ok)show();return !!ok;},
  openLicence(){openCareer('licence');broadcast({wmUI:'career'})},
  toggleSound(){const el=by('wm-audio-toggle');if(el)el.click()},
  rematch(){if(click('#rematch'))hide()},
