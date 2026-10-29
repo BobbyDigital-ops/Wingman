@@ -164,3 +164,56 @@ test('roster remains scrollable with the faction selector visible on both mobile
  expect(offset).toBeGreaterThan(0);
  await expect(page.locator('#career-faction')).toBeVisible();
 });
+
+
+test('named 1v2 branches exist only on ranks 3 5 and 7, with two distinct enemy profiles',async({page})=>{
+ await newPilot(page,'Allies',0);
+ for(let rank=1;rank<=8;rank++){
+  const saved=await state(page);
+  expect(saved.run.rank).toBe(rank);
+  const lanes=saved.run.choices;
+  expect(lanes).toHaveLength(3);
+  for(const [i,choice] of lanes.entries()){
+   const double=(rank===3||rank===5||rank===7)&&i===2;
+   expect(choice.types).toHaveLength(double?2:1);
+   if(double){
+    expect(choice.wingman).toBeTruthy();
+    expect(choice.wingman.id).not.toBe(choice.id);
+    expect(choice.wingman.name).not.toBe(choice.label);
+    expect(choice.wingman.plane).not.toBe(choice.types[0]);
+    expect(choice.wingman.plane).toBe(choice.types[1]);
+    expect(choice.wingman.signature).toBeTruthy();
+    await expect(page.locator('#active-rung [data-choice="2"] .rival-wingman')).toContainText(choice.wingman.name);
+   }else expect(choice.wingman).toBeNull();
+   const profile=await page.evaluate(({id,rank})=>{
+    const p=window.WingmanRoster.find(x=>x.id===id);
+    const v=window.WingmanPilotAI.level(p,rank);
+    return {attributes:v.attributes,signature:v.signature,tactic:v.tactic};
+   },{id:choice.id,rank});
+   expect(choice.attributes).toEqual(profile.attributes);
+   expect(choice.signature).toBe(profile.signature);
+   expect(choice.personality).toBe(profile.tactic);
+  }
+  // Verify the player actually launches a 1v2 encounter, not just a label.
+  const pick=(rank===3||rank===5||rank===7)?2:0;
+  await page.locator('#active-rung [data-choice="'+pick+'"]').click();
+  await expect(page.locator('#menu-return')).toBeVisible();
+  await page.evaluate(()=>window.WingmanCareer.finishEncounter(true,{label:'Regression',types:['fighter']}));
+  if(rank<8)await page.locator('[data-action="ladder"]').click();
+ }
+});
+test('a recurring rival grows in proficiency without changing name, archetype or signature',async({page})=>{
+ await page.goto('/');
+ const observed=await page.evaluate(()=>{
+  const pilot=window.WingmanRoster.find(x=>x.id==='ace-21');
+  const rookie=window.WingmanPilotAI.level(pilot,1);
+  const ace=window.WingmanPilotAI.level(pilot,8);
+  return {rookie,ace};
+ });
+ expect(observed.rookie.name).toBe(observed.ace.name);
+ expect(observed.rookie.signature).toBe(observed.ace.signature);
+ expect(observed.rookie.tactic).toBe(observed.ace.tactic);
+ for(const stat of ['gunnery','manoeuvrability','engine'])
+   expect(observed.ace.attributes[stat]).toBeGreaterThan(observed.rookie.attributes[stat]);
+ expect(observed.ace.reaction).toBeLessThan(observed.rookie.reaction);
+});
