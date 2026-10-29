@@ -413,11 +413,11 @@ test('all six aircraft use distinct tactical class statistics',()=>{
  const game=launch(),planes=game.internals.PLANES;
  const cases=[
   ['fighter',82,3.15,130,40,11],
-  ['heavy',75,1.85,160,78,16],
-  ['bomber',66,1.30,180,147,10],
-  ['bf109',87,2.94,125,42,11],
-  ['bf110',78,1.70,160,75,17],
-  ['he111',69,1.35,175,135,10]
+  ['heavy',75,1.98,160,78,16],
+  ['bomber',66,1.30,180,124,10],
+  ['bf109',87,3.02,125,42,11],
+  ['bf110',78,1.91,160,75,17],
+  ['he111',69,1.35,175,116,10]
  ];
  for(const [type,speed,turn,hull,armour,damage] of cases){
   const p=planes[type];assert.equal(p.speed,speed);assert.equal(p.turn,turn);
@@ -451,7 +451,7 @@ test('bomber rear gunner triggers automatically on a pursuer behind it',()=>{
  assert.equal(bomber.rearCooldown,0);
  game.internals.updatePlane(bomber,1/60,0);
  assert.ok(bomber.rearCooldown>1.5);
- assert.ok(game.internals.state.bullets.some(b=>b.owner===0&&b.damage===6&&b.rearGun));
+ assert.ok(game.internals.state.bullets.some(b=>b.owner===0&&b.damage===4.5&&b.rearGun));
 });
 test('depleted armour reduces hull; shield only protects and never recharges armour',()=>{
  const game=launch();game.listeners.get('start:click')();
@@ -711,10 +711,10 @@ test('rear turret delivers fighter-like bursts without matching fighter bullet d
    game.internals.projectiles(1/60);
  }
  const fired=s.bullets.filter(b=>b.rearGun).length;
- assert.ok(bomber.rearShots<=1,'rear gun fires nearly its entire seven-shot burst');
+ assert.ok(bomber.rearShots<=1,'rear gun fires nearly its entire four-shot burst');
  assert.ok(chaser.health<hullBefore||chaser.armour<armourBefore,'tailing is punished by real projectile hits');
  const gun=game.internals.PLANES.fighter.damage;
- assert.ok(6<gun,'each tail turret hit deals less damage than fighter primary gun');
+ assert.ok(4.5<gun,'each tail turret hit deals less damage than fighter primary gun');
 });
 test('the fighter combat HUD and ability naming remain independent of bomb controls',()=>{
  const game=launch();game.listeners.get('start:click')();
