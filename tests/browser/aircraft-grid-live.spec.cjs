@@ -38,7 +38,9 @@ test('Luftwaffe filter selects actual German aircraft for launch',async({page})=
 });
 test('Road to Ace uses identical pictures and confirms the chosen aircraft before launching',async({page})=>{
  await page.goto('/');
- await page.locator('#career-open').click();
+ const careerEntry=page.locator('#career-open');
+ if(await careerEntry.isVisible())await careerEntry.click();
+ else await page.locator('#career-open-mobile').click();
  await page.locator('[data-candidate="0"]').click();
  await page.locator('[data-action="begin-run"]').click();
  await page.locator('#active-rung [data-choice="0"]').click();
