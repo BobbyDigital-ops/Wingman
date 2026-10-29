@@ -797,3 +797,91 @@ body:has(#career-screen:not([hidden])) #touch-controls{
  color:#ffebc7;padding:5px 7px;text-align:center;font:700 10px Georgia,serif}
 @media(max-width:700px){.career-onboarding{grid-template-columns:1fr;gap:5px;margin:9px 0}
  .onboard-step{padding:6px 10px}}
+
+
+/* VARIANT 1 — CLASSIC POSTER. A decisive editorial art direction:
+   parchment/light blue WWII aviation illustration, bold display lettering,
+   brass/RAF navy details and red principal action. Combat CSS unchanged. */
+.wingman-front .splash-panel{
+ background:linear-gradient(90deg,#f0dfb9f0 0%,#eed7a9df 26%,#e7d4ac7a 48%,#203c5140 74%),
+ url('../../assets/art/wingman-menu-scene.svg') center 47% /cover no-repeat!important;
+ border:clamp(2px,.35vw,5px) solid #162d40!important;
+ box-shadow:inset 0 0 0 4px #e4cb92,inset 0 0 0 7px #253f4b,0 8px 36px #0009!important;
+ color:#0d2739!important;
+}
+.splash-panel:after{border-color:#1d3e5380!important}
+.wingman-front .splash-copy{max-width:min(600px,58%)!important;min-width:0;text-shadow:none!important}
+.wingman-front .splash-title{
+ font-family:Impact,'Arial Narrow',sans-serif!important;
+ font-weight:900!important;font-stretch:condensed;
+ font-size:clamp(52px,10.5vw,150px)!important;line-height:.83!important;
+ letter-spacing:-.055em!important;color:#102638!important;
+ text-shadow:2px 2px 0 #f7e7c1,-2px -1px 0 #ecd7b5!important;
+ transform:scaleX(.92);transform-origin:left center;
+}
+.wingman-front .splash-topline{color:#4b4540!important;letter-spacing:.2em}
+.wingman-front .splash-subtitle{color:#1a3443!important;font-weight:900!important;letter-spacing:.15em}
+.wingman-front .splash-tagline{color:#17364a!important;font-weight:800!important;font-style:italic;letter-spacing:.04em}
+.wingman-front .splash-foot{color:#254357!important;text-shadow:0 1px #e8d1a8}
+.wingman-front .splash-copy>.front-action,
+.wingman-front .flow-actions>.front-action,
+.wingman-front .setup-panel .front-action{
+ background:linear-gradient(180deg,#db4f36,#a72220)!important;
+ border:2px solid #f3d8a9!important;color:#fff4e0!important;
+ box-shadow:0 3px 0 #562421,0 6px 12px #0007,inset 0 1px #fff6!important;
+ text-shadow:0 1px #672821!important;
+ font-family:Impact,'Arial Narrow',sans-serif!important;
+ font-size:clamp(14px,2vw,22px)!important;letter-spacing:.07em!important;
+}
+.wingman-front .splash-copy>.front-secondary{
+ background:#10283fe8!important;color:#fff0cd!important;
+ border:1px solid #f3d09c!important;
+ box-shadow:0 3px 0 #061727aa!important;
+ font-family:Impact,'Arial Narrow',sans-serif!important;
+ letter-spacing:.08em;font-size:clamp(12px,1.6vw,19px)!important;
+}
+.wingman-front .splash-aircraft{filter:contrast(1.1) drop-shadow(3px 6px 3px #1325318c)}
+.wingman-front .wm-hero-insignia{background:#f1ddb2cf!important;color:#11283b!important;border:2px solid #143951!important}
+.wingman-front .flow-panel,.wingman-front .setup-panel{
+ background:linear-gradient(108deg,#efdfbecf,#e6d1a4b6 30%,#b2c7c9a6 66%,#66849b9e),
+ url('../../assets/art/wingman-menu-scene.svg') center /cover!important;
+ color:#112e43!important;border:3px double #163547!important;
+ box-shadow:inset 0 0 0 5px #eddfc3aa,0 5px 25px #0009!important;
+}
+.wingman-front .flow-panel h2,.wingman-front .setup-panel h2{
+ color:#112e44!important;font-family:Impact,'Arial Narrow',sans-serif!important;
+ letter-spacing:.065em!important;text-shadow:1px 2px 0 #eadcb8!important;
+}
+.wingman-front .flow-step,.wingman-front .flow-copy,.wingman-front .setup-label{color:#273d48!important;text-shadow:0 1px #f8edcf}
+.wingman-front .mode-choice{
+ background:linear-gradient(0deg,#09283ce8,#294758bd 55%,#acc1bd8a),
+ url('../../assets/art/wingman-menu-scene.svg') center/cover!important;
+ border:1px solid #ebd5a7!important;box-shadow:0 4px 8px #0007!important;
+}
+.wingman-front .mode-choice.selected{outline:3px solid #a52b27!important;border-color:#f4d7ad!important}
+.wingman-front .mode-choice strong{font-family:Impact,'Arial Narrow',sans-serif!important;color:#ffe8b5!important;letter-spacing:.06em}
+.wingman-front .plane-choice{box-shadow:0 3px 7px #061c2995!important}
+.wingman-front .setup-controls{background:#102c3ce9!important;border:2px solid #cba776!important;color:#f4dec0!important}
+.wingman-front .setup-controls .setup-label,.wingman-front .setup-controls label{color:#f3debe!important;text-shadow:none}
+.wingman-front .flow-actions>.front-secondary{background:#0c2639!important;color:#fff0d3!important;border:1px solid #f0d4ac!important}
+.career-screen{
+ background:linear-gradient(92deg,#071c29e0,#1b3643bf),
+ url('assets/art/wingman-menu-scene.svg') center /cover no-repeat!important;
+}
+.career-panel{
+ background:linear-gradient(160deg,#e5d1abbf,#d4c49fdd 13%,#193340ef 48%,#0c2533f2),
+ url('assets/art/wingman-menu-scene.svg') center /cover no-repeat!important;
+ border:3px double #e4c78e!important;
+}
+.career-head h2{font-family:Impact,'Arial Narrow',sans-serif!important;letter-spacing:.09em!important}
+.call-support{min-width:96px!important;font-size:clamp(8px,1.4svh,12px)!important;line-height:1.15!important;
+ background:linear-gradient(130deg,#28454e,#876d47)!important;
+ border:2px solid #e5c88f!important;white-space:normal!important;text-align:center}
+.call-support:not(:disabled){box-shadow:0 0 11px #f7ce7a8f!important;color:#ffe8ba!important}
+.call-support:disabled{opacity:.73}
+@media(pointer:coarse) and (orientation:landscape),(max-height:540px){
+ .wingman-front .splash-title{font-size:clamp(37px,12svh,74px)!important}
+ .wingman-front .splash-copy{max-width:61%!important}
+ .wingman-front .flow-panel,.wingman-front .setup-panel{background-position:55% 50%!important}
+}
+@media(prefers-reduced-motion:reduce){.wingman-front .front-action{transition:none!important}}
