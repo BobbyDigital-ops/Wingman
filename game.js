@@ -1124,7 +1124,10 @@ function plane(type,id,x,y,angle){
       g.textAlign=right?'right':'left';
       g.fillStyle=right?'#e9b09c':gold;g.font='bold 5.3px monospace';
       const campaignPilot=(!right&&state.mode==='campaign')?readPilotName():'';
-       g.fillText((right?'HOSTILE • ':'YOU • ')+craftClass(q)+(campaignPilot?' • '+campaignPilot:''),x,6,Math.min(W*.32,143));
+      const enemyName=(right&&state.mode==='campaign')?String(q?.aiName||''):'';
+      const callSign=enemyName.match(/"([^"]+)"/)?.[1]||enemyName.split(' ')[0]||'';
+      g.fillText((right?'HOSTILE • ':'YOU • ')+craftClass(q)+
+        (campaignPilot?' • '+campaignPilot:'')+(callSign?' • '+callSign+' R'+q.aiRank:''),x,6,Math.min(W*.32,143));
       g.fillStyle=white;g.font='bold 10px Georgia,serif';
       g.fillText(short(q),x,17,Math.min(W*.32,143));
       const width=Math.min(W*.24,105),start=right?x-width:x;
@@ -1143,6 +1146,7 @@ function plane(type,id,x,y,angle){
     identification(p,false);identification(e,true);
     // Score painted as unobtrusive typographic overlay.
     const score=state.mode==='survival'?'WAVE '+state.round:
+      state.mode==='campaign'&&state.participants===3?'1 v 2':
       state.participants>2?(state.teams?'2 v 2':state.participants+' ACES'):
       state.scores[0]+' : '+state.scores[1];
     g.textAlign='center';g.fillStyle=gold;g.font='bold 5.4px monospace';
