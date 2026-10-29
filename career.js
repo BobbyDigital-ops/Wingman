@@ -316,7 +316,7 @@ function show(which='ladder'){
  }
  showing=true;view=which;screen.hidden=false;menu.classList.add('hidden');result.classList.add('hidden');render();
 }
-function close(){showing=false;screen.hidden=true;window.WingmanGame?.showMenu();}
+function close(){pendingChoice=null;showing=false;screen.hidden=true;window.WingmanGame?.showMenu();}
 const ATTRS=['manoeuvrability','gunnery','engine'];
 let candidates=[];
 let selectedSkill='roll';
@@ -433,7 +433,7 @@ function finishEncounter(won,encounter){
   rankTitle(Math.min(MAX_RANK,atRank+1)):null;
  renderOutcome(won,encounter||rival,earned,promotion);
 }
-function panel(title,body){screen.innerHTML=`<div class="career-panel"><div class="career-head"><h2>${title}</h2><button type="button" data-action="close">CLOSE ×</button></div>${body}</div>`;}
+function panel(title,body){screen.innerHTML=`<div class="career-panel"><div class="career-head"><h2>${title}</h2><button type="button" data-action="close" aria-label="Close career and return to main menu">BACK TO MENU ×</button></div>${body}</div>`;}
 function renderOutcome(won,encounter,earned=[],promotion=null){
  const finished=won&&!data?.run&&data?.lastCompleted?.rank===MAX_RANK;
  const resultTitle=finished?'★ WINGMAN LEGEND — FINAL VICTORY':won?'VICTORY — SORTIE COMPLETE':'DEFEAT — AIRCRAFT LOST';
@@ -519,7 +519,7 @@ function render(){
    <p>NEMESIS <b>${nemesis?escape(byId[nemesis[0]]?.name||'Unknown'):'None yet'}</b></p>
    <p>ACE RUNS COMPLETED <b>${data.completed}</b></p><p>SERVICE RANK <b>${rankTitle(data.best||1)}</b></p><p>LONGEST STREAK <b>${data.bestStreak||0}</b></p></div></div>
    ${medalMarkup()}${serviceMarkup()}
-   <button class="career-primary" data-action="ladder" >START / CONTINUE CAMPAIGN</button><button data-action="character">CHOOSE CHARACTER & NAME</button><button data-action="select">START A NEW PILOT</button>`);
+   <button class="career-primary" data-action="ladder" >START / CONTINUE CAMPAIGN</button><button data-action="character">CHANGE PILOT (KEEP PROGRESS)</button><button data-action="select">NEW CAREER (RESET PROGRESS)</button>`);
   return;
  }
  if(!run){
