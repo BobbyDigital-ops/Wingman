@@ -100,3 +100,23 @@ test('on-screen Spitfire SKILL button activates barrel roll by actual mobile tou
  await expect(skill).toHaveText(/ROLL\s+7s/);
  await expect(skill).toHaveClass(/on-cooldown/);
 });
+
+test('old saved female-name German profile migrates to its fixed male portrait identity',async({page})=>{
+ await page.goto('/');
+ await page.evaluate(()=>{
+  const pilot=window.WingmanRoster.find(p=>p.id==='ace-27');
+  localStorage.setItem('wingman-road-to-ace-v1',JSON.stringify({
+   profile:{name:'Lotte "Schwalbe" Fischer',faction:'Axis',gender:'female',rosterId:pilot.id,
+    plane:pilot.plane,skill:pilot.signature,style:{rosterPortrait:pilot.portrait},
+    attributes:pilot.attributes,characterConfirmed:true},
+   wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null
+  }));
+ });
+ await page.reload();
+ await page.evaluate(()=>window.WingmanCareer.open('licence'));
+ await expect(page.locator('.career-licence')).toContainText('Ludwig');
+ await page.locator('[data-action="portrait"]').click();
+ const updated=await page.evaluate(()=>JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')));
+ expect(updated.profile.name).toMatch(/^Ludwig /);
+ expect(updated.profile.gender).toBe('male');
+});
