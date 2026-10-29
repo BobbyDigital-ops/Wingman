@@ -50,7 +50,7 @@ test('all six historical aircraft photographs load as real images and selection 
  for(const type of ['fighter','heavy','bomber','bf109','bf110','he111']){
   await page.locator('[data-plane="'+type+'"]').click();
   const hero=page.locator('.hangar-real-hero');
-  await expect(hero).toHaveAttribute('data-plane',type);
+  await expect(hero).toHaveAttribute('data-photo-plane',type);
   await expect(hero).toHaveClass(/ready/);
   const dimensions=await hero.evaluate(e=>({width:e.naturalWidth,height:e.naturalHeight,src:e.currentSrc}));
   expect(dimensions.width).toBeGreaterThan(200);
