@@ -27,7 +27,7 @@
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
     scores:[0,0],round:1,time:90,intermission:0,banner:'',bannerTime:0,paused:false,
     impactLock:0,trails:[],blasts:[],visualClock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2,teams:false,difficulty:'standard',
-    wind:{active:false,base:0,current:0,elapsed:0}
+    wind:{active:false,base:0,current:0,elapsed:0},recordMode:'duel',challenge:'intercept',session:null,survivalCarry:null
   };
   const controls={left:false,right:false,boost:false};
   const ui={
@@ -139,6 +139,44 @@ function plane(type,id,x,y,angle){
     g.restore();
   }
   const ARENAS=['ALPINE','COAST','DESERT','STORM'];
+  const CHALLENGES={
+    intercept:{name:'ACE INTERCEPT',time:45,difficulty:'ace',description:'Shoot down an elite fighter before time runs out'},
+    crosswind:{name:'CROSSWIND',time:75,difficulty:'standard',description:'Defeat your rival through a sustained crosswind'},
+    noarmour:{name:'IRON NERVES',time:90,difficulty:'standard',description:'Win with no starting armour'},
+    heavy:{name:'HEAVY HUNTER',time:90,difficulty:'ace',description:'Intercept a heavily armed two-engine fighter'}
+  };
+  function newSession(){
+    return {seconds:0,shots:0,hits:0,kills:0,roundsWon:0,damageTaken:0,finalized:false};
+  }
+  function sessionScore(won){
+    const q=state.session||newSession();
+    const speedBonus=won&&state.recordMode==='challenge'?Math.ceil(Math.max(0,state.time)*4):0;
+    return Math.max(0,Math.round(q.kills*150+q.roundsWon*125+
+      (state.recordMode==='survival'?q.roundsWon*q.roundsWon*28:0)+
+      (won?240:0)+speedBonus+Math.min(250,q.hits*4)));
+  }
+  function finishArcade(won){
+    if(state.mode==='campaign'||!state.session||state.session.finalized)return;
+    const session=state.session;session.finalized=true;
+    const waves=state.recordMode==='survival'?session.roundsWon:0;
+    const entry=window.WingmanArcade?.finish({
+      mode:state.recordMode,challenge:state.recordMode==='challenge'?state.challenge:null,
+      aircraft:state.selected,difficulty:state.difficulty,won,
+      score:sessionScore(won),kills:session.kills,waves,
+      seconds:session.seconds,shots:session.shots,hits:session.hits,damageTaken:session.damageTaken
+    });
+    const box=document.getElementById('arcade-after-action');
+    if(box){
+      const awarded=(entry?.awards||[]).map(a=>'<span class="arcade-new-honour">✦ '+a.replace(/[&<>]/g,'')+'</span>').join('');
+      box.innerHTML='<div class="arcade-after-score"><b>SCORE '+sessionScore(won).toLocaleString()+'</b>'+
+       '<span>YOUR BEST '+Number(entry?.best||sessionScore(won)).toLocaleString()+'</span>'+
+       '<span>KILLS '+session.kills+' · HITS '+session.hits+'/'+session.shots+
+       (state.recordMode==='survival'?' · WAVES '+session.roundsWon:'')+'</span></div>'+
+       (awarded?'<div class="arcade-new-honours">'+awarded+'</div>':'');
+    }
+    window.WingmanArcade?.render?.();
+  }
+
   function syncAbilityButton(){
     const action=document.getElementById('special');
     if(!action)return;
@@ -168,11 +206,19 @@ function plane(type,id,x,y,angle){
         state.fliers[3].alive=false;state.fliers[3].queued=true;state.fliers[3].spawnSafe=0;
       }
     }else if(state.participants>2){
-      const pool=Object.keys(PLANES).filter(t=>t!==state.selected);
-      for(let id=2;id<state.participants;id++){
-        const type=pool[(id+state.round)%pool.length];
-        const p=plane(type,id,W*(id===2?.42:.61),H*(id===2?.62:.36),id===2?-.8:2.4);
-        state.fliers.push(p);
+      const allies=state.selected.startsWith('bf')||state.selected==='he111'?['bf109','bf110','he111']:['fighter','heavy','bomber'];
+      const foes=Object.keys(PLANES).filter(t=>!allies.includes(t));
+      if(state.teams){
+        state.fliers[1]=plane(foes[state.round%foes.length],1,W*.78,H*.52,Math.PI+.15);
+        const mate=allies.filter(t=>t!==state.selected)[(state.round-1)%2];
+        state.fliers.push(plane(mate,2,W*.40,H*.36,-.1));
+        state.fliers.push(plane(foes[(state.round+1)%foes.length],3,W*.67,H*.63,Math.PI+.24));
+      }else{
+        const pool=Object.keys(PLANES).filter(t=>t!==state.selected&&t!==state.enemyType);
+        for(let id=2;id<state.participants;id++){
+          const type=pool[(id+state.round)%pool.length];
+          state.fliers.push(plane(type,id,W*(id===2?.42:.61),H*(id===2?.62:.36),id===2?-.8:2.4));
+        }
       }
     }
     if(state.mode==='campaign'&&state.campaignAirframe?.stats){
@@ -183,6 +229,11 @@ function plane(type,id,x,y,angle){
     }
     state.fliers[0].attributes=pilotAttributes(readPilotAttributes());
     state.fliers[0].pilotSkill=readPilotSkill();
+    if(state.recordMode==='survival'&&state.survivalCarry){
+      state.fliers[0].health=clamp(state.survivalCarry.health,1,state.fliers[0].d.hull);
+      state.fliers[0].armour=clamp(state.survivalCarry.armour,0,state.fliers[0].d.armour);
+    }
+    if(state.mode==='challenge'&&state.challenge==='noarmour')state.fliers[0].armour=0;
     if(state.mode==='campaign'&&state.campaignEncounter){
       const enc=state.campaignEncounter;
       for(const [i,foe] of state.fliers.slice(1).entries())assignCampaignAI(foe,enc,i);
@@ -190,12 +241,16 @@ function plane(type,id,x,y,angle){
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.trails=[];state.blasts=[];state.visualClock=0;
     state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
-    state.time=state.mode==='survival'?70:state.mode==='campaign'?(state.campaignEncounter?.finalBoss?165:120):90;state.impactLock=0;state.phase='playing';state.paused=false;
+    if(state.mode==='challenge'&&state.challenge==='crosswind')
+      state.wind={active:true,base:state.round%2===0?-16:16,current:state.round%2===0?-16:16,elapsed:0};
+    state.time=state.mode==='survival'?70:state.mode==='challenge'?CHALLENGES[state.challenge].time:state.mode==='campaign'?(state.campaignEncounter?.finalBoss?165:120):90;state.impactLock=0;state.phase='playing';state.paused=false;
     if(menuReturn)menuReturn.hidden=false;
     if(fullscreenButton)fullscreenButton.hidden=false;
     const callsign=state.campaignEncounter?.label?.match(/"([^"]+)"/)?.[1]||
       state.campaignEncounter?.label?.split(' ')[0]||'RIVAL';
-    state.banner=state.campaignEncounter?.finalBoss?'FINAL SCRAMBLE — TWO ESCORTS':
+    state.banner=state.mode==='challenge'?CHALLENGES[state.challenge].name+' — GO':
+      state.recordMode==='survival'?'SURVIVAL WAVE '+state.round:
+      state.campaignEncounter?.finalBoss?'FINAL SCRAMBLE — TWO ESCORTS':
       state.mode==='campaign'?(state.campaignEncounter?.mission||'RIVAL INTERCEPT')+' • '+callsign:
       state.wind.active?(state.wind.base>0?'CROSSWIND →':'← CROSSWIND'):'ROUND '+state.round;
     state.bannerTime=state.campaignEncounter?.finalBoss?4:1.5;
@@ -205,12 +260,22 @@ function plane(type,id,x,y,angle){
     audioUnlock();
     const others=Object.keys(PLANES).filter(t=>t!==state.selected);
     state.enemyType=others[Math.floor(Math.random()*others.length)];
-    state.scores=[0,0];state.round=1;state.kills=0;
+    state.scores=[0,0];state.round=1;state.kills=0;state.survivalCarry=null;state.session=newSession();
     state.mode=document.getElementById('mode-select')?.value||'duel';
     state.participants=Number(document.getElementById('pilots-select')?.value||2);
     state.teams=state.participants===4&&document.getElementById('team-select')?.value==='teams';
     state.difficulty=document.getElementById('difficulty-select')?.value||'standard';
     state.arena=Number(document.getElementById('arena-select')?.value||0);
+    state.recordMode=state.mode==='challenge'?'challenge':state.mode==='survival'?'survival':
+      state.participants===4&&state.teams?'teams':state.participants>2?'triple':'duel';
+    state.challenge=CHALLENGES[document.getElementById('challenge-select')?.value]?
+      document.getElementById('challenge-select').value:'intercept';
+    if(state.mode==='challenge'){
+      state.difficulty=CHALLENGES[state.challenge].difficulty;
+      const axis=['bf109','bf110','he111'].includes(state.selected);
+      state.enemyType=state.challenge==='heavy'?(axis?'heavy':'bf110'):
+        state.challenge==='intercept'?(axis?'fighter':'bf109'):state.enemyType;
+    }
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
     document.getElementById('bomb')?.setAttribute('hidden','');
     background=makeBackground();newRound();window.WingmanAudio?.startEngine();
@@ -223,7 +288,7 @@ function plane(type,id,x,y,angle){
     state.enemyType=encounter.types[0];
     state.campaignEncounter=encounter;
     state.scores=[0,0];state.round=1;state.kills=0;
-    state.mode='campaign';state.participants=encounter.types.length+1;
+    state.mode='campaign';state.recordMode='campaign';state.participants=encounter.types.length+1;
     state.teams=encounter.types.length>1;
     state.difficulty=encounter.difficulty||'standard';
     state.arena=encounter.arena||0;
@@ -253,43 +318,77 @@ function plane(type,id,x,y,angle){
     if(menuReturn)menuReturn.hidden=true;
     if(fullscreenButton)fullscreenButton.hidden=true;
     ui.result.classList.add('hidden');ui.menu.classList.remove('hidden');
+    const actionReport=document.getElementById('arcade-after-action');
+    if(actionReport)actionReport.innerHTML='';
+    window.WingmanArcade?.render?.();
     window.WingmanFlow?.reset?.();
     document.getElementById('bomb')?.setAttribute('hidden','');
   }
   function endRound(winner){
     if(state.phase!=='playing')return;
-    if(state.mode==='campaign')window.WingmanAudio?.stopEngine();
     if(state.mode==='campaign'){
+      window.WingmanAudio?.stopEngine();
       state.phase='result';sound('boom');
       const won=winner===0;
       sound(won?'victory':'defeat');
       ui.resultTitle.textContent=won?'SORTIE WON':'SHOT DOWN';
       ui.resultDetail.textContent=won?'Enemy pilots defeated.':'Your aircraft was lost.';
       ui.result.classList.remove('hidden');
-      if(window.WingmanCareer?.finishEncounter)
-        window.WingmanCareer.finishEncounter(won,state.campaignEncounter);
+      window.WingmanCareer?.finishEncounter?.(won,state.campaignEncounter);
       return;
     }
-    if(winner===0||winner===1)state.scores[winner]++;
-    if(winner===0)state.kills++;
+    const won=winner===0;
+    if(won){state.scores[0]++;state.session.roundsWon++;}
+    else state.scores[1]++;
     sound('boom');
-    if((state.mode==='survival'&&winner!==0)||(state.mode!=='survival'&&(state.scores[0]>=2||state.scores[1]>=2))){
-      state.phase='result';
-      const won=state.mode==='survival'?state.kills>0:state.scores[0]>=2;
-      window.WingmanAudio?.stopEngine();sound(won?'victory':'defeat');
-      ui.resultTitle.textContent=won?'VICTORY!':'DEFEAT';
-      ui.resultDetail.textContent=(won?'You outflew the enemy. ':'The enemy won this duel. ')+
-        (state.mode==='survival'?'Aircraft shot down: '+state.kills:'Final score: '+state.scores[0]+'–'+state.scores[1])+'.';
-      ui.result.classList.remove('hidden');
-    }else{
-      state.phase='intermission';state.intermission=2.3;
-      if(state.mode==='survival'){
-        const others=Object.keys(PLANES).filter(t=>t!==state.selected);
-        state.enemyType=others[state.round%others.length];
-      }
-      state.banner=winner===0?'ROUND WON':winner===1?'ROUND LOST':'DRAW';
-      state.bannerTime=2.3;
+    if(state.recordMode==='survival'&&won){
+      const hero=state.fliers[0];
+      const hull=hero.health+hero.d.hull*.14,armour=hero.armour+hero.d.armour*.24;
+      state.survivalCarry={health:clamp(hull,1,hero.d.hull),armour:clamp(armour,0,hero.d.armour)};
+      state.kills=state.session.roundsWon;
+      state.phase='intermission';state.intermission=2.1;
+      const others=Object.keys(PLANES).filter(t=>t!==state.selected);
+      state.enemyType=others[state.round%others.length];
+      state.banner='WAVE '+state.round+' SURVIVED';state.bannerTime=2.1;
+      return;
     }
+    if(state.recordMode==='duel'&&state.scores[0]<2&&state.scores[1]<2){
+      state.phase='intermission';state.intermission=2.3;
+      state.banner=won?'ROUND WON':'ROUND LOST';state.bannerTime=2.3;
+      return;
+    }
+    state.phase='result';window.WingmanAudio?.stopEngine();sound(won?'victory':'defeat');
+    ui.resultTitle.textContent=state.recordMode==='survival'?'SURVIVAL ENDED':
+      state.recordMode==='challenge'?(won?'CHALLENGE COMPLETE':'MISSION FAILED'):
+      won?'VICTORY!':'DEFEAT';
+    ui.resultDetail.textContent=state.recordMode==='survival'?
+      'Waves cleared: '+state.session.roundsWon+'. Best flying earns a place in your local records.':
+      state.recordMode==='challenge'?CHALLENGES[state.challenge].description:
+      state.recordMode==='teams'?(won?'Your squadron prevailed.':'Your squadron was defeated.'):
+      state.recordMode==='triple'?(won?'Last ace flying.':'Another ace survived the melee.'):
+      'Best-of-three score: '+state.scores[0]+'–'+state.scores[1]+'.';
+    finishArcade(won);
+    ui.result.classList.remove('hidden');
+  }
+  function battleOutcomeAfterDeath(p){
+    if(state.phase!=='playing')return;
+    if(state.mode==='campaign'){
+      if(p.id===0)endRound(1);
+      else if(!bossWaiting()&&opponents(state.fliers[0]).every(q=>!q.alive))endRound(0);
+      return;
+    }
+    if(state.recordMode==='survival'){endRound(p.id===0?1:0);return;}
+    if(state.teams){
+      if(!state.fliers.some(q=>q.alive&&q.team===0))endRound(1);
+      else if(!state.fliers.some(q=>q.alive&&q.team===1))endRound(0);
+      return;
+    }
+    if(state.participants>2){
+      if(p.id===0)endRound(1);
+      else if(state.fliers.slice(1).every(q=>!q.alive))endRound(0);
+      return;
+    }
+    endRound(p.id===0?1:0);
   }
   function triggerBurst(p){
     if(!p||!p.alive||p.gunCooldown>0||p.burstLeft>0||p.rollTime>0||state.phase!=='playing'||state.paused)return;
