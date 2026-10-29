@@ -29,3 +29,10 @@
 - Full existing desktop Chromium and emulated mobile landscape regression retained.
 - Image/portrait and gameplay assets are local; no remote runtime image service or new external downloads required.
 - Future aesthetic art upgrades can replace individual hangar illustrations without touching physics or aircraft identity.
+
+## Final QA sign-off
+- **79/79 Node unit tests passed** after the final identity and save migration changes.
+- **123/123 runnable full-suite Playwright tests passed, with one intentionally skipped desktop-only touch test**, covering career, normal combat, all aircraft, portraits, menus, and emulated mobile landscape. The comprehensive suite was completed before the final saved-identity migration addition.
+- **11/11 final focused browser checks passed, with one desktop-only touch check skipped**, on the complete latest code. Includes twenty visually distinct German portrait hashes, both keyboard Q and real mobile SKILL touch, independent six-plane hangar canvases, card bounds, and legacy career migration on both desktop and mobile.
+- Verified that the changed image and presentation code remains separate from aircraft physics, collision shapes, weapon power, and the rest of career progression.
+- Browser emulation does not replace a human visual review or an actual physical Android touch test.
