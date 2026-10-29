@@ -50,6 +50,11 @@ function launch(){
   vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
   const sceneryCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/scenery.js'),'utf8');
   vm.runInNewContext(sceneryCode,sandbox,{timeout:3000,filename:'scenery.js'});
+  // Load exactly the personality definitions shipped with the real game.
+  for(const file of ['src/data/pilot-roster.js','src/data/pilot-ai.js']){
+    const script=fs.readFileSync(require('node:path').join(__dirname,'../',file),'utf8');
+    vm.runInNewContext(script,sandbox,{timeout:3000,filename:file});
+  }
   vm.runInNewContext(instrumented,sandbox,{timeout:3000,filename:'game.js'});
   return {
     listeners,canvas,modelCanvas,internals:sandbox.window.__wingmanTest,
@@ -802,4 +807,40 @@ test('bomber defensive gunners now have a bounded four-round low-damage burst',(
  assert.ok(bomber.rearCooldown>=2.68);
  const round=game.internals.state.bullets.find(b=>b.rearGun);
  assert.equal(round.damage,4.5,'turret rounds should not match heavy cannon damage');
+});
+
+test('campaign pilot identities retain their signature while their actual live plane stats improve at higher ranks',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const state=game.internals.state,[player,enemy]=state.fliers;
+ const lead={id:'ace-21',name:'Otto',rank:1,types:['bf110'],attributes:{manoeuvrability:55,gunnery:91,engine:78},signature:'harden',archetype:'Ironclad'};
+ game.internals.assignCampaignAI(enemy,lead,0);
+ const young={name:enemy.aiName,style:enemy.aiStyle,signature:enemy.pilotSkill,
+  stats:{...enemy.attributes},reaction:enemy.aiSkillLevel};
+ lead.rank=8;
+ game.internals.assignCampaignAI(enemy,lead,0);
+ assert.equal(enemy.aiName,young.name);
+ assert.equal(enemy.aiStyle,young.style);
+ assert.equal(enemy.pilotSkill,young.signature);
+ assert.ok(enemy.attributes.manoeuvrability>young.stats.manoeuvrability);
+ assert.ok(enemy.attributes.gunnery>=young.stats.gunnery);
+ assert.ok(enemy.aiSkillLevel>young.reaction);
+ assert.equal(enemy.health,enemy.d.hull,'ranking cannot add extra hull');
+ assert.equal(enemy.d.damage,game.internals.PLANES[enemy.type].damage,'ranking cannot add raw gun damage');
+});
+test('rank-five double-ace wingman spawns as an independent pilot with own personality and signature',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const state=game.internals.state;
+ const enc={rank:5,id:'ace-21',label:'Otto',types:['bf110','bf109'],
+  attributes:{manoeuvrability:50,gunnery:75,engine:71},signature:'harden',archetype:'Ironclad',
+  wingman:{id:'ace-22',name:'Friedrich',plane:'bf109',attributes:{manoeuvrability:82,gunnery:76,engine:75},signature:'reverse',archetype:'Fox'}};
+ state.mode='campaign';
+ game.internals.assignCampaignAI(state.fliers[1],enc,0);
+ const wing={...state.fliers[1],id:2,type:'bf109',d:game.internals.PLANES.bf109,role:'fighter'};
+ game.internals.assignCampaignAI(wing,enc,1);
+ assert.equal(state.fliers[1].pilotSkill,'harden');
+ assert.equal(wing.pilotSkill,'reverse');
+ assert.equal(state.fliers[1].aiStyle,'guardian');
+ assert.equal(wing.aiStyle,'trickster');
+ assert.notEqual(wing.aiIdentity,state.fliers[1].aiIdentity);
+ assert.notEqual(wing.attributes.gunnery,state.fliers[1].attributes.gunnery);
 });
