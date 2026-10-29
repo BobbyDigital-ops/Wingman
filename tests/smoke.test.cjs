@@ -780,3 +780,26 @@ test('player roll recovers quickly without making AI dodge more often',()=>{
  game.internals.triggerPilotSkill(player);
  assert.equal(player.skillCooldown,7,'pilot roll cooldown reduced from 14s to 7s');
 });
+
+
+test('AI heavy fighter activates its shield proactively against bomber defensive fire',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const [bomber,heavy]=game.internals.state.fliers;
+ heavy.type='heavy';heavy.role='heavy';heavy.d=game.internals.PLANES.heavy;
+ heavy.health=heavy.d.hull;heavy.armour=heavy.d.armour*.9;
+ heavy.x=205;heavy.y=105;heavy.vy=0;heavy.aiRecoveryTime=0;heavy.specialCooldown=0;
+ bomber.x=245;bomber.y=105;bomber.rearShots=3;bomber.burstLeft=0;
+ game.internals.aiInput(heavy,bomber);
+ assert.ok(heavy.armourTime>0,'rear turret threat should trigger a shield before heavy hull damage');
+});
+test('bomber defensive gunners now have a bounded four-round low-damage burst',()=>{
+ const game=launch();game.listeners.get('bomber:click')();game.listeners.get('start:click')();
+ const [bomber,pursuer]=game.internals.state.fliers;
+ bomber.x=205;bomber.y=120;bomber.angle=0;bomber.spawnSafe=0;
+ pursuer.x=160;pursuer.y=120;pursuer.spawnSafe=0;
+ game.internals.updatePlane(bomber,1/60,0);
+ assert.equal(bomber.rearShots,3,'one round must fire immediately from the four-round burst');
+ assert.ok(bomber.rearCooldown>=2.68);
+ const round=game.internals.state.bullets.find(b=>b.rearGun);
+ assert.equal(round.damage,4.5,'turret rounds should not match heavy cannon damage');
+});
