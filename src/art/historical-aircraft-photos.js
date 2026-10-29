@@ -26,11 +26,11 @@
    image.loading='eager';image.decoding='async';
    parent.insertBefore(image,canvas.nextSibling);
   }
-  if(image.dataset.plane===type)return;
-  image.dataset.plane=type;
+  if(image.dataset.photoPlane===type)return;
+  image.dataset.photoPlane=type;
   image.classList.remove('ready');
   image.title='Historical aircraft photograph · '+item.credit;
-  image.onload=()=>{if(image.dataset.plane===type&&image.naturalWidth>0)image.classList.add('ready');};
+  image.onload=()=>{if(image.dataset.photoPlane===type&&image.naturalWidth>0)image.classList.add('ready');};
   image.onerror=()=>image.classList.remove('ready');
   image.src=base+encodeURIComponent(item.file)+'?width='+(key==='hero'?1100:450);
  }
