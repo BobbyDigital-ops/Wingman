@@ -456,3 +456,45 @@ test('legacy saved pilot must explicitly pick a character without wiping progres
  expect(result.wins).toBe(9);
  expect(result.kills).toBe(17);
 });
+
+
+test('Phase 5 original soundscape has an accessible persistent mute setting',async({page})=>{
+ const errors=[];page.on('pageerror',err=>errors.push(err.message));
+ await page.goto('/');
+ const button=page.locator('#wm-audio-toggle');
+ await expect(button).toBeVisible();
+ await expect(button).toHaveAttribute('aria-pressed','true');
+ await button.click();
+ await expect(button).toHaveAttribute('aria-pressed','false');
+ expect(await page.evaluate(()=>localStorage.getItem('wingman-audio-muted'))).toBe('true');
+ await page.reload();
+ await expect(page.locator('#wm-audio-toggle')).toHaveAttribute('aria-pressed','false');
+ await page.locator('#wm-audio-toggle').click();
+ await expect(page.locator('#wm-audio-toggle')).toHaveAttribute('aria-pressed','true');
+ expect(await page.evaluate(()=>Boolean(window.WingmanAudio?.startEngine&&window.WingmanAudio?.play))).toBe(true);
+ expect(errors).toEqual([]);
+});
+test('Phase 5 flight artwork keeps all six model geometries and supports worn and damaged states',async({page})=>{
+ await page.goto('/');
+ const geometry=await page.evaluate(()=>{
+  const sprites=window.WingmanSprites;
+  const canvas=document.createElement('canvas');canvas.width=120;canvas.height=90;
+  const g=canvas.getContext('2d');
+  return ['fighter','heavy','bomber','bf109','bf110','he111'].map(type=>{
+    const variants=[];
+    for(const v of ['level','worn','damaged']){
+      g.clearRect(0,0,120,90);g.save();g.translate(50,45);g.scale(2,2);
+      sprites.draw(g,type,v);g.restore();
+      const d=g.getImageData(0,0,120,90).data;
+      variants.push(Array.from({length:d.length/4},(_,i)=>d[i*4+3]>0?1:0).reduce((a,b)=>a+b,0));
+    }
+    return variants;
+  });
+ });
+ expect(geometry).toHaveLength(6);
+ for(const states of geometry){
+  expect(states[0]).toBeGreaterThan(20);
+  expect(states[1]).toBeGreaterThanOrEqual(states[0]);
+  expect(states[2]).toBeGreaterThanOrEqual(states[0]);
+ }
+});
