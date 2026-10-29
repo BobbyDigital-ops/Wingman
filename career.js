@@ -220,16 +220,23 @@ function makeChoices(run){
  const picked=[];
  if(seen.length&&run.visits%2===1){const rival=byId[seen[(run.seed+run.rank)%seen.length]];if(rival)picked.push(rival);}
  for(const p of shuffled)if(picked.length<3&&!picked.some(q=>q.id===p.id))picked.push(p);
- return picked.map((p,i)=>({
-  id:p.id,
-  rank:run.rank,
-  types:(run.rank>=3&&run.rank<MAX_RANK&&i===2&&run.rank%2===1)?[p.plane,shuffled.find(x=>x.id!==p.id&&x.plane!==p.plane)?.plane||p.plane]:[p.plane],
-  difficulty:run.rank<2?'rookie':run.rank<5?'standard':'ace',
-  arena:(run.rank+i)%4,
-  attributes:p.attributes,
-  signature:p.signature||ROSTER.find(x=>x.id===p.rosterId)?.signature,
-  label:p.name
- }));
+ return picked.map((p,i)=>{
+  const duo=run.rank>=3&&run.rank<MAX_RANK&&i===2&&run.rank%2===1;
+  const partnerPool=shuffled.filter(q=>q.id!==p.id&&q.plane!==p.plane);
+  const wing=duo?(partnerPool[(run.seed+run.rank+i)%partnerPool.length]||shuffled.find(q=>q.id!==p.id)):null;
+  const lead=window.WingmanPilotAI?.level(p,run.rank);
+  const support=wing?window.WingmanPilotAI?.level(wing,run.rank):null;
+  return {id:p.id,rank:run.rank,
+   types:wing?[p.plane,wing.plane]:[p.plane],
+   difficulty:run.rank<2?'rookie':run.rank<5?'standard':'ace',
+   arena:(run.rank+i)%4,attributes:lead?.attributes||p.attributes,
+   signature:lead?.signature||p.signature||ROSTER.find(x=>x.id===p.rosterId)?.signature,
+   archetype:p.archetype||'Balanced',personality:lead?.tactic||'duellist',
+   wingman:wing?{id:wing.id,name:wing.name,plane:wing.plane,
+    attributes:support?.attributes||wing.attributes,signature:support?.signature||wing.signature,
+    archetype:wing.archetype||'Balanced',personality:support?.tactic||'duellist'}:null,
+   label:p.name};
+ });
 }
 function show(which='ladder'){
  // Existing unconfirmed legacy pilots are not treated as a default choice.
@@ -299,6 +306,16 @@ function startRun(aircraftId){
 function fight(index){
  const run=data?.run;if(!run||active||!run.choices)return;
  const choice=run.choices[index];if(!choice)return;
+ // Existing saved choices also gain the same rank progression without resetting the run.
+ const lead=byId[choice.id],scaled=lead?window.WingmanPilotAI?.level(lead,run.rank):null;
+ if(scaled){choice.attributes=scaled.attributes;choice.signature=scaled.signature;choice.archetype=scaled.archetype;choice.personality=scaled.tactic;}
+ if(choice.types?.length===2&&!choice.wingman){
+  const wing=CATALOG.find(p=>p.faction!==run.faction&&p.id!==choice.id&&p.plane===choice.types[1]);
+  const veteran=wing&&window.WingmanPilotAI?.level(wing,run.rank);
+  if(wing)choice.wingman={id:wing.id,name:wing.name,plane:wing.plane,
+   attributes:veteran?.attributes||wing.attributes,signature:veteran?.signature||wing.signature,
+   archetype:wing.archetype,personality:veteran?.tactic};
+ }
  active=choice;screen.hidden=true;showing=false;
  window.WingmanGame.startCampaignFight(choice,run.aircraft,run.airframe);
 }
@@ -346,7 +363,7 @@ function ladder(run){
    // Identity remains stable wherever this pilot reappears in the tree.
    if(fixed)appearance.rosterPortrait=fixed.portrait;
    else appearance.portraitIndex=((Number(p.id.replace('pilot-',''))||0)*7)%5;
-   return '<button class="route-node route-opponent" data-choice="'+lane+'" aria-label="Challenge '+escape(p.name)+'"><span class="route-photo">'+pilotPortrait(p.faction,{...appearance,rosterPortrait:ROSTER.find(x=>x.id===p.rosterId)?.portrait??Number(p.id.replace('pilot-',''))})+'</span><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+'</small>'+(record?'<em>'+record.wins+'–'+record.losses+' RIVALRY</em>':'')+'<span class="route-cta">CHALLENGE →</span></button>';
+   return '<button class="route-node route-opponent" data-choice="'+lane+'" aria-label="Challenge '+escape(p.name)+'"><span class="route-photo">'+pilotPortrait(p.faction,{...appearance,rosterPortrait:ROSTER.find(x=>x.id===p.rosterId)?.portrait??Number(p.id.replace('pilot-',''))})+'</span><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+'</small><small class="rival-tactics">'+escape(window.WingmanPilotAI?.describe(p,rank)||p.archetype||'ACE')+'</small><small class="rival-rank-stats">TURN '+(op.attributes?.manoeuvrability??65)+' · GUNS '+(op.attributes?.gunnery??65)+' · ENGINE '+(op.attributes?.engine??65)+'</small>'+(op.wingman?'<small class="rival-wingman">⚔ 1v2 WITH '+escape(op.wingman.name)+'</small>':'')+(record?'<em>'+record.wins+'–'+record.losses+' RIVALRY</em>':'')+'<span class="route-cta">CHALLENGE →</span></button>';
   }).join('');
   rows.push('<section class="route-tier '+status+'" '+(current?'id="active-rung"':'')+'><div class="route-rank">'+(rank===MAX_RANK?'★ FINAL ACE':'RANK '+rank)+(current?' • CHOOSE A BRANCH':'')+'</div><div class="route-fork" aria-hidden="true"><span></span><span></span><span></span></div><div class="route-three">'+options+'</div><div class="route-join" aria-hidden="true"><span></span><span></span><span></span></div></section>');
  }
