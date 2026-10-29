@@ -439,6 +439,7 @@ function plane(type,id,x,y,angle){
     // Straight, readable cannon and machine-gun bursts; no component targeting.
     const skill=pilotFactors(p),dx=Math.cos(p.angle),dy=Math.sin(p.angle);
     if(p.deadeyeTime>0)skill.gun*=1.09;
+    if(p.id===0&&state.session)state.session.shots++;
     state.bullets.push({x:p.x+dx*(p.d.radius+2),y:p.y+dy*(p.d.radius+2),
       vx:dx*p.d.bulletSpeed*skill.gun+p.vx*.35,vy:dy*p.d.bulletSpeed*skill.gun+p.vy*.35,
       owner:p.id,damage:p.d.damage,life:p.d.gunLife,age:0});
@@ -453,9 +454,11 @@ function plane(type,id,x,y,angle){
         life:random(.22,.7),max:.7,color,size:Math.random()<.2?2:1});
     }
   }
-  function hit(p,amount,x,y,zoneOverride,cause='GUN'){
+  function hit(p,amount,x,y,zoneOverride,cause='GUN',owner=null){
     if(!p.alive||p.spawnSafe>0)return;
     let remaining=amount*(p.armourTime>0?.45:1)*(p.hardenTime>0?.6:1);
+    const incoming=Math.min(remaining,Math.max(0,p.armour)+Math.max(0,p.health));
+    if(p.id===0&&state.session)state.session.damageTaken+=incoming;
     const absorbed=Math.min(p.armour,remaining);
     p.armour-=absorbed;remaining-=absorbed;
     p.health=Math.max(0,p.health-remaining);
@@ -470,7 +473,8 @@ function plane(type,id,x,y,angle){
         state.bannerTime=1.9;
       }
       sound('boom');
-      if(state.participants===2||p.id===0||!bossWaiting()&&opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
+      if(owner===0&&p.id!==0&&state.session)state.session.kills++;
+      battleOutcomeAfterDeath(p);
     }
   }
   function triggerPilotSkill(p){
@@ -536,7 +540,7 @@ function plane(type,id,x,y,angle){
       if(p.y>=H-13){
         p.y=H-13;p.health=0;p.alive=false;
         p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
-        if(p.id===0||state.participants===2||!bossWaiting()&&opponents(state.fliers[0]).every(q=>!q.alive))endRound(p.id===0?1:0);
+        battleOutcomeAfterDeath(p);
       }
       // Reversals can consume existing climb reserve, never create altitude.
       p.climbLoad=Math.max(0,p.climbLoad-dt*25)+Math.max(0,oldY-p.y);
@@ -620,7 +624,7 @@ function plane(type,id,x,y,angle){
     if(p.y>=H-13){
       p.y=H-13;p.health=0;p.alive=false;
       p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
-      if(p.id===0||state.participants===2||!bossWaiting()&&opponents(state.fliers[0]).every(other=>!other.alive))endRound(p.id===0?1:0);
+      battleOutcomeAfterDeath(p);
     }
   }
   function tailMagnet(p,steer){
@@ -670,7 +674,9 @@ function plane(type,id,x,y,angle){
   function aiInput(p,target){
     p.aiThink=Math.max(0,p.aiThink-STEP);
     const rankAI=state.mode==='campaign'&&p.id>0;
-    const talent=rankAI?(p.aiSkillLevel||0):state.difficulty==='ace'?1:state.difficulty==='rookie'?0:.55;
+    const talent=rankAI?(p.aiSkillLevel||0):state.recordMode==='survival'?
+      clamp((state.difficulty==='ace'?.57:state.difficulty==='rookie'?.12:.34)+(state.round-1)*.065,0,1):
+      state.difficulty==='ace'?1:state.difficulty==='rookie'?0:.55;
     const style=rankAI?p.aiStyle:'hunter';
     const range=combatDistance(p,target);
     const targetAngle=Math.atan2(target.y-p.y,wrappedDelta(p.x,target.x));
@@ -713,12 +719,14 @@ function plane(type,id,x,y,angle){
       if(rankAI&&talent<.58&&Math.random()<(1-talent)*.16)p.aiMistake=.3+(1-talent)*.35;
       const patience=rankAI?(p.aiPersonality?.patience??.55):.55;
       p.aiThink=rankAI?(.75-talent*.53+Math.random()*(.29-talent*.12))*(1.12-patience*.22):
+        state.recordMode==='survival'?(.68-talent*.45)+Math.random()*.17:
         (state.difficulty==='rookie'?.68:state.difficulty==='ace'?.23:.35)+Math.random()*.22;
     }
     const solution=interceptPoint(p,target);
     // Rookies aim near present position; aces account for bullet travel time.
     // Neither receives homing bullets or forced steering.
-    const lead=rankAI?.18+talent*.72:state.difficulty==='rookie'?.20:state.difficulty==='ace'?.90:.55;
+    const lead=rankAI?.18+talent*.72:state.recordMode==='survival'?.20+talent*.7:
+      state.difficulty==='rookie'?.20:state.difficulty==='ace'?.90:.55;
     const aimDx=solution.x-(p.x+wrappedDelta(p.x,target.x));
     let tx=target.x+aimDx*lead,ty=target.y+(solution.y-target.y)*lead;
     if(rankAI){
@@ -781,7 +789,7 @@ function plane(type,id,x,y,angle){
     const goal=Math.atan2(ty-p.y,wrapDx);
     const error=angleDiff(goal,p.angle);
     const turn=Math.abs(error)<.085?0:Math.sign(error);
-    const baseTolerance=rankAI?.11+talent*.14:state.difficulty==='rookie'?.13:state.difficulty==='ace'?.22:.18;
+    const baseTolerance=rankAI?.11+talent*.14:state.recordMode==='survival'?.13+talent*.1:state.difficulty==='rookie'?.13:state.difficulty==='ace'?.22:.18;
     const tolerance=rankAI&&style==='sniper'?baseTolerance*.67:rankAI&&style==='brawler'?baseTolerance*1.12:baseTolerance;
     if(p.aiMode==='attack'&&range<(rankAI?115+talent*65:165)&&Math.abs(error)<tolerance&&
       target.spawnSafe<=0&&target.rollTime<=0&&p.gunCooldown<=0&&p.burstLeft===0&&
@@ -904,7 +912,7 @@ function plane(type,id,x,y,angle){
       // Explosions must not masquerade as ramming damage when airframes touch.
       const source=state.fliers[owner];
       if(source&&distance(source,p)<source.d.radius+p.d.radius+5)continue;
-      if(d<r+p.d.radius)hit(p,damage*(1-clamp(d/(r+p.d.radius),0,.75)),x,y,undefined,cause);
+      if(d<r+p.d.radius)hit(p,damage*(1-clamp(d/(r+p.d.radius),0,.75)),x,y,undefined,cause,owner);
     }
   }
   function projectiles(dt){
@@ -935,7 +943,8 @@ function plane(type,id,x,y,angle){
           const hitBody=Math.abs(longitudinal)<=halfLength&&Math.abs(lateral)<=3.3;
           const hitWing=Math.abs(longitudinal)<=halfLength*.55&&Math.abs(lateral)<=wingWidth;
           if(hitBody||hitWing){
-            hit(target,b.damage,nx,ny,undefined,'GUN');struck=true;break;
+            if(b.owner===0&&state.session)state.session.hits++;
+            hit(target,b.damage,nx,ny,undefined,'GUN',b.owner);struck=true;break;
           }
         }
         if(struck)break;
@@ -979,11 +988,12 @@ function plane(type,id,x,y,angle){
     if(state.phase==='playing'){
       updateWind(dt);
       state.time-=dt;
+      if(state.session)state.session.seconds+=dt;
       summonFinalAce(dt);
-      if(state.mode==='survival'&&state.time<=0){endRound(1);return;}
+      if((state.mode==='survival'||state.mode==='challenge')&&state.time<=0){endRound(1);return;}
       const user=state.fliers[0];
       window.WingmanAudio?.flight(user?.speed||0,(user?.health||0)/(user?.d?.hull||1));
-      updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);
+      if(user.alive)updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);
       for(const p of state.fliers.slice(1)){
         if(p.alive){const target=nearestEnemy(p);const steer=target?aiInput(p,target):0;updatePlane(p,dt,steer,p.aiBoost);}
       }
@@ -991,13 +1001,17 @@ function plane(type,id,x,y,angle){
       // Airframes may overlap without dealing damage. No ramming penalty.
       const enemies=state.fliers.slice(1);
       if(state.participants>2){
-        if(!user.alive)endRound(1);
-        else if(!bossWaiting()&&opponents(user).every(p=>!p.alive))endRound(0);
-        else if(state.time<=0)endRound(1);
+        if(state.teams){
+          if(!state.fliers.some(q=>q.alive&&q.team===0))endRound(1);
+          else if(!state.fliers.some(q=>q.alive&&q.team===1))endRound(0);
+          else if(state.time<=0)endRound(1);
+        }else{
+          if(!user.alive)endRound(1);
+          else if(enemies.every(p=>!p.alive))endRound(0);
+          else if(state.time<=0)endRound(1);
+        }
       }else if(state.time<=0){
         const enemy=enemies[0];
-        // Armour and hull both count: an intact hull with no armour is
-        // not equivalent to a completely undamaged aircraft at timeout.
         const condition=p=>(p.health+p.armour)/(p.d.hull+p.d.armour);
         const a=condition(user),b=condition(enemy);
         endRound(Math.abs(a-b)<.025?-1:a>b?0:1);
