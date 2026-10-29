@@ -45,7 +45,7 @@ function launch(){
     console
   };
   const instrumented=code.replace('  // All scenery is painted once;',
-    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,triggerRoll,triggerPilotSkill,hit,steerPlane,updatePlane,controls,aiInput,assignCampaignAI,tailMagnet,shoot,rollWind,updateWind,projectiles,PLANES,wrappedDelta,combatDistance,interceptPoint};\n  // All scenery is painted once;');
+    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,triggerRoll,triggerPilotSkill,hit,steerPlane,updatePlane,controls,aiInput,assignCampaignAI,startCampaignFight,summonFinalAce,bossWaiting,update,tailMagnet,shoot,rollWind,updateWind,projectiles,PLANES,wrappedDelta,combatDistance,interceptPoint};\n  // All scenery is painted once;');
   const artCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/aircraft.js'),'utf8');
   vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
   const sceneryCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/scenery.js'),'utf8');
@@ -843,4 +843,58 @@ test('rank-five double-ace wingman spawns as an independent pilot with own perso
  assert.equal(wing.aiStyle,'trickster');
  assert.notEqual(wing.aiIdentity,state.fliers[1].aiIdentity);
  assert.notEqual(wing.attributes.gunnery,state.fliers[1].attributes.gunnery);
+});
+
+test('final mission starts as 1v2 with a queued elite, then the ace enters after first escort falls',()=>{
+ const game=launch();
+ const boss={id:'ace-21',name:'Otto "Sauerkraut" Krüger',plane:'bf110',signature:'harden',
+  archetype:'Ironclad',attributes:{manoeuvrability:60,gunnery:85,engine:70}};
+ const escorts=[{id:'ace-22',name:'Friedrich "Schnitzel" Bauer',plane:'bf109',signature:'reverse',
+  archetype:'Fox',attributes:{manoeuvrability:90,gunnery:80,engine:75}},
+ {id:'ace-25',name:'Ernst "Knödel" Neumann',plane:'he111',signature:'harden',
+  archetype:'Bulwark',attributes:{manoeuvrability:70,gunnery:75,engine:65}}];
+ const match={id:boss.id,label:boss.name,rank:8,mission:'FINAL SHOWDOWN',finalBoss:true,
+  types:[escorts[0].plane,escorts[1].plane,boss.plane],opponents:[...escorts,boss],
+  attributes:boss.attributes,signature:boss.signature,archetype:boss.archetype,difficulty:'ace',arena:0};
+ game.internals.startCampaignFight(match,'fighter',null);
+ const state=game.internals.state;
+ assert.equal(state.fliers.length,4);
+ assert.equal(state.participants,4);
+ assert.equal(state.teams,true);
+ assert.equal(state.time,165);
+ assert.equal(state.fliers.filter(x=>x.id>0&&x.alive).length,2);
+ assert.equal(state.fliers[3].queued,true);
+ assert.equal(state.fliers[3].aiIdentity,boss.id);
+ assert.equal(state.fliers[1].aiIdentity,escorts[0].id);
+ assert.equal(state.fliers[2].aiIdentity,escorts[1].id);
+ // The first dead escort must not count as completing the whole battle.
+ state.fliers[1].spawnSafe=0;
+ game.internals.hit(state.fliers[1],10000,state.fliers[1].x,state.fliers[1].y);
+ assert.equal(state.phase,'playing');
+ assert.equal(game.internals.bossWaiting(),true);
+ game.internals.summonFinalAce(1/60);
+ assert.equal(state.fliers[3].alive,true);
+ assert.equal(state.fliers[3].queued,false);
+ assert.equal(state.bossReinforcementLaunched,true);
+ assert.equal(state.fliers[3].aiName,boss.name);
+ assert.equal(state.fliers[3].pilotSkill,'harden');
+ // Defeat all three, not merely the escort wave.
+ for(const p of [state.fliers[2],state.fliers[3]]){
+   p.spawnSafe=0;
+   game.internals.hit(p,10000,p.x,p.y);
+ }
+ assert.equal(state.phase,'result');
+});
+test('final ace arrives after twenty seconds even when both escorts survive',()=>{
+ const game=launch(),r={rank:8,id:'ace-24',label:'Kurt',types:['bf109','he111','bf110'],
+   finalBoss:true,opponents:[
+    {id:'ace-22',name:'Friedrich',plane:'bf109',signature:'reverse'},
+    {id:'ace-26',name:'Hans',plane:'he111',signature:'smoke'},
+    {id:'ace-24',name:'Kurt',plane:'bf110',signature:'roll'}]};
+ game.internals.startCampaignFight(r,'fighter',null);
+ game.internals.summonFinalAce(19);
+ assert.equal(game.internals.bossWaiting(),true);
+ game.internals.summonFinalAce(1.1);
+ assert.equal(game.internals.bossWaiting(),false);
+ assert.equal(game.internals.state.fliers.filter(p=>p.alive&&p.id>0).length,3);
 });
