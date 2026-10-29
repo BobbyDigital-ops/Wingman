@@ -229,6 +229,16 @@ function plane(type,id,x,y,angle){
     }
     state.fliers[0].attributes=pilotAttributes(readPilotAttributes());
     state.fliers[0].pilotSkill=readPilotSkill();
+    // Specialist rating only applies to the player's preferred aircraft,
+    // and only in Road to Ace. Avoid mutating shared PLANES definitions.
+    const bonus=state.mode==='campaign'?state.campaignEncounter?.playerAptitude:null;
+    if(bonus){
+      const hero=state.fliers[0],base=hero.d;
+      hero.d={...base,hull:Math.round(base.hull*bonus.hull),
+        armour:Math.round(base.armour*bonus.armour),
+        damage:Math.round(base.damage*bonus.damage*100)/100};
+      hero.health=hero.d.hull;hero.armour=hero.d.armour;
+    }
     if(state.recordMode==='survival'&&state.survivalCarry){
       state.fliers[0].health=clamp(state.survivalCarry.health,1,state.fliers[0].d.hull);
       state.fliers[0].armour=clamp(state.survivalCarry.armour,0,state.fliers[0].d.armour);
@@ -619,7 +629,8 @@ function plane(type,id,x,y,angle){
     if(p.angle< -Math.PI)p.angle+=TAU;
     const power=1-.15*clamp((.6-p.health/p.d.hull)/.6,0,1);
     // The Spitfire's Overdrive has 25% more power; the BF 109 stays unchanged.
-    const boostGain=p.boosting?(p.type==='fighter'?1.27*SPITFIRE_BOOST_GAIN:1.27):1;
+    // Stronger, clearly felt Overdrive, still bounded by flight/energy limits.
+    const boostGain=p.boosting?(p.type==='fighter'?1.46*SPITFIRE_BOOST_GAIN:1.40):1;
     const wanted=p.d.speed*engine*(p.engineCutTime>0?.42:1)*(p.diveTime>0?1.15:1)*power*(.87+.13*p.energy/100)*boostGain*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
     // Airspeed gained in a dive carries through a level-out, then fades.
     const drag=p.role==='fighter'?1.08:p.role==='heavy'?.93:.79;
@@ -631,7 +642,7 @@ function plane(type,id,x,y,angle){
     p.speed+=dt*exchange*(DIVE_SPEED_GAIN*dive*dive-29*climb*climb);
     if(p.diveTime>0){p.speed+=dt*11;p.vy+=dt*36;}
     // Higher but bounded dive ceiling; proportional Overdrive headroom.
-    const speedLimit=p.boosting?(p.type==='fighter'?1.52*SPITFIRE_BOOST_GAIN:DIVE_OVERSPEED_LIMIT):DIVE_OVERSPEED_LIMIT;
+    const speedLimit=p.boosting?(p.type==='fighter'?1.68*SPITFIRE_BOOST_GAIN:1.78):DIVE_OVERSPEED_LIMIT;
     p.speed=clamp(p.speed,p.d.speed*.43,p.d.speed*engine*speedLimit);
     // The velocity vector gently follows the fuselage, rather than snapping.
     const follow=Math.min(1,dt*(p.role==='bomber'?3.2:p.role==='heavy'?4:5.1));
