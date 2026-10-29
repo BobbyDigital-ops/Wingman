@@ -380,6 +380,7 @@ function finishEncounter(won,encounter){
  if(!active||!data?.run)return;
  const run=data.run,rival=active;
  const atRank=run.rank;
+ const previousTitle=rankTitle(atRank);
  const record=data.records[rival.id]||(data.records[rival.id]={wins:0,losses:0});
  const earned=[];
  const award=id=>{if(medal(id))earned.push(MEDALS.find(m=>m.id===id));};
@@ -413,10 +414,12 @@ function finishEncounter(won,encounter){
  if(data.run){run.visits++;run.choices=makeChoices(run);}
  save();active=null;
  view='outcome';showing=true;screen.hidden=false;result.classList.add('hidden');
- renderOutcome(won,encounter||rival,earned);
+ const promotion=won&&rankTitle(Math.min(MAX_RANK,atRank+1))!==previousTitle?
+  rankTitle(Math.min(MAX_RANK,atRank+1)):null;
+ renderOutcome(won,encounter||rival,earned,promotion);
 }
 function panel(title,body){screen.innerHTML=`<div class="career-panel"><div class="career-head"><h2>${title}</h2><button type="button" data-action="close">CLOSE ×</button></div>${body}</div>`;}
-function renderOutcome(won,encounter,earned=[]){
+function renderOutcome(won,encounter,earned=[],promotion=null){
  const finished=won&&!data?.run&&data?.lastCompleted?.rank===MAX_RANK;
  const resultTitle=finished?'★ WINGMAN LEGEND — FINAL VICTORY':won?'VICTORY — SORTIE COMPLETE':'DEFEAT — AIRCRAFT LOST';
  const medalCards=earned.length?'<div class="award-celebration"><strong>NEW DECORATIONS</strong><div class="earned-ribbons">'+
@@ -425,12 +428,13 @@ function renderOutcome(won,encounter,earned=[]){
   '<p>'+escape(data.profile.name)+' has defeated the final squadron and earned the title of <b>Wingman Legend</b>.</p>'+
   '<div class="career-stats"><span>'+data.completed+' COMPLETED RUN'+(data.completed===1?'':'S')+'</span>'+
   '<span>'+data.kills+' CONFIRMED KILLS</span><span>'+data.bestStreak+' BEST STREAK</span></div></section>':'';
+ const promotionMarkup=promotion?'<div class="career-promotion"><span>NEW PROMOTION</span><strong>'+escape(promotion)+'</strong></div>':'';
  const lossNotice=!won&&data?.run?'<p class="career-muted">One life lost. Your career continues from rank '+data.run.rank+'.</p>':'';
  panel(resultTitle,'<p class="career-outcome-opponent">'+escape(encounter?.label||'Rival')+' · '+
   escape((encounter?.types||[]).map(t=>aircraft[t]||t).join(' + '))+'</p>'+tribute+lossNotice+
   '<div class="career-stats"><span>'+(data?.run?'RANK '+data.run.rank:'RUN FINISHED')+'</span>'+
   '<span>'+(data?.run?'♥ '+data.run.lives+' LIVES':'SERVICE RECORDED')+'</span></div>'+
-  medalCards+(finished?medalMarkup():'' )+
+  promotionMarkup+medalCards+(finished?medalMarkup():'' )+
   (finished?serviceMarkup(8):'')+
   '<button class="career-primary" data-action="ladder">'+(data?.run?'CONTINUE LADDER':'VIEW PILOT LICENCE')+'</button>');
 }
