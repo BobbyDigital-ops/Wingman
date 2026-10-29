@@ -298,6 +298,9 @@ function show(which='ladder'){
  if(!data)which='select';
  else if(!data.profile.characterConfirmed)which='character';
  if((!data||which==='select')&&!candidates.length)candidates=generateCandidates();
+ if(data?.run?.rank===MAX_RANK&&!data.run.choices?.every(c=>c.finalBoss)){
+   data.run.choices=makeChoices(data.run);save();
+ }
  showing=true;view=which;screen.hidden=false;menu.classList.add('hidden');result.classList.add('hidden');render();
 }
 function close(){showing=false;screen.hidden=true;window.WingmanGame?.showMenu();}
@@ -375,23 +378,61 @@ function fight(index){
 }
 function finishEncounter(won,encounter){
  if(!active||!data?.run)return;
- const run=data.run;
- const record=data.records[active.id]||(data.records[active.id]={wins:0,losses:0});
- if(won){data.wins++;data.kills+=active.types.length;record.wins++;run.rank++;data.best=Math.max(data.best,Math.min(MAX_RANK,run.rank));
-  if(run.rank>MAX_RANK){data.completed++;data.run=null;}
- }else{data.losses++;record.losses++;run.lives--;run.rank=Math.max(1,run.rank-1);
+ const run=data.run,rival=active;
+ const atRank=run.rank;
+ const record=data.records[rival.id]||(data.records[rival.id]={wins:0,losses:0});
+ const earned=[];
+ const award=id=>{if(medal(id))earned.push(MEDALS.find(m=>m.id===id));};
+ data.streak??=0;data.bestStreak??=0;
+ if(won){
+  data.wins++;data.kills+=rival.types.length;record.wins++;
+  data.streak++;data.bestStreak=Math.max(data.bestStreak,data.streak);
+  run.rank++;
+  data.best=Math.max(data.best,Math.min(MAX_RANK,run.rank));
+  if(data.wins===1)award('first-blood');
+  if(data.streak>=3)award('triple-ace');
+  if(run.rank>=5)award('veteran');
+  if(rival.types.length>=2)award('double-trouble');
+  if(run.lives<3)award('iron-will');
+  if(atRank===MAX_RANK&&rival.finalBoss)award('wingman-legend');
+  if(run.rank>MAX_RANK){
+   data.completed++;
+   data.lastCompleted={pilot:data.profile.name,aircraft:run.aircraft,
+    nemesis:rival.label,streak:data.bestStreak,missions:data.service?.length+1||8,
+    medals:data.medals.slice(),rank:MAX_RANK};
+   data.run=null;
+  }
+ }else{
+  data.losses++;record.losses++;data.streak=0;
+  run.lives--;run.rank=Math.max(1,run.rank-1);
   if(run.lives<=0)data.run=null;
  }
+ archiveService({won,rank:atRank,rival:rival.label,
+  mission:rival.mission||'DOGFIGHT',enemies:rival.types.length,
+  result:won?'VICTORY':'SHOT DOWN'});
  if(data.run){run.visits++;run.choices=makeChoices(run);}
  save();active=null;
- view='outcome';showing=true;screen.hidden=false;result.classList.add('hidden');renderOutcome(won,encounter);
+ view='outcome';showing=true;screen.hidden=false;result.classList.add('hidden');
+ renderOutcome(won,encounter||rival,earned);
 }
 function panel(title,body){screen.innerHTML=`<div class="career-panel"><div class="career-head"><h2>${title}</h2><button type="button" data-action="close">CLOSE ×</button></div>${body}</div>`;}
-function renderOutcome(won,encounter){
- const resultTitle=won?'VICTORY — SORTIE COMPLETE':'DEFEAT — AIRCRAFT LOST';
- panel(resultTitle,`<p>${escape(encounter.label)} · ${escape(encounter.types.map(t=>aircraft[t]).join(' + '))}</p>
- <div class="career-stats"><span>${data?.run?'RANK '+data.run.rank:'RUN FINISHED'}</span><span>${data?.run?'♥ '+data.run.lives+' LIVES':'START AGAIN'}</span></div>
- <button class="career-primary" data-action="ladder">${data?.run?'CONTINUE LADDER':'VIEW PILOT LICENCE'}</button>`);
+function renderOutcome(won,encounter,earned=[]){
+ const finished=won&&!data?.run&&data?.lastCompleted?.rank===MAX_RANK;
+ const resultTitle=finished?'★ WINGMAN LEGEND — FINAL VICTORY':won?'VICTORY — SORTIE COMPLETE':'DEFEAT — AIRCRAFT LOST';
+ const medalCards=earned.length?'<div class="award-celebration"><strong>NEW DECORATIONS</strong><div class="earned-ribbons">'+
+  earned.map(m=>'<span title="'+escape(m.desc)+'">'+m.glyph+' '+escape(m.title)+'</span>').join('')+'</div></div>':'';
+ const tribute=finished?'<section class="final-tribute"><div class="final-laurel">★ ✦ ★</div><h3>THE SKY IS YOURS</h3>'+
+  '<p>'+escape(data.profile.name)+' has defeated the final squadron and earned the title of <b>Wingman Legend</b>.</p>'+
+  '<div class="career-stats"><span>'+data.completed+' COMPLETED RUN'+(data.completed===1?'':'S')+'</span>'+
+  '<span>'+data.kills+' CONFIRMED KILLS</span><span>'+data.bestStreak+' BEST STREAK</span></div></section>':'';
+ const lossNotice=!won&&data?.run?'<p class="career-muted">One life lost. Your career continues from rank '+data.run.rank+'.</p>':'';
+ panel(resultTitle,'<p class="career-outcome-opponent">'+escape(encounter?.label||'Rival')+' · '+
+  escape((encounter?.types||[]).map(t=>aircraft[t]||t).join(' + '))+'</p>'+tribute+lossNotice+
+  '<div class="career-stats"><span>'+(data?.run?'RANK '+data.run.rank:'RUN FINISHED')+'</span>'+
+  '<span>'+(data?.run?'♥ '+data.run.lives+' LIVES':'SERVICE RECORDED')+'</span></div>'+
+  medalCards+(finished?medalMarkup():'' )+
+  (finished?serviceMarkup(8):'')+
+  '<button class="career-primary" data-action="ladder">'+(data?.run?'CONTINUE LADDER':'VIEW PILOT LICENCE')+'</button>');
 }
 function appearanceControls(){
  const options={face:['Oval','Narrow','Broad','Angular','Round'],skin:['Fair','Warm','Tan','Deep','Pale'],
