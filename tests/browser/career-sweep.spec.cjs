@@ -251,7 +251,10 @@ test('career records decorations, streaks, final-ace ceremony and persistent ser
  await expect(page.locator('.career-service .career-log-entry')).toHaveCount(8);
  await page.reload();
  if(await page.locator('#career-license').isVisible())await page.locator('#career-license').click();
- else await page.locator('#career-open-mobile').click();
+ else {
+  await page.locator('#career-open-mobile').click();
+  await page.locator('[data-action="licence"]').first().click();
+ }
  await expect(page.locator('.medal.earned')).toHaveCount(result.medals.length);
  await expect(page.locator('.career-service')).toBeVisible();
 });
