@@ -27,7 +27,7 @@
  }
  let data=read();
  function save(){try{localStorage.setItem(KEY,JSON.stringify(data));}catch{}}
- const number=(v,lo,hi)=>Math.min(hi,Math.max(lo,Number(v)||0));
+ const number=(v,lo,hi)=>Number.isFinite(Number(v))?Math.min(hi,Math.max(lo,Number(v))):lo;
  const groupKey=r=>[r.mode,r.challenge||'none',r.difficulty||'standard',r.aircraft||'fighter'].join('|');
  const rank=r=>Number(r.score)||0;
  function board(mode=null){
