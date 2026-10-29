@@ -268,7 +268,8 @@ test('final ace identity is constant across all three approaches, and nemesis re
   localStorage.setItem(key,JSON.stringify(d));
  },KEY);
  await page.reload();
- await page.locator('#career-open').click();
+ if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
+ else await page.locator('#career-open-mobile').click();
  const saved=await state(page);
  expect(saved.run.rank).toBe(8);
  const choices=saved.run.choices;
