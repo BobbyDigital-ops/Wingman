@@ -7,22 +7,26 @@ async function openCareer(page){
   else await page.locator('#career-open-mobile').click();
 }
 async function newPilot(page,faction='Allies',index=0,aircraft){
-  await openCareer(page);
-  await page.locator('#career-faction').selectOption(faction);
-  await page.locator('[data-candidate="'+index+'"]').click();
-  await expect(page.locator('.career-licence')).toBeVisible();
-  await page.locator('[data-action="ladder"]').last().click();
-  await expect(page.locator('.airframe-card')).toHaveCount(3);
-  const type=aircraft||(faction==='Axis'?'bf109':'fighter');
-  await page.locator('[data-aircraft="'+type+'"]').click();
-  await expect(page.locator('#active-rung [data-choice]')).toHaveCount(3);
+ await openCareer(page);
+ await page.locator('#career-faction').selectOption(faction);
+ await page.locator('[data-candidate="'+index+'"]').click();
+ await expect(page.locator('[data-action="begin-run"]')).toBeVisible();
+ await page.locator('[data-action="begin-run"]').click();
+ await expect(page.locator('#active-rung [data-choice]')).toHaveCount(3);
+}
+async function launchChoice(page,lane=0,type){
+ const before=await state(page);
+ await page.locator('#active-rung [data-choice="'+lane+'"]').click();
+ await expect(page.locator('[data-sortie-plane]')).toHaveCount(3);
+ await page.locator('[data-sortie-plane="'+(type||(before.profile.faction==='Axis'?'bf109':'fighter'))+'"]').click();
+ await expect(page.locator('#menu-return')).toBeVisible();
+ return before;
 }
 async function encounter(page,win=true,lane=0){
-  const before=await state(page);
-  await page.locator('#active-rung [data-choice="'+lane+'"]').click();
-  await page.evaluate(won=>window.WingmanCareer.finishEncounter(won,{label:'Playwright test rival',types:['fighter']}),win);
-  await expect(page.locator('[data-action="ladder"]')).toBeVisible();
-  return before;
+ const before=await launchChoice(page,lane);
+ await page.evaluate(won=>window.WingmanCareer.finishEncounter(won,{label:'Playwright test rival',types:['fighter']}),win);
+ await expect(page.locator('[data-action="ladder"]')).toBeVisible();
+ return before;
 }
 test('RAF and Luftwaffe can both select a character, retain career on reload and see three real opponent branches',async({page})=>{
  for(const faction of ['Allies','Axis']){
@@ -130,28 +134,28 @@ test('abandoning an active career sortie via MENU unlocks the same tier without 
  if(await page.locator('#career-open').isVisible())await page.locator('#career-open').click();
  else await page.locator('#career-open-mobile').click();
  await expect(page.locator('#active-rung [data-choice]')).toHaveCount(3);
- await page.locator('#active-rung [data-choice="1"]').click();
- await expect(page.locator('#menu-return')).toBeVisible();
+ await launchChoice(page,1);
  const after=await state(page);
  expect(after.wins).toBe(before.wins);
  expect(after.losses).toBe(before.losses);
  expect(after.run.lives).toBe(3);
  expect(after.run.rank).toBe(1);
 });
-test('rolled heavy fighter armour reflects actual combat armour rather than inflated historical cards',async({page})=>{
- for(const [faction,type,base] of [['Allies','heavy',78],['Axis','bf110',75]]){
-  await openCareer(page);
-  await page.locator('#career-faction').selectOption(faction);
-  await page.locator('[data-candidate="0"]').click();
-  await page.locator('[data-action="ladder"]').last().click();
-  const armour=Number((await page.locator('[data-aircraft="'+type+'"]').innerText()).match(/ARMOUR\s+(\d+)/)?.[1]);
-  expect(armour).toBeGreaterThanOrEqual(Math.round(base*.9));
-  expect(armour).toBeLessThanOrEqual(Math.ceil(base*1.1));
-  await page.locator('[data-aircraft="'+type+'"]').click();
+test('mission-by-mission aircraft selection has three valid choices and no permanent airframe lock',async({page})=>{
+ for(const faction of ['Allies','Axis']){
+  await newPilot(page,faction,0);
+  const initial=await state(page);
+  await page.locator('#active-rung [data-choice="0"]').click();
+  await expect(page.locator('[data-sortie-plane]')).toHaveCount(3);
+  await page.locator('[data-action="sortie-back"]').click();
+  await expect(page.locator('#active-rung [data-choice]')).toHaveCount(3);
+  const aircraft=faction==='Allies'?'heavy':'bf110';
+  await launchChoice(page,1,aircraft);
   const saved=await state(page);
-  expect(saved.run.airframe.stats.armour).toBe(armour);
+  expect(saved.run.aircraft).toBe(aircraft);
+  expect(saved.run.airframe).toBeNull();
+  await page.locator('#menu-return').click();
   await page.evaluate(key=>localStorage.removeItem(key),KEY);
-  await page.goto('/');
  }
 });
 test('roster remains scrollable with the faction selector visible on both mobile and desktop',async({page})=>{
@@ -205,8 +209,7 @@ test('named 1v2 branches exist only on ranks 3 5 and 7, with two distinct enemy 
   }
   // Verify player can launch each challenge tier, including the 1v3 finale.
   const pick=(rank===3||rank===5||rank===7)?2:0;
-  await page.locator('#active-rung [data-choice="'+pick+'"]').click();
-  await expect(page.locator('#menu-return')).toBeVisible();
+  await launchChoice(page,pick);
   await page.evaluate(()=>window.WingmanCareer.finishEncounter(true,{label:'Regression',types:['fighter']}));
   if(rank<8)await page.locator('[data-action="ladder"]').click();
  }
@@ -231,7 +234,7 @@ test('career records decorations, streaks, final-ace ceremony and persistent ser
  await newPilot(page,'Allies',1,'heavy');
  for(let rank=1;rank<=8;rank++){
   const pick=rank===3||rank===5||rank===7?2:0;
-  await page.locator('#active-rung [data-choice="'+pick+'"]').click();
+  await launchChoice(page,pick);
   await page.evaluate(()=>window.WingmanCareer.finishEncounter(true,{label:'QA Victory',types:['fighter']}));
   const saved=await state(page);
   expect(saved.streak).toBe(rank);
