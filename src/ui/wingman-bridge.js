@@ -74,7 +74,7 @@ function sync(){
   }else{
    resultSeen=false;
    if(menu||campaign){
-    if(cover?.hidden)show();
+    if(cover?.hidden){show();if(menu&&!campaign)broadcast({wmUI:'home'});}
    }else hide();
   }
  }finally{syncing=false}
@@ -97,6 +97,8 @@ function mount(){
 window.WingmanUIBridge={show,hide,choosePilot,beginCareer,startCareer,startArcade,continueCareer,
  openLicence(){openCareer('licence');broadcast({wmUI:'career'})},
  toggleSound(){const el=by('wm-audio-toggle');if(el)el.click()},
+ rematch(){if(click('#rematch'))hide()},
+ changeAircraft(){if(click('#change-plane'))show()},
  home(){window.WingmanGame?.showMenu?.();broadcast({wmUI:'home'});show()}
 };
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
