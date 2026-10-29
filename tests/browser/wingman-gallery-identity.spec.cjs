@@ -61,31 +61,23 @@ test('Spitfire skill works with Q, advertises recharging and has a real manoeuvr
  await expect(page.locator('#roll')).toHaveClass(/on-cooldown/);
  await expect(page.locator('#roll')).toHaveAttribute('aria-label',/recharging/i);
 });
-test('selection art uses separate illustrated hangar backgrounds and aircraft names never overlap cards',async({page})=>{
+test('the approved illustrated aircraft set has six distinct crops and legible labels',async({page})=>{
  await openSetup(page);
- expect(await page.evaluate(()=>window.WingmanHangarArt.themes.length)).toBe(6);
- const artwork=await page.locator('canvas.wm-aircraft-card-canvas').evaluateAll(els=>els.map(canvas=>{
-  const {width,height}=canvas;const p=canvas.getContext('2d').getImageData(0,0,width,height).data;
-  let hash=2166136261;
-  for(let i=0;i<p.length;i+=61){hash^=p[i];hash=Math.imul(hash,16777619)>>>0;}
-  return {hash,width,height};
- }));
- expect(artwork).toHaveLength(6);
- expect(new Set(artwork.map(a=>a.hash)).size).toBe(6);
- for(const button of await page.locator('.plane-choice').all()){
-  const b=button.locator('b');
-  const rect=await button.boundingBox(),textRect=await b.boundingBox();
-  expect(rect).toBeTruthy();expect(textRect).toBeTruthy();
-  expect(textRect.x).toBeGreaterThanOrEqual(rect.x-1);
-  expect(textRect.x+textRect.width).toBeLessThanOrEqual(rect.x+rect.width+1);
+ const cards=page.locator('.wg-card');
+ await expect(cards).toHaveCount(6);
+ const visual=await page.locator('.wg-card-art').evaluateAll(items=>items.map(x=>({
+  art:getComputedStyle(x).backgroundImage.slice(0,40),position:getComputedStyle(x).backgroundPosition
+ })));
+ expect(visual.every(v=>v.art.includes('data:image/avif'))).toBe(true);
+ expect(new Set(visual.map(v=>v.position)).size).toBe(6);
+ for(const item of await page.locator('.wg-card:visible').all()){
+  const card=await item.boundingBox(),title=await item.locator('.wg-card-title strong').boundingBox();
+  expect(title.x).toBeGreaterThanOrEqual(card.x-1);
+  expect(title.x+title.width).toBeLessThanOrEqual(card.x+card.width+1);
  }
+ await page.locator('[data-wg-faction="Axis"]').click();
  await page.locator('[data-plane="bf109"]').click();
- await expect(page.locator('#wm-featured-name')).toHaveText('EMIL');
- const image=await page.locator('#wm-featured-plane').evaluate(canvas=>{
-  const rgba=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
-  return [rgba[0],rgba[1],rgba[2],rgba[3]];
- });
- expect(image[3]).toBe(255);
+ await expect(page.locator('[data-plane="bf109"] .wg-card-title')).toContainText('BF 109E EMIL');
 });
 
 test('on-screen Spitfire SKILL button activates barrel roll by actual mobile touch',async({page,isMobile})=>{
