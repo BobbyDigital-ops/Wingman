@@ -283,9 +283,26 @@ function draw(g,type,variant){
  if(type==='fighter'||type==='bf109')fighter(g,p,type==='bf109');
  else if(type==='heavy'||type==='bf110')twin(g,p,type==='bf110');
  else bomber(g,p,type==='he111');
- if(variant==='damaged'){
-  // Small airframe soot, not an arbitrary black rectangle.
-  g.fillStyle='#3d423c9c';g.beginPath();g.ellipse(-3.5,-1.55,2.8,.55,-.1,0,Math.PI*2);g.fill();
+ if(variant==='worn'||variant==='damaged'){
+  // Paint chips and restrained exhaust staining follow the existing wing
+  // and fuselage. These details never affect sprite scale or hit geometry.
+  g.save();
+  g.globalAlpha=variant==='damaged'?.86:.47;
+  g.fillStyle='#2b302a';
+  g.beginPath();g.ellipse(-5.4,-1.65,3.4,.65,-.08,0,Math.PI*2);g.fill();
+  g.strokeStyle='#d1d4c17c';g.lineWidth=.34;
+  g.beginPath();g.moveTo(-8,1.85);g.lineTo(-5.9,2.15);g.lineTo(-4.1,1.95);
+  g.moveTo(5,-1.5);g.lineTo(7.7,-1.85);
+  g.moveTo(-1.5,3.7);g.lineTo(1.25,4.2);g.stroke();
+  g.fillStyle='#4a3c32';
+  for(const [x,y] of [[-7,2],[-1,2.9],[4,1.45]])g.fillRect(x,y,1.1,.46);
+  if(variant==='damaged'){
+   g.strokeStyle='#35332bd1';g.lineWidth=1.05;
+   g.beginPath();g.moveTo(-9,-1.2);g.lineTo(-4.7,-.9);g.lineTo(-2,.4);
+   g.moveTo(1,2.3);g.lineTo(7,2.65);g.stroke();
+   g.fillStyle='#e1bc88aa';g.fillRect(6.6,2.1,.75,.5);
+  }
+  g.restore();
  }
  g.restore();
 }
