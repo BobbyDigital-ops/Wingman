@@ -514,17 +514,26 @@ function plane(type,id,x,y,angle){
   }
   // Tactical AI: state changes prevent indefinite tail-chasing and combat orbits.
 
-  // Rank changes decision-making only, never the aircraft damage or durability.
-  const AI_STYLES=['hunter','duellist','cautious','opportunist'];
+  // Personality persists across the ladder. Increasing rank improves aim,
+  // decisions and effective attributes without changing weapons or hull.
+  const AI_STYLES=['hunter','duellist','guardian','trickster','sniper','interceptor','survivor','brawler'];
   function assignCampaignAI(p,encounter,offset=0){
     const rank=clamp(Number(encounter.rank)||1,1,8);
-    const key=String(encounter.id||encounter.label||'rival');
-    let hash=0;for(const char of key)hash=(hash*31+char.charCodeAt(0))>>>0;
-    p.aiRank=rank;
-    p.aiStyle=AI_STYLES[(hash+offset)%AI_STYLES.length];
-    p.aiSkillLevel=clamp((rank-1)/7,0,1);
-    p.aiMistake=0;
-    p.pilotSkill=encounter.signature||['roll','reverse','smoke','harden','deadeye','cut','dive'][(hash+offset*3)%7];
+    const wing=offset>0?encounter.wingman:null;
+    const raw=wing||{id:encounter.id,name:encounter.label,plane:encounter.types[0],
+      attributes:encounter.attributes,signature:encounter.signature,
+      archetype:encounter.archetype,personality:encounter.personality};
+    const personality=window.WingmanPilotAI?.level(raw,rank);
+    let hash=0;for(const ch of String(raw.id||raw.name||'rival'))hash=(hash*31+ch.charCodeAt(0))>>>0;
+    p.aiIdentity=raw.id||encounter.id;
+    p.aiName=raw.name||encounter.label;
+    p.aiArchetype=personality?.archetype||raw.archetype||'Balanced';
+    p.aiRank=rank;p.aiStyle=personality?.style||raw.personality||AI_STYLES[hash%AI_STYLES.length];
+    p.aiPersonality=personality||null;
+    p.aiSkillLevel=(rank-1)/7;p.aiMistake=0;
+    p.attributes=pilotAttributes(personality?.attributes||raw.attributes||encounter.attributes);
+    p.pilotSkill=personality?.signature||raw.signature||encounter.signature||'roll';
+    p.aiThink=0;
   }
   function aiInput(p,target){
     p.aiThink=Math.max(0,p.aiThink-STEP);
@@ -560,10 +569,19 @@ function plane(type,id,x,y,angle){
       else if(p.gunCooldown>0&&range<110) p.aiMode='extend';
       else if(range>150) p.aiMode='intercept';
       else p.aiMode='attack';
-      if(rankAI&&style==='cautious'&&range<100&&p.health<p.d.hull*.65)p.aiMode='extend';
-      if(rankAI&&style==='opportunist'&&target.gunCooldown>0&&range<145)p.aiMode='attack';
+      if(rankAI){
+        if((style==='guardian'||style==='survivor')&&range<145&&
+           (p.health<p.d.hull*(style==='guardian'?.76:.87)||p.armour<p.d.armour*.52))
+          p.aiMode='extend';
+        if(style==='trickster'&&enemyBehind&&range<115)p.aiMode='break';
+        if(style==='interceptor'&&range>95&&p.y>H*.45)p.aiMode='intercept';
+        if(style==='sniper'&&range<50&&target.burstLeft>0)p.aiMode='evade';
+        if((style==='brawler'||style==='hunter')&&range<150&&target.gunCooldown>0)p.aiMode='attack';
+      }
       if(rankAI&&talent<.58&&Math.random()<(1-talent)*.16)p.aiMistake=.3+(1-talent)*.35;
-      p.aiThink=rankAI?.75-talent*.53+Math.random()*(.29-talent*.12):(state.difficulty==='rookie'?.68:state.difficulty==='ace'?.23:.35)+Math.random()*.22;
+      const patience=rankAI?(p.aiPersonality?.patience??.55):.55;
+      p.aiThink=rankAI?(.75-talent*.53+Math.random()*(.29-talent*.12))*(1.12-patience*.22):
+        (state.difficulty==='rookie'?.68:state.difficulty==='ace'?.23:.35)+Math.random()*.22;
     }
     const solution=interceptPoint(p,target);
     // Rookies aim near present position; aces account for bullet travel time.
@@ -574,6 +592,10 @@ function plane(type,id,x,y,angle){
     if(rankAI){
       if(style==='duellist'&&range<110)ty-=18;
       if(style==='hunter'&&range<125)tx+=target.vx*.13;
+      if(style==='sniper'&&range>55){tx+=target.vx*.10;ty+=target.vy*.10;}
+      if(style==='interceptor'&&range>80)ty=Math.min(ty,target.y-30);
+      if(style==='trickster'&&p.aiMode==='break')ty+=p.y>H*.5?-28:28;
+      if(style==='survivor'&&range<90&&p.gunCooldown>0)ty+=p.y>H*.55?-26:24;
       if(p.aiMistake>0){p.aiMistake=Math.max(0,p.aiMistake-STEP);ty+=25*(1-talent);}
     }
 
@@ -615,7 +637,8 @@ function plane(type,id,x,y,angle){
     const goal=Math.atan2(ty-p.y,wrapDx);
     const error=angleDiff(goal,p.angle);
     const turn=Math.abs(error)<.085?0:Math.sign(error);
-    const tolerance=rankAI?.11+talent*.14:state.difficulty==='rookie'?.13:state.difficulty==='ace'?.22:.18;
+    const baseTolerance=rankAI?.11+talent*.14:state.difficulty==='rookie'?.13:state.difficulty==='ace'?.22:.18;
+    const tolerance=rankAI&&style==='sniper'?baseTolerance*.67:rankAI&&style==='brawler'?baseTolerance*1.12:baseTolerance;
     if(p.aiMode==='attack'&&range<(rankAI?115+talent*65:165)&&Math.abs(error)<tolerance&&
       target.spawnSafe<=0&&target.rollTime<=0&&p.gunCooldown<=0&&p.burstLeft===0&&
       (p.role!=='bomber'||range<72&&Math.random()<.16))triggerBurst(p);
@@ -625,11 +648,20 @@ function plane(type,id,x,y,angle){
     }
     // Veteran enemies deliberately use their own pilot skill; rookies
     // largely rely on elementary manoeuvres and are slower to react.
-    if(rankAI&&p.skillCooldown<=0&&talent>.22){
-      if((p.aiMode==='evade'||p.aiMode==='break')&&range<100&&
-         ['roll','reverse','smoke','harden','cut','dive'].includes(p.pilotSkill))
+    if(rankAI&&p.skillCooldown<=0&&talent>.19){
+      const threatened=(p.aiMode==='evade'||p.aiMode==='break'||enemyBehind)&&range<(75+talent*45);
+      const offensive=(p.aiMode==='attack'||p.aiMode==='intercept')&&range<(90+talent*30);
+      if(threatened&&['roll','reverse','smoke','harden','cut','dive'].includes(p.pilotSkill))
         triggerPilotSkill(p);
-      else if(p.aiMode==='attack'&&range<90&&facing<.25&&p.pilotSkill==='deadeye')
+      else if(offensive&&p.pilotSkill==='deadeye'&&facing<.35)
+        triggerPilotSkill(p);
+      else if(p.aiStyle==='interceptor'&&p.pilotSkill==='dive'&&
+          p.aiMode==='intercept'&&p.y<target.y-25&&range<165)
+        triggerPilotSkill(p);
+      else if(p.aiStyle==='guardian'&&p.pilotSkill==='harden'&&
+          (p.armour<p.d.armour*.6||p.health<p.d.hull*.75))
+        triggerPilotSkill(p);
+      else if(p.aiStyle==='trickster'&&p.pilotSkill==='smoke'&&enemyBehind&&range<155)
         triggerPilotSkill(p);
     }
     return turn;
