@@ -410,7 +410,26 @@ function plane(type,id,x,y,angle){
     state.banner='THE LEGEND ARRIVES — '+(boss.aiName?.match(/"([^"]+)"/)?.[1]||'FINAL ACE').toUpperCase();
     state.bannerTime=4;sound('boss');
   }
-  function nearestEnemy(p){return opponents(p).sort((a,b)=>combatDistance(p,a)-combatDistance(p,b))[0];}
+  function nearestEnemy(p){
+    const targets=opponents(p);
+    if(!state.teams||targets.length<2)return targets.sort((a,b)=>combatDistance(p,a)-combatDistance(p,b))[0];
+    if(state.recordMode==='teams'){
+      // 2v2 wingmen know friend from foe and cover different targets.
+      // Neither enemy is hard-locked: after a casualty the surviving target
+      // remains a legitimate opponent and the whole battle is still playable.
+      const ally=state.fliers.find(q=>q.team===p.team&&q.id!==p.id&&q.alive);
+      const human=state.fliers[0],ourWing=state.fliers[2];
+      if(p.team===1){
+        const assigned=(p.id===1?human:ourWing);
+        if(assigned?.alive&&targets.includes(assigned))return assigned;
+      }
+      if(p.team===0&&ally){
+        const threat=targets.slice().sort((a,b)=>combatDistance(a,ally)-combatDistance(b,ally))[0];
+        if(threat&&combatDistance(threat,ally)<105)return threat;
+      }
+    }
+    return targets.sort((a,b)=>combatDistance(p,a)-combatDistance(p,b))[0];
+  }
   function triggerSpecial(p){
     if(!p||!p.alive||p.specialCooldown>0||state.phase!=='playing'||state.paused)return;
     if(p.role==='fighter'){
@@ -1318,7 +1337,10 @@ function plane(type,id,x,y,angle){
     // Score painted as unobtrusive typographic overlay.
     const score=state.mode==='campaign'&&state.campaignEncounter?.finalBoss?
       'FINAL • '+(state.bossReinforcementLaunched?'1 v 3':'ESCORTS'):
-      state.mode==='survival'?'WAVE '+state.round:
+      state.recordMode==='survival'?'WAVE '+state.round:
+      state.recordMode==='challenge'?CHALLENGES[state.challenge].name:
+      state.recordMode==='teams'?'SQUADRON '+state.fliers.filter(q=>q.alive&&q.team===0).length+' v '+state.fliers.filter(q=>q.alive&&q.team===1).length:
+      state.recordMode==='triple'?'FREE FOR ALL':
       state.mode==='campaign'&&state.participants===3?'1 v 2':
       state.participants>2?(state.teams?'2 v 2':state.participants+' ACES'):
       state.scores[0]+' : '+state.scores[1];
@@ -1328,6 +1350,13 @@ function plane(type,id,x,y,angle){
     g.fillText(score,cx,17,Math.max(52,W*.20));
     g.fillStyle='#d4c4a6';g.font='bold 5.8px monospace';
     g.fillText(Math.max(0,Math.ceil(state.time))+'s  /  '+(ARENAS[state.arena]||'ALPINE'),cx,27);
+    if(state.recordMode==='survival'){
+      g.fillStyle='#dbe7a4';g.font='bold 6px monospace';
+      g.fillText('CLEARED '+(state.session?.roundsWon||0)+'  ·  DAMAGE CARRIES',cx,35);
+    }else if(state.recordMode==='teams'&&!state.fliers[0]?.alive&&state.fliers[2]?.alive){
+      g.fillStyle='#e9c89e';g.font='bold 6px monospace';
+      g.fillText('WINGMAN STILL FIGHTING',cx,35);
+    }
     if(bossWaiting()){
       const remain=Math.ceil(state.bossCountdown||0);
       g.fillStyle='#f4c793';g.font='bold 6.6px monospace';
