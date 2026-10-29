@@ -19,6 +19,7 @@ async function launchChoice(page,lane=0,type){
  await page.locator('#active-rung [data-choice="'+lane+'"]').click();
  await expect(page.locator('[data-sortie-plane]')).toHaveCount(3);
  await page.locator('[data-sortie-plane="'+(type||(before.profile.faction==='Axis'?'bf109':'fighter'))+'"]').click();
+ await page.locator('[data-action="confirm-sortie-aircraft"]').click();
  await expect(page.locator('#menu-return')).toBeVisible();
  return before;
 }
