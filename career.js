@@ -458,9 +458,11 @@ function ladder(run){
    // Identity remains stable wherever this pilot reappears in the tree.
    if(fixed)appearance.rosterPortrait=fixed.portrait;
    else appearance.portraitIndex=((Number(p.id.replace('pilot-',''))||0)*7)%5;
-   return '<button class="route-node route-opponent" data-choice="'+lane+'" aria-label="Challenge '+escape(p.name)+'"><span class="route-photo">'+pilotPortrait(p.faction,{...appearance,rosterPortrait:ROSTER.find(x=>x.id===p.rosterId)?.portrait??Number(p.id.replace('pilot-',''))})+'</span><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+'</small><small class="rival-tactics">'+escape(window.WingmanPilotAI?.describe(p,rank)||p.archetype||'ACE')+'</small><small class="rival-rank-stats">TURN '+(op.attributes?.manoeuvrability??65)+' · GUNS '+(op.attributes?.gunnery??65)+' · ENGINE '+(op.attributes?.engine??65)+'</small>'+(op.wingman?'<small class="rival-wingman">⚔ 1v2 WITH '+escape(op.wingman.name)+'</small>':'')+(record?'<em>'+record.wins+'–'+record.losses+' RIVALRY</em>':'')+'<span class="route-cta">CHALLENGE →</span></button>';
+   return '<button class="route-node route-opponent" data-choice="'+lane+'" aria-label="Challenge '+escape(p.name)+'"><span class="route-photo">'+pilotPortrait(p.faction,{...appearance,rosterPortrait:ROSTER.find(x=>x.id===p.rosterId)?.portrait??Number(p.id.replace('pilot-',''))})+'</span><strong>'+escape(p.name)+'</strong><small>'+escape(op.types.map(t=>aircraft[t]).join(' + '))+'</small><small class="rival-tactics">'+escape(window.WingmanPilotAI?.describe(p,rank)||p.archetype||'ACE')+'</small><small class="rival-rank-stats">TURN '+(op.attributes?.manoeuvrability??65)+' · GUNS '+(op.attributes?.gunnery??65)+' · ENGINE '+(op.attributes?.engine??65)+'</small>'+(op.wingman?'<small class="rival-wingman">⚔ 1v2 WITH '+escape(op.wingman.name)+'</small>':'')+
+ (op.finalBoss?'<small class="rival-final">♛ FINAL 1v3 • ACE + '+escape(op.wingmen.map(w=>w.name.match(/"([^"]+)"/)?.[1]||w.name).join(' & '))+'</small>':'')+
+ '<small class="rival-mission">'+escape(op.mission||'DOGFIGHT')+'</small>'+(record?'<em>'+record.wins+'–'+record.losses+' RIVALRY</em>':'')+'<span class="route-cta">CHALLENGE →</span></button>';
   }).join('');
-  rows.push('<section class="route-tier '+status+'" '+(current?'id="active-rung"':'')+'><div class="route-rank">'+(rank===MAX_RANK?'★ FINAL ACE':'RANK '+rank)+(current?' • CHOOSE A BRANCH':'')+'</div><div class="route-fork" aria-hidden="true"><span></span><span></span><span></span></div><div class="route-three">'+options+'</div><div class="route-join" aria-hidden="true"><span></span><span></span><span></span></div></section>');
+  rows.push('<section class="route-tier '+status+'" '+(current?'id="active-rung"':'')+'><div class="route-rank">'+(rank===MAX_RANK?'♛ FINAL SQUADRON · 1v3':'RANK '+rank)+(current?' • CHOOSE A BRANCH':'')+'</div><div class="route-fork" aria-hidden="true"><span></span><span></span><span></span></div><div class="route-three">'+options+'</div><div class="route-join" aria-hidden="true"><span></span><span></span><span></span></div></section>');
  }
  return '<div class="ladder-scroll campaign-tree career-route-map" role="region" aria-label="Eight rank branching career map with three routes per rank" tabindex="0"><div class="tree-spine route-spine">'+rows.join('')+'</div></div>';
 }
@@ -496,20 +498,21 @@ function render(){
    <p>ACTIVE SKILL <b>${escape(PILOT_SKILLS.find(x=>x[0]===(p.skill||'roll'))?.[1]||'BARREL ROLL')}</b></p><p>MANOEUVRABILITY <b>${p.attributes?.manoeuvrability??65}</b></p><p>GUNNERY <b>${p.attributes?.gunnery??65}</b></p><p>ENGINE HANDLING <b>${p.attributes?.engine??65}</b></p><p>CONFIRMED KILLS <b>${data.kills}</b></p><p>VICTORIES <b>${wins}</b></p><p>DEFEATS <b>${losses}</b></p>
    <p>WIN / LOSS <b>${ratio}</b></p><p>HIGHEST RANK <b>${Math.min(MAX_RANK,data.best||1)}</b></p>
    <p>NEMESIS <b>${nemesis?escape(byId[nemesis[0]]?.name||'Unknown'):'None yet'}</b></p>
-   <p>ACE RUNS COMPLETED <b>${data.completed}</b></p></div></div>
+   <p>ACE RUNS COMPLETED <b>${data.completed}</b></p><p>SERVICE RANK <b>${rankTitle(data.best||1)}</b></p><p>LONGEST STREAK <b>${data.bestStreak||0}</b></p></div></div>
+   ${medalMarkup()}${serviceMarkup()}
    <button class="career-primary" data-action="ladder">ROAD TO ACE</button><button data-action="character">CHOOSE CHARACTER & NAME</button><button data-action="select">START A NEW PILOT</button>`);
   return;
  }
  if(!run){
   if(airframeOffers.length!==3)prepareAirframes();
   panel('ROAD TO ACE',`<p>${escape(p.name)} · ${p.faction}. Choose one aircraft for your entire run. Three lives; a defeat costs a life and drops you one rank.</p>
-  <p class="career-muted">Win eight ranks of tactical dogfights to challenge the summit. Opponents are named, and past defeats build grudges.</p>
+  <p class="career-muted">Win eight ranks against recurring rival pilots. Earn decorations, survive with three lives and defeat the final ace with two escorts.</p>
   <div class="career-planes">${airframeOffers.map(a=>`<button class="airframe-card" data-aircraft="${a.type}"><strong>${aircraft[a.type]}</strong><small>SPEED ${a.stats.speed}</small><small>TURN ${a.stats.turn}</small><small>HULL ${a.stats.hull}</small><small>ARMOUR ${a.stats.armour}</small><span>LOCK IN AIRCRAFT</span></button>`).join('')}</div>
   <button data-action="licence">VIEW PILOT LICENCE</button>`);
   return;
  }
  panel('ROAD TO ACE',`<div class="career-stats"><span>${escape(p.name)} · ${aircraft[run.aircraft]}</span><span>RANK ${run.rank}/${MAX_RANK}</span><span>${'♥'.repeat(run.lives)}${'♡'.repeat(3-run.lives)}</span></div>
- <p class="career-muted">Choose one of three rival branches to ascend. Cleared ranks remain below; future ranks are locked above.</p>
+ <p class="career-muted">Choose one of three tactical routes. On rank eight, every route faces the final ace and two named escorts — defeat all three.</p>
  ${ladder(run)}<div class="career-bottom-actions"><button data-action="licence">VIEW PILOT LICENCE</button><button data-action="character">CHOOSE CHARACTER</button></div>`);
  const marker=screen.querySelector('#active-rung'),list=screen.querySelector('.ladder-scroll');
   // Only centre the active rank inside the ladder itself. scrollIntoView()
