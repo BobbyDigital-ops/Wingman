@@ -17,11 +17,11 @@
   const SPITFIRE_BOOST_GAIN=1.25;
   const PLANES={
     fighter:{name:'SUPERMARINE SPITFIRE',speed:82,turn:3.15,hull:130,armour:40,radius:5.5,burst:10,interval:.055,cooldown:1.5,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'REVERSE'},
-    heavy:{name:'BRISTOL BEAUFIGHTER',speed:75,turn:1.85,hull:160,armour:78,radius:8,burst:5,interval:.19,cooldown:2.45,damage:16,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
-    bomber:{name:'AVRO LANCASTER',speed:66,turn:1.3,hull:180,armour:147,radius:9,burst:4,interval:.30,cooldown:2.85,damage:10,bulletSpeed:158,gunLife:1.22,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'},
-    bf109:{name:'MESSERSCHMITT BF 109E · EMIL',class:'fighter',nation:'Germany',speed:87,turn:2.94,hull:125,armour:42,radius:5.5,burst:9,interval:.067,cooldown:1.48,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#afb89d',shade:'#647a74',accent:'#ecd06c',special:'REVERSE'},
-    bf110:{name:'MESSERSCHMITT BF 110 · ZERSTÖRER',class:'heavy',nation:'Germany',speed:78,turn:1.70,hull:160,armour:75,radius:8,burst:6,interval:.18,cooldown:2.62,damage:17,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
-    he111:{name:'HEINKEL HE 111',class:'bomber',nation:'Germany',speed:69,turn:1.35,hull:175,armour:135,radius:8.5,burst:4,interval:.32,cooldown:2.82,damage:10,bulletSpeed:162,gunLife:1.22,specialCd:10,color:'#a5ae9d',shade:'#576b61',accent:'#b4baca',special:'CLIMB'}
+    heavy:{name:'BRISTOL BEAUFIGHTER',speed:75,turn:1.98,hull:160,armour:78,radius:8,burst:7,interval:.17,cooldown:2.20,damage:16,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
+    bomber:{name:'AVRO LANCASTER',speed:66,turn:1.3,hull:180,armour:124,radius:9,burst:4,interval:.30,cooldown:2.85,damage:10,bulletSpeed:158,gunLife:1.22,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'},
+    bf109:{name:'MESSERSCHMITT BF 109E · EMIL',class:'fighter',nation:'Germany',speed:87,turn:3.02,hull:125,armour:42,radius:5.5,burst:10,interval:.064,cooldown:1.40,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#afb89d',shade:'#647a74',accent:'#ecd06c',special:'REVERSE'},
+    bf110:{name:'MESSERSCHMITT BF 110 · ZERSTÖRER',class:'heavy',nation:'Germany',speed:78,turn:1.91,hull:160,armour:75,radius:8,burst:8,interval:.17,cooldown:2.27,damage:17,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
+    he111:{name:'HEINKEL HE 111',class:'bomber',nation:'Germany',speed:69,turn:1.35,hull:175,armour:116,radius:8.5,burst:4,interval:.32,cooldown:2.82,damage:10,bulletSpeed:162,gunLife:1.22,specialCd:10,color:'#a5ae9d',shade:'#576b61',accent:'#b4baca',special:'CLIMB'}
   };
   const state={
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
@@ -620,7 +620,7 @@ function plane(type,id,x,y,angle){
       target.spawnSafe<=0&&target.rollTime<=0&&p.gunCooldown<=0&&p.burstLeft===0&&
       (p.role!=='bomber'||range<72&&Math.random()<.16))triggerBurst(p);
     if(p.specialCooldown<=0){
-      if(p.role==='heavy'&&range<100&&(p.health<p.d.hull*.7||target.burstLeft>0))triggerSpecial(p);
+      if(p.role==='heavy'&&range<100&&(p.armour<p.d.armour*.75||target.burstLeft>0||target.rearShots>0))triggerSpecial(p);
       if(p.role==='fighter'&&(p.aiMode==='intercept'||p.aiMode==='extend')&&range>75)triggerSpecial(p);
     }
     // Veteran enemies deliberately use their own pilot skill; rookies
@@ -659,11 +659,11 @@ function plane(type,id,x,y,angle){
         const along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle);
         const lateral=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
         const range=Math.hypot(dx,dy);
-        return along< -11&&range<155&&lateral<Math.min(65,range*.70);
+        return along< -11&&range<135&&lateral<Math.min(55,range*.62);
       }).sort((a,b)=>combatDistance(p,a)-combatDistance(p,b));
       if(threats.length){
-        p.rearShots=7;p.rearShotTime=0;p.rearTarget=threats[0].id;
-        p.rearCooldown=1.85;
+        p.rearShots=4;p.rearShotTime=0;p.rearTarget=threats[0].id;
+        p.rearCooldown=2.70;
       }
     }
     if(p.role==='bomber'&&p.rearShots>0){
@@ -675,9 +675,9 @@ function plane(type,id,x,y,angle){
           const range=Math.hypot(dx,dy);
           const along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle);
           const lateral=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
-          if(along< -9&&range<165&&lateral<Math.min(70,range*.76)){
+          if(along< -9&&range<145&&lateral<Math.min(60,range*.67)){
             // Lead the target using relative airspeed and preserve real bullet
-            // collisions. Seven 6-damage rounds offer a deterrent without fighter-level punishment,
+            // collisions. Four 4.5-damage rounds still deter a pursuer without dominating dogfights,
             // but never match the fighter's 10 x 11 primary gun damage.
             const speed=221;
             const lead=clamp(range/speed,.05,.78);
@@ -686,12 +686,12 @@ function plane(type,id,x,y,angle){
             const aim=Math.atan2(
               target.y-muzzleY+(target.vy-p.vy*.32)*lead,
               wrappedDelta(muzzleX,target.x)+(target.vx-p.vx*.32)*lead
-            )+random(-.035,.035);
+            )+random(-.095,.095);
             state.bullets.push({
               x:muzzleX,y:muzzleY,
               vx:Math.cos(aim)*speed+p.vx*.32,
               vy:Math.sin(aim)*speed+p.vy*.32,
-              owner:p.id,damage:6,life:1.0,age:0,rearGun:true
+              owner:p.id,damage:4.5,life:1.0,age:0,rearGun:true
             });
             p.turretFlash=.12;
           }
