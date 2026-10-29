@@ -108,22 +108,27 @@ const fleet={
  bf110:{name:'ZERSTÖRER',tag:'LUFTWAFFE · MESSERSCHMITT BF 110 · HEAVY FIGHTER · SHIELD',stats:[70,45,77]},
  he111:{name:'HEINKEL',tag:'LUFTWAFFE · HE 111 · MEDIUM BOMBER · DEFENSIVE GUNNERS',stats:[54,32,93]}
 };
-// Keep crisp native-resolution vector aircraft previews until the painted
-// assets are generated as separate full-resolution files, not 86x60 crops.
-function paintPlane(canvas,type,scale){
- if(!canvas||!window.WingmanSprites)return;
+// Dedicated illustrated hangar art is independent of combat scale and sprites.
+// Gracefully retains existing vector previews if a browser lacks the enhancement.
+function paintPlane(canvas,type,large=false){
+ if(!canvas)return;
+ if(window.WingmanHangarArt?.paint){
+  window.WingmanHangarArt.paint(canvas,type,large);
+  return;
+ }
+ if(!window.WingmanSprites)return;
  const g=canvas.getContext('2d');if(!g)return;
  g.clearRect(0,0,canvas.width,canvas.height);
- g.save();g.translate(canvas.width*.5,canvas.height*.52);g.scale(scale,scale);
- g.rotate(-.085);g.shadowColor='#051928';g.shadowBlur=1.3;g.shadowOffsetY=1.2;
- window.WingmanSprites.draw(g,type,'level');
- g.restore();
+ g.save();g.translate(canvas.width*.5,canvas.height*.52);
+ g.scale(large?Math.min(canvas.width/58,canvas.height/16):Math.min(canvas.width/53,canvas.height/18),
+   large?Math.min(canvas.width/58,canvas.height/16):Math.min(canvas.width/53,canvas.height/18));
+ window.WingmanSprites.draw(g,type,'level');g.restore();
 }
 function renderFleet(){
- document.querySelectorAll('canvas[data-aircraft-art]').forEach(c=>paintPlane(c,c.dataset.aircraftArt,10.3));
+ document.querySelectorAll('canvas[data-aircraft-art]').forEach(c=>paintPlane(c,c.dataset.aircraftArt,false));
  const current=document.querySelector('.plane-choice.selected')?.dataset.plane||'fighter';
  const info=fleet[current]||fleet.fighter;
- paintPlane($('wm-featured-plane'),current,21.5);
+ paintPlane($('wm-featured-plane'),current,true);
  if($('wm-featured-name'))$('wm-featured-name').textContent=info.name;
  if($('wm-featured-description'))$('wm-featured-description').textContent=info.tag;
  for(const [i,id] of ['wm-stat-speed','wm-stat-turn','wm-stat-armour'].entries()){
