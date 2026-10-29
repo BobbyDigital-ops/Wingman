@@ -246,29 +246,49 @@ function pilotPortrait(faction,look=0){
  </svg>`;
 }
 function makeChoices(run){
- const enemyFaction=run.faction==='Allies'?'Axis':'Allies',pool=CATALOG.filter(p=>p.faction===enemyFaction);
- // Stable selection for each visit to a rank; favour recurring rivals when possible.
- const seen=Object.keys(data.records||{}).filter(id=>byId[id]&&byId[id].faction===enemyFaction);
- const rng=(run.seed+run.rank*37+run.visits*19)>>>0;
- const shuffled=pool.map((p,i)=>({p,sort:((i*53+rng*17+i*i*11)%113)})).sort((a,b)=>a.sort-b.sort).map(o=>o.p);
+ const enemyFaction=run.faction==='Allies'?'Axis':'Allies';
+ const pool=CATALOG.filter(p=>p.faction===enemyFaction);
+ const seed=(run.seed+run.rank*37+run.visits*19)>>>0;
+ const shuffled=pool.map((p,i)=>({p,sort:((i*53+seed*17+i*i*11)%113)}))
+  .sort((a,b)=>a.sort-b.sort).map(o=>o.p);
+ const nemesis=pool.map(p=>({p,r:data?.records?.[p.id]}))
+  .filter(x=>x.r&&(x.r.losses||x.r.wins))
+  .sort((a,b)=>((b.r.losses||0)*3+(b.r.wins||0))-((a.r.losses||0)*3+(a.r.wins||0)))[0]?.p;
  const picked=[];
- if(seen.length&&run.visits%2===1){const rival=byId[seen[(run.seed+run.rank)%seen.length]];if(rival)picked.push(rival);}
+ if(nemesis&&run.rank>=4)picked.push(nemesis);
  for(const p of shuffled)if(picked.length<3&&!picked.some(q=>q.id===p.id))picked.push(p);
- return picked.map((p,i)=>{
-  const duo=run.rank>=3&&run.rank<MAX_RANK&&i===2&&run.rank%2===1;
-  const partnerPool=shuffled.filter(q=>q.id!==p.id&&q.plane!==p.plane);
-  const wing=duo?(partnerPool[(run.seed+run.rank+i)%partnerPool.length]||shuffled.find(q=>q.id!==p.id)):null;
-  const lead=window.WingmanPilotAI?.level(p,run.rank);
-  const support=wing?window.WingmanPilotAI?.level(wing,run.rank):null;
-  return {id:p.id,rank:run.rank,
-   types:wing?[p.plane,wing.plane]:[p.plane],
+ const fixed=window.WingmanPilotAI;
+ const profile=p=>{
+  const scaled=fixed?.level(p,run.rank);
+  return {id:p.id,name:p.name,plane:p.plane,
+   attributes:scaled?.attributes||p.attributes,
+   signature:scaled?.signature||p.signature||'roll',
+   archetype:p.archetype||'Balanced',personality:scaled?.tactic||'duellist'};
+ };
+ const chooseEscorts=(boss,lane)=>{
+  const options=shuffled.filter(p=>p.id!==boss.id);
+  const first=options[(seed+lane*3)%options.length];
+  const second=options.filter(p=>p.id!==first.id&&p.plane!==first.plane)[(seed+lane*7)%options.filter(p=>p.id!==first.id&&p.plane!==first.plane).length]||options.find(p=>p.id!==first.id);
+  return [first,second];
+ };
+ return [0,1,2].map(i=>{
+  // Rank eight is always a three-plane finale: two escorts launch first,
+  // then the SAME named final ace enters, whatever approach the player picks.
+  const final=run.rank===MAX_RANK;
+  const p=final?(nemesis||shuffled[(run.seed+13)%shuffled.length]):picked[i];
+  const duo=!final&&run.rank>=3&&i===2&&run.rank%2===1;
+  const lead=profile(p);
+  const wing=duo?shuffled.find(q=>q.id!==p.id&&q.plane!==p.plane):null;
+  const w=wing?profile(wing):null;
+  const escorts=final?chooseEscorts(p,i).map(profile):[];
+  const opponents=final?[...escorts,lead]:w?[lead,w]:[lead];
+  const mission=final?'FINAL SHOWDOWN':duo?'DOUBLE ACE':i===0?'INTERCEPTION':i===1?'HIGH-ALTITUDE DUEL':'HUNTER PATROL';
+  return {id:p.id,rank:run.rank,types:opponents.map(q=>q.plane),
    difficulty:run.rank<2?'rookie':run.rank<5?'standard':'ace',
-   arena:(run.rank+i)%4,attributes:lead?.attributes||p.attributes,
-   signature:lead?.signature||p.signature||ROSTER.find(x=>x.id===p.rosterId)?.signature,
-   archetype:p.archetype||'Balanced',personality:lead?.tactic||'duellist',
-   wingman:wing?{id:wing.id,name:wing.name,plane:wing.plane,
-    attributes:support?.attributes||wing.attributes,signature:support?.signature||wing.signature,
-    archetype:wing.archetype||'Balanced',personality:support?.tactic||'duellist'}:null,
+   arena:(run.rank+i)%4,attributes:lead.attributes,signature:lead.signature,
+   archetype:lead.archetype,personality:lead.personality,
+   wingman:w,wingmen:escorts,
+   opponents,finalBoss:final,bossId:final?p.id:null,mission,
    label:p.name};
  });
 }
