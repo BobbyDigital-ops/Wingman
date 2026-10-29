@@ -27,7 +27,7 @@
     phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
     scores:[0,0],round:1,time:90,intermission:0,banner:'',bannerTime:0,paused:false,
     impactLock:0,trails:[],blasts:[],visualClock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2,teams:false,difficulty:'standard',
-    wind:{active:false,base:0,current:0,elapsed:0},recordMode:'duel',challenge:'intercept',session:null,survivalCarry:null
+    wind:{active:false,base:0,current:0,elapsed:0},recordMode:'duel',challenge:'intercept',session:null,survivalCarry:null,supportCharge:0,supportTime:0,supportUses:0
   };
   const controls={left:false,right:false,boost:false};
   const ui={
@@ -187,6 +187,9 @@ function plane(type,id,x,y,angle){
   }
   function newRound(){
     syncAbilityButton();
+    if(state.mode==='campaign'){state.supportCharge=0;state.supportTime=0;state.supportUses=0;}
+    const help=document.getElementById('call-support');
+    if(help)help.hidden=state.mode!=='campaign';
     state.fliers=[
       plane(state.selected,0,W*.22,H*.45,-.14),
       plane(state.enemyType,1,W*.78,H*.52,Math.PI+.15)
@@ -404,7 +407,48 @@ function plane(type,id,x,y,angle){
     if(!p||!p.alive||p.gunCooldown>0||p.burstLeft>0||p.rollTime>0||state.phase!=='playing'||state.paused)return;
     p.burstLeft=p.d.burst;p.shotTimer=0;
   }
-  function opponents(p){return state.fliers.filter(other=>other.alive&&other.id!==p.id&&(!state.teams||other.team!==p.team));}
+  function opponents(p){return state.fliers.filter(other=>other.alive&&other.id!==p.id&&(!(state.teams||state.mode==='campaign')||other.team!==p.team));}
+  function callSupport(){
+    if(state.mode!=='campaign'||state.phase!=='playing'||state.paused||
+      !state.fliers[0]?.alive||state.supportCharge<100||state.supportTime>0)return false;
+    const allied=['bf109','bf110','he111'].includes(state.selected)?
+      ['bf109','bf110','he111']:['fighter','heavy','bomber'];
+    const count=state.campaignEncounter?.rank>=5?2:1,hero=state.fliers[0];
+    state.supportCharge=0;state.supportTime=11;state.supportUses++;
+    for(let i=0;i<count;i++){
+      const type=allied[(allied.indexOf(state.selected)+i+1)%allied.length];
+      const p=plane(type,10+i,clamp(hero.x-(i+1)*29,20,W-20),
+        clamp(hero.y+(i===0?-22:24),25,H-22),hero.angle);
+      p.team=0;p.support=true;p.supportTime=11;p.spawnSafe=.8;
+      p.aiSkillLevel=.42;p.aiName=i===0?'WINGMAN ONE':'WINGMAN TWO';
+      state.fliers.push(p);
+    }
+    state.banner='ON MY SIX! — '+count+' WINGMAN'+(count===1?'':'S')+' INBOUND';
+    state.bannerTime=2.6;sound('special');return true;
+  }
+  function updateSupport(dt){
+    if(state.mode!=='campaign')return;
+    if(state.supportTime>0){
+      state.supportTime=Math.max(0,state.supportTime-dt);
+      for(const p of state.fliers.filter(x=>x.support)){
+        p.supportTime=state.supportTime;
+        if(!state.supportTime){p.alive=false;p.departed=true;}
+      }
+      if(!state.supportTime)state.fliers=state.fliers.filter(x=>!x.support);
+    }
+    const btn=document.getElementById('call-support');
+    if(btn){
+      btn.hidden=false;
+      btn.style?.setProperty?.('--support-charge',state.supportCharge+'%');
+      btn.textContent=state.supportTime>0?'SUPPORT '+Math.ceil(state.supportTime)+'s':
+        state.supportCharge>=100?'ON MY SIX! · READY':
+        'ON MY SIX! · '+Math.floor(state.supportCharge)+'%';
+      btn.setAttribute('aria-label',state.supportTime>0?'Wingmen active for '+Math.ceil(state.supportTime)+' seconds':
+        state.supportCharge>=100?'Call in wingman support, ready':
+        'Wingman support charge '+Math.floor(state.supportCharge)+' percent');
+      btn.disabled=state.supportTime>0||state.supportCharge<100;
+    }
+  }
   function bossWaiting(){return state.mode==='campaign'&&!!state.campaignEncounter?.finalBoss&&state.fliers.some(p=>p.queued);}
   function summonFinalAce(dt){
     if(!bossWaiting())return;
@@ -485,6 +529,8 @@ function plane(type,id,x,y,angle){
   }
   function hit(p,amount,x,y,zoneOverride,cause='GUN',owner=null){
     if(!p.alive||p.spawnSafe>0)return;
+    if(state.mode==='campaign'&&owner===0&&p.team===1&&state.phase==='playing')
+      state.supportCharge=Math.min(100,state.supportCharge+Math.min(amount,p.health+p.armour)*.42);
     let remaining=amount*(p.armourTime>0?.45:1)*(p.hardenTime>0?.6:1);
     const incoming=Math.min(remaining,Math.max(0,p.armour)+Math.max(0,p.health));
     if(p.id===0&&state.session)state.session.damageTaken+=incoming;
@@ -948,7 +994,7 @@ function plane(type,id,x,y,angle){
   function explosion(x,y,r,owner,damage,cause='BOMB'){
     emit(x,y,22,'#ffc47b',52);emit(x,y,9,'#6b707b',30);sound('boom');
     for(const p of state.fliers){
-      if(!p.alive||p.id===owner||(state.teams&&state.fliers[owner]?.team===p.team))continue;
+      if(!p.alive||p.id===owner||((state.teams||state.mode==='campaign')&&state.fliers[owner]?.team===p.team))continue;
       const d=Math.hypot(x-p.x,y-p.y);
       // Explosions must not masquerade as ramming damage when airframes touch.
       const source=state.fliers[owner];
@@ -961,7 +1007,7 @@ function plane(type,id,x,y,angle){
       const b=state.bullets[i],px=b.x,py=b.y;
       b.x+=(b.vx+state.wind.current*.18)*dt;b.y+=b.vy*dt;b.life-=dt;b.age=(b.age||0)+dt;
       const shooter=state.fliers[b.owner];
-      const targets=state.fliers.filter(p=>p.id!==b.owner&&p.alive&&(!state.teams||p.team!==shooter?.team));
+      const targets=state.fliers.filter(p=>p.id!==b.owner&&p.alive&&(!(state.teams||state.mode==='campaign')||p.team!==shooter?.team));
       // Neither a gun muzzle nor a bomber can inflict disguised impact damage
       // by touching another airframe: rounds must leave the collision envelope.
       let struck=false;
@@ -1028,6 +1074,7 @@ function plane(type,id,x,y,angle){
     state.bannerTime=Math.max(0,state.bannerTime-dt);
     if(state.phase==='playing'){
       updateWind(dt);
+      updateSupport(dt);
       state.time-=dt;
       if(state.session)state.session.seconds+=dt;
       summonFinalAce(dt);
@@ -1611,8 +1658,9 @@ function plane(type,id,x,y,angle){
   bindButton('fire',null,()=>triggerBurst(state.fliers[0]));
   bindButton('special',null,()=>triggerSpecial(state.fliers[0]));
   bindButton('roll',null,()=>triggerPilotSkill(state.fliers[0]));
+  bindButton('call-support',null,()=>callSupport());
   // A dedicated SKILL control replaces the ambiguous double-tap turn gesture.
-  const preventKeys=new Set(['ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyA','KeyD','KeyW','ArrowUp','KeyE','KeyK','KeyL','KeyQ','KeyB']);
+  const preventKeys=new Set(['ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyA','KeyD','KeyW','ArrowUp','KeyE','KeyK','KeyL','KeyQ','KeyB','KeyR']);
   document.addEventListener('keydown',e=>{
     if(preventKeys.has(e.code))e.preventDefault();
     if(e.code==='KeyA'||e.code==='ArrowLeft')controls.left=true;
@@ -1622,6 +1670,7 @@ function plane(type,id,x,y,angle){
     if(e.code==='Space'){audioUnlock();triggerBurst(state.fliers[0]);}
     if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyK'||e.code==='KeyE'){audioUnlock();triggerSpecial(state.fliers[0]);}
     if(e.code==='KeyL'||e.code==='KeyQ'){audioUnlock();triggerPilotSkill(state.fliers[0]);}
+    if(e.code==='KeyR'){audioUnlock();callSupport();}
     
     if(e.code==='KeyP'&&state.phase==='playing')state.paused=!state.paused;
     if(e.code==='Escape'&&state.phase!=='menu'){e.preventDefault();showMenu();}
