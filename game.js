@@ -408,26 +408,34 @@ function plane(type,id,x,y,angle){
     p.burstLeft=p.d.burst;p.shotTimer=0;
   }
   function opponents(p){return state.fliers.filter(other=>other.alive&&other.id!==p.id&&(!(state.teams||state.mode==='campaign')||other.team!==p.team));}
+  // Career-only tactical reserve. Call one wingman early (45 charge) or
+  // save for two (100 charge). Either deployment lasts 30 seconds.
+  // Exactly one call per sortie; charging happens with flying time and
+  // successful hits. The player makes a meaningful timing decision.
+  const SUPPORT_ONE=45,SUPPORT_TWO=100,SUPPORT_DURATION=30;
   function callSupport(){
     if(state.mode!=='campaign'||state.phase!=='playing'||state.paused||
-      !state.fliers[0]?.alive||state.supportCharge<100||state.supportTime>0)return false;
+      !state.fliers[0]?.alive||state.supportCharge<SUPPORT_ONE||
+      state.supportTime>0||state.supportUses>=1)return false;
     const allied=['bf109','bf110','he111'].includes(state.selected)?
       ['bf109','bf110','he111']:['fighter','heavy','bomber'];
-    const count=state.campaignEncounter?.rank>=5?2:1,hero=state.fliers[0];
-    state.supportCharge=0;state.supportTime=11;state.supportUses++;
+    const count=state.supportCharge>=SUPPORT_TWO?2:1,hero=state.fliers[0];
+    state.supportCharge=0;state.supportTime=SUPPORT_DURATION;state.supportUses++;
     for(let i=0;i<count;i++){
       const type=allied[(allied.indexOf(state.selected)+i+1)%allied.length];
-      const p=plane(type,state.fliers.length,clamp(hero.x-(i+1)*29,20,W-20),
+      const p=plane(type,100+state.supportUses*2+i,clamp(hero.x-(i+1)*29,20,W-20),
         clamp(hero.y+(i===0?-22:24),25,H-22),hero.angle);
-      p.team=0;p.support=true;p.supportTime=11;p.spawnSafe=.8;
+      p.team=0;p.support=true;p.supportTime=SUPPORT_DURATION;p.spawnSafe=.8;
       p.aiSkillLevel=.42;p.aiName=i===0?'WINGMAN ONE':'WINGMAN TWO';
       state.fliers.push(p);
     }
-    state.banner='ON MY SIX! — '+count+' WINGMAN'+(count===1?'':'S')+' INBOUND';
+    state.banner='ON MY SIX! — '+count+' WINGMAN'+(count===1?'':'S')+' · 30s';
     state.bannerTime=2.6;sound('special');return true;
   }
   function updateSupport(dt){
     if(state.mode!=='campaign')return;
+    if(state.phase==='playing'&&state.supportUses===0)
+      state.supportCharge=Math.min(SUPPORT_TWO,state.supportCharge+dt*1.65);
     if(state.supportTime>0){
       state.supportTime=Math.max(0,state.supportTime-dt);
       for(const p of state.fliers.filter(x=>x.support)){
@@ -440,16 +448,20 @@ function plane(type,id,x,y,angle){
     if(btn){
       btn.hidden=false;
       btn.style?.setProperty?.('--support-charge',state.supportCharge+'%');
-      btn.textContent=state.supportTime>0?'SUPPORT '+Math.ceil(state.supportTime)+'s':
-        state.supportCharge>=100?'ON MY SIX! · READY':
-        'ON MY SIX! · '+Math.floor(state.supportCharge)+'%';
-      btn.setAttribute('aria-label',state.supportTime>0?'Wingmen active for '+Math.ceil(state.supportTime)+' seconds':
-        state.supportCharge>=100?'Call in wingman support, ready':
-        'Wingman support charge '+Math.floor(state.supportCharge)+' percent');
-      btn.disabled=state.supportTime>0||state.supportCharge<100;
+      const one=state.supportCharge>=SUPPORT_ONE;
+      btn.textContent=state.supportTime>0?'WINGMEN '+Math.ceil(state.supportTime)+'s':
+        state.supportUses>0?'SUPPORT USED':
+        state.supportCharge>=SUPPORT_TWO?'CALL 2 WINGMEN · 30s':
+        one?'CALL 1 · '+Math.floor(state.supportCharge)+'% / HOLD FOR 2':
+        'WINGMEN '+Math.floor(state.supportCharge)+'% / 45%';
+      btn.setAttribute('aria-label',state.supportTime>0?'Support planes active for '+Math.ceil(state.supportTime)+' seconds':
+        state.supportUses>0?'Support already deployed this sortie':
+        one?(state.supportCharge>=SUPPORT_TWO?'Call two wingmen for thirty seconds':'Call one wingman for thirty seconds, or wait for two'):
+        'Support charging: '+Math.floor(state.supportCharge)+' percent, one plane at forty-five percent');
+      btn.disabled=state.supportTime>0||state.supportUses>0||!one;
     }
   }
-  function bossWaiting(){return state.mode==='campaign'&&!!state.campaignEncounter?.finalBoss&&state.fliers.some(p=>p.queued);}
+    function bossWaiting(){return state.mode==='campaign'&&!!state.campaignEncounter?.finalBoss&&state.fliers.some(p=>p.queued);}
   function summonFinalAce(dt){
     if(!bossWaiting())return;
     state.bossCountdown=Math.max(0,(state.bossCountdown||0)-dt);
@@ -530,7 +542,7 @@ function plane(type,id,x,y,angle){
   function hit(p,amount,x,y,zoneOverride,cause='GUN',owner=null){
     if(!p.alive||p.spawnSafe>0)return;
     if(state.mode==='campaign'&&owner===0&&p.team===1&&state.phase==='playing')
-      state.supportCharge=Math.min(100,state.supportCharge+Math.min(amount,p.health+p.armour)*.42);
+      state.supportCharge=Math.min(100,state.supportCharge+Math.min(amount,p.health+p.armour)*.24);
     let remaining=amount*(p.armourTime>0?.45:1)*(p.hardenTime>0?.6:1);
     const incoming=Math.min(remaining,Math.max(0,p.armour)+Math.max(0,p.health));
     if(p.id===0&&state.session)state.session.damageTaken+=incoming;
