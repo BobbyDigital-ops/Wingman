@@ -7,7 +7,7 @@
   <meta name="description" content="Wingman — WWII fighter dogfighting, four dramatic battlefields, and tactical aerial combat.">
   <title>Wingman · Pixel Dogfights</title>
   <link rel="stylesheet" href="./styles.css?v=20261028phase8c">
-  <link rel="stylesheet" href="./career.css?v=20261029phase3a">
+  <link rel="stylesheet" href="./career.css?v=20261029phase45a">
   <link rel="stylesheet" href="./src/ui/interface.css?v=20261028wingman2art1">
 </head>
 <body>
@@ -15,7 +15,7 @@
     <header class="site-header">
       <strong>WINGMAN</strong><span>PIXEL DOGFIGHTS · ROAD TO ACE</span>
     </header>
-    <nav class="career-nav"><button id="career-open" type="button">CHOOSE PILOT / ROAD TO ACE</button><button id="career-license" type="button">PILOT LICENCE</button></nav>
+    <nav class="career-nav"><button id="career-open" type="button">CHOOSE PILOT / ROAD TO ACE</button><button id="career-license" type="button">PILOT LICENCE</button><button id="wm-audio-toggle" type="button" aria-label="Mute Wingman sound" aria-pressed="true">♫ SOUND ON</button></nav>
     <main class="game-frame" id="frame"><button id="menu-return" type="button" aria-label="Return to game menu" title="Return to menu" hidden>MENU</button><button id="fullscreen-toggle" type="button" hidden aria-label="Enter full screen" title="Full screen">⛶</button>
       <canvas id="game" width="320" height="180" role="img" aria-label="Side-on aerial duel with fighter aircraft"></canvas>
       <canvas id="aircraft-layer" class="aircraft-layer" width="320" height="180" aria-hidden="true"></canvas>
@@ -114,10 +114,11 @@
   <script src="./assets/art/wingman-roster-32.js?v=20261028art32b" defer></script>
   <script src="./assets/art/wingman-german-painted-atlas.js?v=20261029painted20" defer></script>
   <script src="./src/art/scenery.js?v=20261028phase8bfix1" defer></script>
-  <script src="./game.js?v=20261029phase3b" defer></script>
+  <script src="./src/audio/soundscape.js?v=20261029phase5a" defer></script>
+  <script src="./game.js?v=20261029phase45a" defer></script>
   <script src="./src/data/pilot-roster.js?v=20261029roster40" defer></script>
   <script src="./src/data/pilot-ai.js?v=20261029phase3a" defer></script>
-  <script src="./career.js?v=20261029phase3a" defer></script>
+  <script src="./career.js?v=20261029phase45a" defer></script>
   <script src="./src/ui/flow.js?v=20261028crisp2" defer></script>
 </body>
 </html>
