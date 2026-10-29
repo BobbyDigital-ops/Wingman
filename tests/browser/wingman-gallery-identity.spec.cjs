@@ -87,3 +87,16 @@ test('selection art uses separate illustrated hangar backgrounds and aircraft na
  });
  expect(image[3]).toBe(255);
 });
+
+test('on-screen Spitfire SKILL button activates barrel roll by actual mobile touch',async({page,isMobile})=>{
+ test.skip(!isMobile,'Touch UI test belongs to mobile landscape');
+ await openSetup(page);
+ await page.locator('[data-plane="fighter"]').click();
+ await page.locator('#start').click();
+ const skill=page.locator('#roll');
+ await expect(skill).toBeVisible();
+ await expect(skill).toHaveText('ROLL');
+ await skill.tap();
+ await expect(skill).toHaveText(/ROLL\s+7s/);
+ await expect(skill).toHaveClass(/on-cooldown/);
+});
