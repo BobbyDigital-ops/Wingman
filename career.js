@@ -121,9 +121,9 @@ function germanPilotPortrait(slot){
  const i=p?pilots.filter(x=>x.faction==='Axis').findIndex(x=>x.id===p.id):Math.max(0,slot-20);
  const paintedReady=window.WingmanGermanPortraitsReady===true && !!window.WingmanGermanPortraitAtlas;
  if(i>=0&&i<20&&paintedReady){
-  // Original approved Luftwaffe portraits occupy slots 0–15 unchanged; four supplementary distinct German pilots occupy 16–19. Keep gender matching and never reuse a slot.
-  const portraitOrder=[0,1,2,3,4,6,5,7,8,9,10,11,12,13,14,15,16,17,18,19];
-  const artworkSlot=portraitOrder[i],col=artworkSlot%4,row=Math.floor(artworkSlot/4);
+  // Direct, stable one-to-one mapping. All 20 tiles are distinct.
+  // Female faces are slots 3, 5, 11, 14, 16 and 18, matching roster gender.
+  const artworkSlot=i,col=artworkSlot%4,row=Math.floor(artworkSlot/4);
   return '<svg class="pilot-avatar german-painted" viewBox="0 0 96 112" role="img" aria-label="'+escape(p?.name||'German pilot')+' portrait" overflow="hidden"><image href="'+window.WingmanGermanPortraitAtlas+'" x="'+(-col*96)+'" y="'+(-row*112)+'" width="384" height="560" preserveAspectRatio="none"/></svg>';
  }
  const female=p?.gender==='female';
