@@ -57,3 +57,9 @@ For each of the three personal stats (manoeuvrability, gunnery, engine), the eff
 
 ## Next recommendation
 After playing this build, pay particular attention to a returning rival's recognisable tactics at ranks 1, 4 and 8. If they still feel too similar in normal combat, adjust each archetype using measured behaviour telemetry rather than new weapon stats. The next major development phase remains deeper career progression, recurring nemeses and ace bosses.
+
+## Final implementation validation
+- **68/68 unit checks passed**, including personality profile uniqueness, monotonically increasing attributes, actual `game.js` foe stat assignment, independent 1v2 skill assignments and previous flight/combat tests.
+- **106/106 Playwright browser checks passed** across Chromium desktop and emulated mobile landscape, including the new 8-rank 1v2 branch sweep, returning-rival progression, career save persistence, menu/aircraft controls and portrait loading.
+- The Vercel deployment returned **HTTP 200** for `index.html`, `src/data/pilot-ai.js`, `career.js` and `game.js`. The new personality module and HUD changes were confirmed in the served files.
+- Tests use controlled career win/loss callbacks and emulated mobile browsers, not an eight-rank human playthrough or a physical Android handset.
