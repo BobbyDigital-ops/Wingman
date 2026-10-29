@@ -8,8 +8,8 @@ const arenas=['alpine','coast','desert','storm'],difficulties=['rookie','standar
 function edit(s,find,replacement){assert.equal(s.split(find).length,2,'Missing/nonunique anchor '+find.slice(0,60));return s.replace(find,replacement);}
 function launch(){
  let src=source;
- src=edit(src,'      updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);',
- '      if(state.bench){const foe=nearestEnemy(user);updatePlane(user,dt,foe?aiInput(user,foe):0,user.aiBoost);}else updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);');
+ src=edit(src,'      if(user.alive)updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);',
+ '      if(state.bench){const foe=nearestEnemy(user);updatePlane(user,dt,foe?aiInput(user,foe):0,user.aiBoost);}else if(user.alive)updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);');
  src=edit(src,"    if(p.id!==0||steer!==0||p.swoop||!p.alive)return 0;","    if(p.id!==0||state.bench||steer!==0||p.swoop||!p.alive)return 0;");
  src=edit(src,"    p.rollRecovery=(p.id===0?.70:1.35)+(p.role==='bomber'?.35:0);",
  "    p.rollRecovery=(p.id===0&&!state.bench?.70:1.35)+(p.role==='bomber'?.35:0);");
