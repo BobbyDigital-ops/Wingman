@@ -24,6 +24,18 @@ const nav=document.getElementById('career-open'),licenceBtn=document.getElementB
 function load(){try{
  const o=JSON.parse(localStorage.getItem(STORE)||'null');
  if(!o?.profile)return null;
+ // Reconcile older saved German identities with the fixed painted-portrait
+ // canon. Never overwrite a player's custom callsign.
+ const chosen=ROSTER.find(p=>p.id===o.profile.rosterId);
+ if(chosen&&chosen.faction==='Axis'){
+  const oldNames={
+   'ace-24':'Kurt "Korken" Weber',
+   'ace-26':'Hans "Bratwurst" Fischer',
+   'ace-32':'Günther "Käsekopf" Hoffmann'
+  };
+  if(oldNames[chosen.id]===o.profile.name)o.profile.name=chosen.name;
+  o.profile.gender=chosen.gender;
+ }
  o.records=o.records&&typeof o.records==='object'?o.records:{};
  o.medals=Array.isArray(o.medals)?o.medals:[];
  o.service=Array.isArray(o.service)?o.service.slice(-32):[];
