@@ -19,15 +19,16 @@ test('clear three-step Road to Ace onboarding and change aircraft without resett
  await expect(page.locator('#active-rung [data-choice]')).toHaveCount(3);
  await page.locator('#active-rung [data-choice="0"]').click();
  await expect(page.locator('[data-sortie-plane]')).toHaveCount(3);
- await expect(page.locator('.preferred-plane')).toHaveCount(1);
+ await expect(page.locator('.wg-preferred')).toHaveCount(1);
  const saved=await page.evaluate(k=>JSON.parse(localStorage.getItem(k)),KEY);
  const preferred=saved.profile.plane;
- await expect(page.locator('.preferred-plane')).toContainText('10%');
+ await expect(page.locator('.wg-preferred')).toContainText('10%');
  await page.locator('[data-action="sortie-back"]').click();
  await expect(page.locator('#active-rung [data-choice]')).toHaveCount(3);
  const alternative=preferred==='fighter'?'heavy':'fighter';
  await page.locator('#active-rung [data-choice="1"]').click();
  await page.locator('[data-sortie-plane="'+alternative+'"]').click();
+ await page.locator('[data-action="confirm-sortie-aircraft"]').click();
  await expect(page.locator('#menu-return')).toBeVisible();
  let progressed=await page.evaluate(k=>JSON.parse(localStorage.getItem(k)),KEY);
  expect(progressed.run.aircraft).toBe(alternative);
@@ -36,29 +37,26 @@ test('clear three-step Road to Ace onboarding and change aircraft without resett
  await page.locator('[data-action="ladder"]').click();
  await page.locator('#active-rung [data-choice="0"]').click();
  await page.locator('[data-sortie-plane="'+preferred+'"]').click();
+ await page.locator('[data-action="confirm-sortie-aircraft"]').click();
  progressed=await page.evaluate(k=>JSON.parse(localStorage.getItem(k)),KEY);
  expect(progressed.run.aircraft).toBe(preferred);
  expect(progressed.run.choices[0].playerAptitude).toEqual({hull:1.1,armour:1.1,damage:1.1});
  expect(progressed.run.rank).toBe(2);
 });
-test('all six historical aircraft photographs load as real images and selection updates the featured photo',async({page})=>{
+test('the original six painted aircraft images load offline and filter by squadron',async({page})=>{
  await page.goto('/');
  await page.locator('#splash-continue').click();
  await page.locator('#mode-next').click();
  await expect(page.locator('#options-panel')).toBeVisible();
- await expect.poll(async()=>page.locator('.hangar-real-photo.ready').count(),{timeout:18000}).toBe(7);
- for(const type of ['fighter','heavy','bomber','bf109','bf110','he111']){
-  await page.locator('[data-plane="'+type+'"]').click();
-  const hero=page.locator('.hangar-real-hero');
-  await expect(hero).toHaveAttribute('data-photo-plane',type);
-  await expect(hero).toHaveClass(/ready/);
-  const dimensions=await hero.evaluate(e=>({width:e.naturalWidth,height:e.naturalHeight,src:e.currentSrc}));
-  expect(dimensions.width).toBeGreaterThan(200);
-  expect(dimensions.height).toBeGreaterThan(100);
-  expect(dimensions.src).toMatch(/commons.wikimedia.org/);
- }
- const files=await page.locator('.hangar-real-tile').evaluateAll(xs=>xs.map(x=>x.src));
- expect(new Set(files).size).toBe(6);
+ await expect(page.locator('.wg-card')).toHaveCount(6);
+ const positions=await page.locator('.wg-card-art').evaluateAll(elements=>elements.map(el=>getComputedStyle(el).backgroundPosition));
+ expect(new Set(positions).size).toBe(6);
+ const picture=await page.locator('.wg-card-art').first().evaluate(el=>getComputedStyle(el).backgroundImage);
+ expect(picture).toContain('data:image/avif;base64');
+ await page.locator('[data-wg-faction="Axis"]').click();
+ await expect(page.locator('.wg-card:visible')).toHaveCount(3);
+ await page.locator('[data-plane="bf110"]').click();
+ await expect(page.locator('[data-plane="bf110"]')).toHaveAttribute('aria-pressed','true');
 });
 test('menu navigation provides back routes and does not trap the user in arcade settings',async({page})=>{
  await page.goto('/');
