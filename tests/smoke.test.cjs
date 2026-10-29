@@ -21,6 +21,7 @@ function launch(){
   el['pilots-select']={value:'2'};
   el['team-select']={value:'ffa'};
   el['mode-select']={value:'duel'};
+  el['challenge-select']={value:'intercept'};
   el['arena-select']={value:'0'};
   for(const id of ['menu','result','result-title','result-detail','start',
     'rematch','change-plane','menu-return','left','right','boost','fire','special','roll','bomb']){
@@ -45,7 +46,7 @@ function launch(){
     console
   };
   const instrumented=code.replace('  // All scenery is painted once;',
-    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,triggerRoll,triggerPilotSkill,hit,steerPlane,updatePlane,controls,aiInput,assignCampaignAI,startCampaignFight,summonFinalAce,bossWaiting,update,tailMagnet,shoot,rollWind,updateWind,projectiles,PLANES,wrappedDelta,combatDistance,interceptPoint};\n  // All scenery is painted once;');
+    '  window.__wingmanTest={state,triggerBomb,triggerSpecial,triggerRoll,triggerPilotSkill,hit,steerPlane,updatePlane,controls,aiInput,assignCampaignAI,startCampaignFight,summonFinalAce,bossWaiting,update,newRound,endRound,battleOutcomeAfterDeath,nearestEnemy,sessionScore,CHALLENGES,tailMagnet,shoot,rollWind,updateWind,projectiles,PLANES,wrappedDelta,combatDistance,interceptPoint};\n  // All scenery is painted once;');
   const artCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/aircraft.js'),'utf8');
   vm.runInNewContext(artCode,sandbox,{timeout:3000,filename:'aircraft.js'});
   const sceneryCode=fs.readFileSync(require('node:path').join(__dirname,'../src/art/scenery.js'),'utf8');
@@ -60,6 +61,8 @@ function launch(){
     listeners,canvas,modelCanvas,internals:sandbox.window.__wingmanTest,
     setPilots:n=>{el['pilots-select'].value=String(n);},
     setTeams:v=>{el['team-select'].value=v;},
+    setMode:v=>{el['mode-select'].value=v;},
+    setChallenge:v=>{el['challenge-select'].value=v;},
     setViewport:(width,height)=>{
       viewport={width,height};
       listeners.get('window:resize')?.();
@@ -897,4 +900,89 @@ test('final ace arrives after twenty seconds even when both escorts survive',()=
  game.internals.summonFinalAce(1.1);
  assert.equal(game.internals.bossWaiting(),false);
  assert.equal(game.internals.state.fliers.filter(p=>p.alive&&p.id>0).length,3);
+});
+
+
+test('Phase 6 Survival carries damaged hull and armour to subsequent wave with partial repairs',()=>{
+ const game=launch();game.setMode('survival');game.listeners.get('start:click')();
+ const state=game.internals.state;
+ assert.equal(state.recordMode,'survival');
+ const hero=state.fliers[0];
+ hero.health=40;hero.armour=5;hero.spawnSafe=0;
+ game.internals.endRound(0);
+ assert.equal(state.phase,'intermission');
+ assert.equal(state.session.roundsWon,1);
+ assert.ok(state.survivalCarry.health>40 && state.survivalCarry.health<hero.d.hull);
+ assert.ok(state.survivalCarry.armour>5 && state.survivalCarry.armour<hero.d.armour);
+ const old={...state.survivalCarry};state.round=2;
+ game.internals.newRound();
+ assert.equal(state.phase,'playing');
+ assert.equal(state.fliers[0].health,old.health);
+ assert.equal(state.fliers[0].armour,old.armour);
+ assert.equal(state.session.roundsWon,1,'successive waves belong to one single scorebook entry');
+ state.fliers[0].spawnSafe=0;
+ game.internals.hit(state.fliers[0],10000,state.fliers[0].x,state.fliers[0].y);
+ assert.equal(state.phase,'result');
+});
+test('Phase 6 2v2 combat continues after player falls while friendly AI remains',()=>{
+ const game=launch();game.setPilots(4);game.setTeams('teams');game.listeners.get('start:click')();
+ const state=game.internals.state;
+ assert.equal(state.recordMode,'teams');
+ assert.deepEqual(Array.from(state.fliers,x=>x.team),[0,1,0,1]);
+ const friendly=['fighter','heavy','bomber'], german=['bf109','bf110','he111'];
+ assert.ok(friendly.includes(state.fliers[2].type));
+ assert.ok(german.includes(state.fliers[1].type));
+ assert.ok(german.includes(state.fliers[3].type));
+ state.fliers[0].spawnSafe=0;
+ game.internals.hit(state.fliers[0],9999,state.fliers[0].x,state.fliers[0].y);
+ assert.equal(state.phase,'playing');
+ assert.ok(game.internals.nearestEnemy(state.fliers[2])?.team===1);
+ state.fliers[1].spawnSafe=0;state.fliers[3].spawnSafe=0;
+ game.internals.hit(state.fliers[1],9999,state.fliers[1].x,state.fliers[1].y);
+ assert.equal(state.phase,'playing');
+ game.internals.hit(state.fliers[3],9999,state.fliers[3].x,state.fliers[3].y);
+ assert.equal(state.phase,'result','surviving AI wingman can clinch victory');
+ assert.equal(state.scores[0],1);
+});
+test('Phase 6 Free For All only awards a win after both rivals are destroyed',()=>{
+ const game=launch();game.setPilots(3);game.listeners.get('start:click')();
+ const state=game.internals.state;
+ assert.equal(state.recordMode,'triple');
+ state.fliers[1].spawnSafe=0;state.fliers[2].spawnSafe=0;
+ game.internals.hit(state.fliers[1],9999,state.fliers[1].x,state.fliers[1].y);
+ assert.equal(state.phase,'playing');
+ game.internals.hit(state.fliers[2],9999,state.fliers[2].x,state.fliers[2].y);
+ assert.equal(state.phase,'result');
+ assert.equal(state.scores[0],1);
+});
+test('Phase 6 special challenges enforce forced enemy and clock, adverse weather and no armour',()=>{
+ for(const [id,time,type] of [['intercept',45,'bf109'],['crosswind',75,null],['noarmour',90,null],['heavy',90,'bf110']]){
+  const game=launch();game.setMode('challenge');game.setChallenge(id);
+  game.listeners.get('start:click')();
+  const state=game.internals.state;
+  assert.equal(state.recordMode,'challenge');
+  assert.equal(state.time,time);
+  assert.equal(state.participants,2);
+  assert.equal(state.challenge,id);
+  if(type)assert.equal(state.fliers[1].type,type);
+  if(id==='crosswind')assert.equal(state.wind.active,true);
+  if(id==='noarmour')assert.equal(state.fliers[0].armour,0);
+  if(id==='intercept'||id==='heavy')assert.equal(state.difficulty,'ace');
+  state.time=.005;
+  game.internals.update(.02);
+  assert.equal(state.phase,'result',id+' expires as a real timed mission');
+  assert.equal(state.scores[1],1);
+ }
+});
+test('Phase 6 squadron target choices distribute enemy pilots and protect living allies',()=>{
+ const game=launch();game.setPilots(4);game.setTeams('teams');game.listeners.get('start:click')();
+ const state=game.internals.state;
+ assert.equal(game.internals.nearestEnemy(state.fliers[1]).id,0);
+ assert.equal(game.internals.nearestEnemy(state.fliers[3]).id,2);
+ const wing=state.fliers[2];const chosen=game.internals.nearestEnemy(wing);
+ assert.equal(chosen.team,1);
+ state.fliers[0].alive=false;
+ assert.equal(game.internals.nearestEnemy(state.fliers[1]).team,0);
+ state.fliers[2].alive=false;
+ assert.equal(game.internals.nearestEnemy(state.fliers[3]),undefined);
 });
