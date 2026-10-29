@@ -21,9 +21,43 @@ const byId=Object.fromEntries([
 const aircraft={fighter:'Spitfire',heavy:'Beaufighter',bomber:'Lancaster',bf109:'Messerschmitt Bf 109E',bf110:'Zerstörer (Bf 110)',he111:'Heinkel He 111'};
 const screen=document.getElementById('career-screen'),menu=document.getElementById('menu'),result=document.getElementById('result');
 const nav=document.getElementById('career-open'),licenceBtn=document.getElementById('career-license');
-function load(){try{const o=JSON.parse(localStorage.getItem(STORE)||'null');return o?.profile?o:null;}catch{return null;}}
+function load(){try{
+ const o=JSON.parse(localStorage.getItem(STORE)||'null');
+ if(!o?.profile)return null;
+ o.records=o.records&&typeof o.records==='object'?o.records:{};
+ o.medals=Array.isArray(o.medals)?o.medals:[];
+ o.service=Array.isArray(o.service)?o.service.slice(-32):[];
+ o.streak=Math.max(0,Number(o.streak)||0);
+ o.bestStreak=Math.max(0,Number(o.bestStreak)||0);
+ return o;
+ }catch{return null;}}
 let data=load(),active=null,showing=false,view='ladder';
 function save(){try{localStorage.setItem(STORE,JSON.stringify(data));}catch{}}
+ const MEDALS=[
+  {id:'first-blood',title:'FIRST VICTORY',desc:'Win your first aerial encounter',glyph:'✦'},
+  {id:'triple-ace',title:'TRIPLE ACE',desc:'Win three consecutive sorties',glyph:'★'},
+  {id:'veteran',title:'VETERAN WINGS',desc:'Reach rank five',glyph:'❖'},
+  {id:'double-trouble',title:'TWO AGAINST ONE',desc:'Defeat two enemy aircraft',glyph:'⚔'},
+  {id:'iron-will',title:'IRON WILL',desc:'Survive a run after losing a life',glyph:'◆'},
+  {id:'wingman-legend',title:'WINGMAN LEGEND',desc:'Defeat the final three-aircraft squadron',glyph:'♛'}
+ ];
+ const rankTitle=rank=>rank>=8?'LEGENDARY ACE':rank>=6?'ACE COMMANDER':rank>=4?'FLIGHT LEADER':rank>=2?'FLYING OFFICER':'ROOKIE';
+ const medal=code=>{
+  data.medals||=[];if(data.medals.includes(code))return false;
+  data.medals.push(code);return true;
+ };
+ const archiveService=entry=>{
+  data.service||=[];data.service.push(entry);data.service=data.service.slice(-32);
+ };
+ function serviceMarkup(limit=7){
+  const entries=(data?.service||[]).slice(-limit).reverse();
+  return '<section class="career-service"><h3>FLIGHT LOG</h3>'+
+   (entries.length?entries.map(e=>'<div class="career-log-entry"><span>'+escape(e.won?'✓ VICTORY':'✕ DEFEAT')+'</span><strong>'+escape(e.rival||'UNKNOWN')+'</strong><small>R'+e.rank+' · '+escape(e.mission||'SORTIE')+'</small></div>').join(''):'<p class="career-muted">Your service record begins with your first sortie.</p>')+'</section>';
+ }
+ function medalMarkup(){
+  return '<section class="career-medals"><h3>HONOURS & DECORATIONS</h3><div class="medal-strip">'+MEDALS.map(m=>
+   '<div class="medal '+(data?.medals?.includes(m.id)?'earned':'locked')+'" title="'+escape(m.desc)+'"><span aria-hidden="true">'+m.glyph+'</span><strong>'+escape(m.title)+'</strong><small>'+escape(m.desc)+'</small></div>').join('')+'</div></section>';
+ }
 function escape(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function appearance(seed=0){
  const n=Number(seed)||0;
@@ -281,7 +315,7 @@ function createProfile(index){
  const name=chosen.roster.name;
  const faction=chosen.roster.faction;
  airframeOffers=[];
- data={profile:{name,faction,rosterId:chosen.roster.id,plane:chosen.roster.plane,style:chosen.style,attributes:chosen.attributes,skill:chosen.roster.signature,characterConfirmed:true,gender:chosen.roster.gender},wins:0,losses:0,kills:0,records:{},best:0,completed:0,run:null};
+ data={profile:{name,faction,rosterId:chosen.roster.id,plane:chosen.roster.plane,style:chosen.style,attributes:chosen.attributes,skill:chosen.roster.signature,characterConfirmed:true,gender:chosen.roster.gender},wins:0,losses:0,kills:0,records:{},best:0,completed:0,streak:0,bestStreak:0,medals:[],service:[],run:null};
  save();view='licence';render();
 }
 const BASE_AIRCRAFT={fighter:{speed:82,turn:3.15,hull:130,armour:40},heavy:{speed:75,turn:1.98,hull:160,armour:78},bomber:{speed:66,turn:1.30,hull:180,armour:124},bf109:{speed:87,turn:3.02,hull:125,armour:42},bf110:{speed:78,turn:1.91,hull:160,armour:75},he111:{speed:69,turn:1.35,hull:175,armour:116}};
