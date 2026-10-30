@@ -8,7 +8,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer']}
  let source=sources.game;
  const edit=(from,to)=>{if(source.split(from).length!==2)throw Error('QA anchor missing: '+from.slice(0,75));source=source.replace(from,to);};
  edit('      if(user.alive)updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);',
- '      if(state.qa){const foe=nearestEnemy(user);const steer=state.qaScenario==="escape"?clamp(angleDiff(0,user.angle)*3,-1,1):foe?aiInput(user,foe):0;updatePlane(user,dt,steer,user.aiBoost);}else if(user.alive)updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);');
+ '      if(state.qa){const foe=nearestEnemy(user);const steer=state.qaScenario==="escape"?clamp(angleDiff(0,user.angle)*3,-1,1):state.qaScenario==="weave"?clamp(angleDiff(Math.sin(state.visualClock*.82)*.37,user.angle)*3.2,-1,1):foe?aiInput(user,foe):0;updatePlane(user,dt,steer,user.aiBoost);}else if(user.alive)updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);');
  edit('    if(p.id!==0||steer!==0||p.swoop||!p.alive)return 0;',
  '    if(p.id!==0||state.qa||steer!==0||p.swoop||!p.alive)return 0;');
  edit('    p.rollRecovery=(p.id===0?.70:1.35)+(p.role===\'bomber\'?.35:0);',
@@ -71,12 +71,12 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer']}
  const summary={games:0,groundCrashes:0,byType:{},bombSalvos:0,gunShots:0,tailSeconds:0,pursuitSeconds:0,firingOpportunitySeconds:0,damageTaken:[0,0],hitsTaken:[0,0],enemyVictories:0,ceilingContact:0,modeChanges:0,modes:{},scenarios:{},samples:[]};
  for(const t of types)summary.byType[t]={games:0,groundCrashes:0,bombSalvos:0,tailSeconds:0,ceilingContact:0};
  for(const scenario of scenarios){
-  summary.scenarios[scenario]={games:0,groundCrashes:0,tailSeconds:0,evadeSeconds:0,pursuitSeconds:0};
+  summary.scenarios[scenario]={games:0,groundCrashes:0,tailSeconds:0,evadeSeconds:0,pursuitSeconds:0,playerDamage:0,playerHits:0};
   for(let rep=0;rep<reps;rep++)for(let i=0;i<types.length;i++)for(let j=i+1;j<types.length;j++){
    for(const order of [0,1]){
     const a=order?types[j]:types[i],b=order?types[i]:types[j];seed=10001+rep*17029+i*1873+j*3899+order*1193;
     window.aiQA.setup(a,b,'ace',scenario,rep%2===1);const x=window.aiQA.tick(Math.round(seconds*60));
-    summary.games++;summary.scenarios[scenario].games++;if(x.winner===1)summary.enemyVictories++;
+    summary.games++;summary.scenarios[scenario].games++;summary.scenarios[scenario].playerDamage+=x.damage[0];summary.scenarios[scenario].playerHits+=x.hits[0];if(x.winner===1)summary.enemyVictories++;
     for(let side=0;side<2;side++){
      const type=side===0?a:b,t=summary.byType[type],sc=summary.scenarios[scenario];
      t.games++;t.groundCrashes+=+x.ground[side];t.bombSalvos+=x.bombs[side];t.tailSeconds+=x.tail[side];t.ceilingContact+=x.ceiling[side];
