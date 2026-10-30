@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const aircraft=[
- {id:'fighter',name:'SPITFIRE',role:'AGILE FIGHTER',ability:'OVERDRIVE',faction:'Allies',speed:82,turn:3.15,armour:40,damage:11},
+ {id:'fighter',name:'SPITFIRE',role:'AGILE FIGHTER',ability:'CORKSCREW',faction:'Allies',speed:82,turn:3.15,armour:40,damage:11},
  {id:'heavy',name:'BEAUFIGHTER',role:'HEAVY FIGHTER',ability:'SHIELD',faction:'Allies',speed:75,turn:1.98,armour:78,damage:16},
  {id:'bomber',name:'LANCASTER',role:'BOMBER',ability:'TURRETS',faction:'Allies',speed:66,turn:1.30,armour:124,damage:10},
  {id:'bf109',name:'BF 109E EMIL',role:'AGILE FIGHTER',ability:'OVERDRIVE',faction:'Axis',speed:87,turn:3.02,armour:42,damage:11},

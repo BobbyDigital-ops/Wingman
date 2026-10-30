@@ -11,10 +11,14 @@
   let g=canvas.getContext('2d',{alpha:false});
   g.imageSmoothingEnabled=false;
 
-  // Stronger gravity-driven dive momentum and Spitfire-specific Overdrive.
+  // Flight balance: RAF Spitfire corkscrew boost and rate-limited heavy rolls.
   const DIVE_SPEED_GAIN=64;
   const DIVE_OVERSPEED_LIMIT=1.60;
-  const SPITFIRE_BOOST_GAIN=1.25;
+  const CORKSCREW_SPIN_TIME=.72;
+  const CORKSCREW_BOOST_TIME=2.5;
+  const CORKSCREW_COOLDOWN=14;
+  const HEAVY_ROLL_COOLDOWN=13;
+  const HEAVY_ROLL_DODGE=.17;
   const PLANES={
     fighter:{name:'SUPERMARINE SPITFIRE',speed:82,turn:3.15,hull:130,armour:40,radius:5.5,burst:10,interval:.055,cooldown:1.5,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'REVERSE'},
     heavy:{name:'BRISTOL BEAUFIGHTER',speed:75,turn:1.98,hull:160,armour:78,radius:8,burst:7,interval:.17,cooldown:2.20,damage:16,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
@@ -106,12 +110,12 @@ function pilotFactors(p){
 }
 function plane(type,id,x,y,angle){
     const d=PLANES[type];
-    return {overdriveTime:0,bombQueue:0,bombInterval:0,bombRunId:0,attributes:pilotAttributes(),pilotSkill:'roll',skillCooldown:0,smokescreen:0,hardenTime:0,deadeyeTime:0,engineCutTime:0,diveTime:0,id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
+    return {overdriveTime:0,corkscrewTime:0,corkscrewDuration:0,corkscrewRecovery:0,bombQueue:0,bombInterval:0,bombRunId:0,attributes:pilotAttributes(),pilotSkill:'roll',skillCooldown:0,smokescreen:0,hardenTime:0,deadeyeTime:0,engineCutTime:0,diveTime:0,id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
       vy:Math.sin(angle)*d.speed*.8,health:d.hull,armour:d.armour,rearCooldown:0,rearShots:0,rearShotTime:0,aiBombDelay:id>0?4.5:0,turretFlash:0,
       critical:false,criticalCause:'',flightRisk:0,climbLoad:0,aiRecoveryTime:0,tailAssist:0,
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boostCharge:100,boosting:false,aiBoost:false,
       spawnSafe:1.0,smokeTimer:0,hitFlash:0,alive:true,aiThink:0,
-      energy:85,rollTime:0,rollDuration:0,rollRecovery:0,skillFeedback:'',skillFeedbackTime:0,stallTime:0,wallGrace:0,armourTime:0,bombCooldown:0,climbAssist:0,
+      energy:85,rollTime:0,rollDuration:0,rollRecovery:0,rollCooldown:0,rollDodgeTime:0,skillFeedback:'',skillFeedbackTime:0,stallTime:0,wallGrace:0,armourTime:0,bombCooldown:0,climbAssist:0,
       swoopTime:0,swoop:null,turnVelocity:0,damageCause:'',damageNotice:0,muzzleFlash:0};
   }
 
@@ -181,9 +185,9 @@ function plane(type,id,x,y,angle){
     const action=document.getElementById('special');
     if(!action)return;
     const role=PLANES[state.selected]?.class||state.selected;
-    const label=role==='fighter'?'BOOST':role==='heavy'?'SHIELD':'BOMBS';
+    const label=state.selected==='fighter'?'CORKSCREW':role==='fighter'?'BOOST':role==='heavy'?'SHIELD':'BOMBS';
     action.textContent=label;
-    action.setAttribute('aria-label',role==='bomber'?'Release bomb salvo':role==='heavy'?'Activate defensive shield':'Activate overdrive');
+    action.setAttribute('aria-label',state.selected==='fighter'?'Activate Spitfire corkscrew speed burst':role==='bomber'?'Release bomb salvo':role==='heavy'?'Activate defensive shield':'Activate overdrive');
   }
   function newRound(){
     syncAbilityButton();
@@ -498,7 +502,20 @@ function plane(type,id,x,y,angle){
   }
   function triggerSpecial(p){
     if(!p||!p.alive||p.specialCooldown>0||state.phase!=='playing'||state.paused)return;
-    if(p.role==='fighter'){
+    if(p.type==='fighter'){
+      // A visibly twisting axial roll plus strong acceleration, without invulnerability.
+      p.specialCooldown=CORKSCREW_COOLDOWN;
+      p.overdriveTime=CORKSCREW_BOOST_TIME;
+      p.corkscrewTime=CORKSCREW_SPIN_TIME;
+      p.corkscrewDuration=CORKSCREW_SPIN_TIME;
+      p.corkscrewRecovery=0;
+      p.speed=Math.min(p.d.speed*1.5,Math.max(p.speed,p.d.speed*1.27));
+      p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*.38;
+      p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*.38;
+      emit(p.x,p.y,13,'#d4e9f5',25);
+      if(p.id===0){p.skillFeedback='CORKSCREW BOOST';p.skillFeedbackTime=1.1;}
+    }else if(p.role==='fighter'){
+      // German Bf 109 retains regular overdrive, not the Spitfire corkscrew.
       p.specialCooldown=12;
       p.overdriveTime=2.8;
       emit(p.x,p.y,6,'#c4e4da',12);
@@ -585,16 +602,20 @@ function plane(type,id,x,y,angle){
     else if(kind==='cut'){p.engineCutTime=1.4;p.speed*=.72;}
     else if(kind==='dive'){p.diveTime=.85;p.energy=Math.min(100,p.energy+12);}
     else return false;
-    p.skillCooldown=durations[kind]||14;
+    p.skillCooldown=kind==='roll'&&p.role==='heavy'?HEAVY_ROLL_COOLDOWN:(durations[kind]||14);
     if(p.id===0){p.skillFeedback=PILOT_SKILL_NAMES[kind]||'PILOT SKILL';p.skillFeedbackTime=1.25;}
     sound('special');
     return true;
   }
   function triggerRoll(p){
-    if(!p||!p.alive||state.phase!=='playing'||state.paused||p.rollTime>0||p.rollRecovery>0)return false;
-    p.rollTime=p.role==='fighter'?.5:p.role==='heavy'?.48:.45;
+    if(!p||!p.alive||state.phase!=='playing'||state.paused||
+       p.rollTime>0||p.rollRecovery>0||p.rollCooldown>0)return false;
+    // Heavy fighters remain vulnerable for most of the visible roll animation.
+    p.rollTime=p.role==='fighter'?.50:p.role==='heavy'?.40:.45;
     p.rollDuration=p.rollTime;
+    p.rollDodgeTime=p.role==='heavy'?HEAVY_ROLL_DODGE:p.rollTime;
     p.rollRecovery=(p.id===0?.70:1.35)+(p.role==='bomber'?.35:0);
+    p.rollCooldown=p.role==='heavy'?HEAVY_ROLL_COOLDOWN:p.role==='fighter'?4:8;
     return true;
   }
   function crossTopEdge(p){
@@ -680,15 +701,14 @@ function plane(type,id,x,y,angle){
     const magneticTurn=tailMagnet(p,steer);
     const desired=p.climbAssist>0
       ?clamp(angleDiff(Math.atan2(-43,Math.cos(p.angle)<0?-20:20),p.angle)*2,-p.d.turn,p.d.turn)
-      :steer*p.d.turn*skill.turn*authority*(1-p.flightRisk*.34)*(p.type==='bf109'?(p.speed>p.d.speed*1.15?.91:p.speed<p.d.speed*.73?.86:1):1)+noseDrop+magneticTurn;
+      :steer*p.d.turn*skill.turn*authority*(p.corkscrewRecovery>0?.72:1)*(1-p.flightRisk*.34)*(p.type==='bf109'?(p.speed>p.d.speed*1.15?.91:p.speed<p.d.speed*.73?.86:1):1)+noseDrop+magneticTurn;
     p.turnVelocity+=(desired-p.turnVelocity)*Math.min(1,dt*(p.role==='bomber'?6:7.5));
     p.angle+=p.turnVelocity*dt;
     if(p.angle>Math.PI)p.angle-=TAU;
     if(p.angle< -Math.PI)p.angle+=TAU;
     const power=1-.15*clamp((.6-p.health/p.d.hull)/.6,0,1);
-    // The Spitfire's Overdrive has 25% more power; the BF 109 stays unchanged.
-    // Stronger, clearly felt Overdrive, still bounded by flight/energy limits.
-    const boostGain=p.boosting?(p.type==='fighter'?1.46*SPITFIRE_BOOST_GAIN:1.40):1;
+    // A powerful but bounded Spitfire speed burst; Bf 109 retains Overdrive.
+    const boostGain=p.boosting?(p.type==='fighter'?1.55:1.40):1;
     const wanted=p.d.speed*engine*(p.engineCutTime>0?.42:1)*(p.diveTime>0?1.15:1)*power*(.87+.13*p.energy/100)*boostGain*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
     // Airspeed gained in a dive carries through a level-out, then fades.
     const drag=p.role==='fighter'?1.08:p.role==='heavy'?.93:.79;
@@ -700,7 +720,7 @@ function plane(type,id,x,y,angle){
     p.speed+=dt*exchange*(DIVE_SPEED_GAIN*dive*dive-29*climb*climb);
     if(p.diveTime>0){p.speed+=dt*11;p.vy+=dt*36;}
     // Higher but bounded dive ceiling; proportional Overdrive headroom.
-    const speedLimit=p.boosting?(p.type==='fighter'?1.68*SPITFIRE_BOOST_GAIN:1.78):DIVE_OVERSPEED_LIMIT;
+    const speedLimit=p.boosting?1.78:DIVE_OVERSPEED_LIMIT;
     p.speed=clamp(p.speed,p.d.speed*.43,p.d.speed*engine*speedLimit);
     // The velocity vector gently follows the fuselage, rather than snapping.
     const follow=Math.min(1,dt*(p.role==='bomber'?3.2:p.role==='heavy'?4:5.1));
@@ -890,7 +910,7 @@ function plane(type,id,x,y,angle){
     const baseTolerance=rankAI?.11+talent*.14:state.recordMode==='survival'?.13+talent*.1:state.difficulty==='rookie'?.13:state.difficulty==='ace'?.22:.18;
     const tolerance=rankAI&&style==='sniper'?baseTolerance*.67:rankAI&&style==='brawler'?baseTolerance*1.12:baseTolerance;
     if(p.aiMode==='attack'&&range<(rankAI?115+talent*65:165)&&Math.abs(error)<tolerance&&
-      target.spawnSafe<=0&&target.rollTime<=0&&p.gunCooldown<=0&&p.burstLeft===0&&
+      target.spawnSafe<=0&&target.rollDodgeTime<=0&&p.gunCooldown<=0&&p.burstLeft===0&&
       (p.role!=='bomber'||range<72&&Math.random()<.16))triggerBurst(p);
     if(p.specialCooldown<=0){
       if(p.role==='heavy'&&range<100&&(p.armour<p.d.armour*.75||target.burstLeft>0||target.rearShots>0))triggerSpecial(p);
@@ -926,7 +946,11 @@ function plane(type,id,x,y,angle){
     p.turretFlash=Math.max(0,(p.turretFlash||0)-dt);
     for(const key of ['skillCooldown','smokescreen','hardenTime','deadeyeTime','engineCutTime','diveTime'])p[key]=Math.max(0,(p[key]||0)-dt);
     p.armourTime=Math.max(0,p.armourTime-dt);
+    const wasBoosting=p.overdriveTime>0;
     p.overdriveTime=Math.max(0,(p.overdriveTime||0)-dt);
+    if(p.type==='fighter'&&wasBoosting&&p.overdriveTime===0)p.corkscrewRecovery=.65;
+    p.corkscrewTime=Math.max(0,(p.corkscrewTime||0)-dt);
+    p.corkscrewRecovery=Math.max(0,(p.corkscrewRecovery||0)-dt);
     if(p.bombQueue>0){p.bombInterval-=dt;if(p.bombInterval<=0){releaseBomb(p);p.bombQueue--;p.bombInterval=.40;if(p.bombQueue===0)p.bombRunId++;}}
     p.climbAssist=Math.max(0,p.climbAssist-dt);
     p.bombCooldown=Math.max(0,p.bombCooldown-dt);
@@ -936,7 +960,7 @@ function plane(type,id,x,y,angle){
       // battery. A pilot sitting directly astern gets a sustained, physical
       // gun burst. Approaches from ahead or the flank remain safer.
       const threats=opponents(p).filter(q=>{
-        if(q.spawnSafe>0||q.rollTime>0)return false;
+        if(q.spawnSafe>0||q.rollDodgeTime>0)return false;
         const dx=wrappedDelta(p.x,q.x),dy=q.y-p.y;
         const along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle);
         const lateral=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
@@ -985,6 +1009,8 @@ function plane(type,id,x,y,angle){
     p.boosting=!!(p.role==='fighter'&&p.overdriveTime>0&&!p.swoop);
     p.boostCharge=100;
     p.rollTime=Math.max(0,p.rollTime-dt);
+    p.rollDodgeTime=Math.max(0,(p.rollDodgeTime||0)-dt);
+    p.rollCooldown=Math.max(0,(p.rollCooldown||0)-dt);
     p.skillFeedbackTime=Math.max(0,(p.skillFeedbackTime||0)-dt);
     p.rollRecovery=Math.max(0,p.rollRecovery-dt);
     steerPlane(p,steer,dt);
@@ -1025,7 +1051,7 @@ function plane(type,id,x,y,angle){
       let struck=false;
       for(const target of targets){
         const clear=shooter&&combatDistance(target,shooter)>target.d.radius+shooter.d.radius+3;
-        if(!clear||target.rollTime>0||target.evasiveTime>0||b.age<=.035)continue;
+        if(!clear||target.rollDodgeTime>0||target.evasiveTime>0||b.age<=.035)continue;
         const vx=b.x-px,vy=b.y-py,denom=vx*vx+vy*vy;
         // Extended fuselage and wing are independently hittable, without a
         // giant circular hit area around the bombers.
@@ -1320,8 +1346,13 @@ function plane(type,id,x,y,angle){
   function aircraft(p){
     const c=modelCtx;
     c.save();c.translate(p.x,p.y);c.rotate(p.angle);
-    if(p.rollTime>0){
-      // Full visible roll, without changing the hitbox or the duration of evasion.
+    if(p.corkscrewTime>0){
+      // Axial double spiral: heading unchanged, and no invulnerability.
+      const progress=1-p.corkscrewTime/(p.corkscrewDuration||CORKSCREW_SPIN_TIME);
+      c.scale(1,Math.cos(progress*TAU*2));
+      c.strokeStyle='#d2f0ffd9';c.lineWidth=.9;
+      c.beginPath();c.ellipse(0,0,p.d.radius+6,6,0,0,TAU);c.stroke();
+    }else if(p.rollTime>0){
       const progress=1-p.rollTime/(p.rollDuration||.5);
       c.scale(1,Math.cos(progress*TAU));
       c.strokeStyle='#dcece0b3';c.lineWidth=.65;
@@ -1381,6 +1412,17 @@ function plane(type,id,x,y,angle){
     // Minimal cinema-frame combat overlay, not a dashboard: the aircraft and sky
     // own the screen. Vital data appears as small edge markings and typography.
     const p=state.fliers[0],e=state.fliers.find(f=>f.id>0&&f.alive)||state.fliers[1],cx=W*.5;
+    const specialButton=document.getElementById('special');
+    if(specialButton&&p){
+      const role=p.role;
+      const baseLabel=p.type==='fighter'?'CORKSCREW':role==='fighter'?'BOOST':role==='heavy'?'SHIELD':'BOMBS';
+      const cooldown=Math.max(0,p.specialCooldown||0);
+      const label=cooldown>0?(p.type==='fighter'?'CORK':baseLabel)+' '+Math.ceil(cooldown)+'s':baseLabel;
+      if(specialButton.textContent!==label)specialButton.textContent=label;
+      specialButton.setAttribute('aria-label',baseLabel+(cooldown>0?' recharging '+Math.ceil(cooldown)+' seconds':' ready'));
+      specialButton.classList.toggle('on-cooldown',cooldown>0);
+      specialButton.classList.toggle('skill-active',!!(p.corkscrewTime>0||p.boosting||p.armourTime>0));
+    }
     const skillButton=document.getElementById('roll');
     if(skillButton&&p){
       const kind=PILOT_SKILL_NAMES[p.pilotSkill]||'BARREL ROLL';
