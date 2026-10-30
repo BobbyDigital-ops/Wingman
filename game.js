@@ -979,7 +979,7 @@ function plane(type,id,x,y,angle){
       const goalY=clamp(target.y-67,79,WORLD_H-140);
       const seekX=wrappedDelta(p.x,goalX);
       // No pointless 180-turn for an already aligned drop window.
-      heading=Math.atan2(clamp((goalY-p.y)*.7,-43,43),Math.abs(seekX)<18?horiz*86:(Math.sign(seekX)*86));
+      heading=Math.atan2(clamp((goalY-p.y)*.7,-43,43),horiz*86);
     }
     const error=angleDiff(heading,p.angle);
     p.aiMode=plan==='escape'?'evade':plan==='gain-height'?'climb':
