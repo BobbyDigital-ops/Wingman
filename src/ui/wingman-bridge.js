@@ -50,24 +50,17 @@ function startCareer(index,type){
  if(!click('#active-rung [data-choice="'+index+'"]',by('career-screen')))return false;
  if(!click('[data-sortie-plane="'+type+'"]',by('career-screen')))return false;
  if(!click('[data-action="confirm-sortie-aircraft"]',by('career-screen')))return false;
- if(window.WingmanGame?.isPlaying?.())hide();return true;
+ const started=!!window.WingmanGame?.isPlaying?.();
+ if(started)hide();
+ return started;
 }
-function startArcade({mode,aircraft,difficulty,arena}){
- if(!['duel','survival','triple','teams','challenge'].includes(mode))return false;
- if(!['fighter','heavy','bomber','bf109','bf110','he111'].includes(aircraft))return false;
- window.WingmanFlow?.setMode?.(mode);
- if(!window.WingmanFlow?.setMode)return false;
- // Show the underlying hidden setup to preserve the original game state.
- window.WingmanFlow.show?.('options');
- const faction=['bf109','bf110','he111'].includes(aircraft)?'Axis':'Allies';
- click('[data-wg-faction="'+faction+'"]');
- if(!click('.wg-card[data-plane="'+aircraft+'"]'))return false;
- setValue('difficulty-select',difficulty);
- setValue('arena-select',arena);
- if(!click('#start'))return false;
- // Game state, rather than overlay timing, authoritatively confirms launch.
- if(!window.WingmanGame?.isPlaying?.())return false;
- hide();return true;
+function startArcade(options){
+  if(!window.WingmanGame?.launchArcade)return false;
+  // There is only one authoritative launch. Do not expose or navigate through
+  // Wingman's old hidden aircraft-selection view.
+  const started=window.WingmanGame.launchArcade(options);
+  if(started){hide();resultSeen=false;}
+  return !!started;
 }
 function continueCareer(){openCareer('ladder');show()}
 function sync(){
