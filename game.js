@@ -935,12 +935,12 @@ function plane(type,id,x,y,angle){
     // Establish a distinct altitude advantage before attempting to bomb.
     const desiredHeight=clamp(target.y-85,68,WORLD_H-166);
     const altitudeAdvantage=target.y-p.y;
-    const safeBottom=p.y>WORLD_H-135||(p.y>WORLD_H-185&&p.vy>16);
-    const nearCeiling=p.y<89&&p.vy< -13;
+    const safeBottom=p.y>WORLD_H-185&&(p.vy>3||p.y>WORLD_H-143);
+    const nearCeiling=p.y<152&&(p.vy< -5||p.y<100);
     if((alarm||safeBottom)&&p.aiPlan!=='escape'&&p.aiThreatGrace<=0){
       p.aiPlan='escape';p.aiCommit=2.6;p.aiThreatGrace=3.2;
       p.aiEscapeSign=p.y>WORLD_H*.58?-1:p.y<124?1:(target.y>p.y?-1:1);
-      p.aiBankHeading=p.angle+(p.aiEscapeSign||-1)*1.35;
+      p.aiBankHeading=Math.atan2((p.aiEscapeSign||-1)*.45,horiz);
     }else if(p.aiCommit<=0||!p.aiPlan){
       if(altitudeAdvantage<55){
         p.aiPlan='gain-height';p.aiCommit=3.6;
@@ -956,11 +956,11 @@ function plane(type,id,x,y,angle){
       // Pull away from the actual ground well before the bomber's wide
       // turning arc reaches it, even during a committed bombing leg.
       plan='recover';
-      heading=Math.atan2(-.75,horiz);
+      heading=Math.atan2(-.65,horiz);
       p.aiCommit=Math.max(p.aiCommit,.8);
     }else if(nearCeiling){
       plan='recover';
-      heading=Math.atan2(.35,horiz);
+      heading=Math.atan2(.48,horiz);
     }else if(plan==='escape'){
       // Held 75-degree bank: visibly different from a shallow S-curve.
       heading=p.aiBankHeading;
@@ -968,9 +968,9 @@ function plane(type,id,x,y,angle){
       // Real climbing run, not an invisible climb impulse. Break off before
       // reaching the ceiling and use a shallower heading if already near it.
       const delta=clamp(desiredHeight-p.y,-105,35);
-      const pitch=clamp(delta/90,-.80,.27);
+      const pitch=clamp(delta/145,-.54,.24);
       heading=Math.atan2(Math.tan(pitch),horiz);
-      if(p.y<110)heading=Math.atan2(.24,horiz);
+      if(p.y<160)heading=Math.atan2(.43,horiz);
     }else{
       // The bomber must turn to meet the player instead of staying forever
       // on whichever horizontal heading it spawned with.
@@ -979,7 +979,7 @@ function plane(type,id,x,y,angle){
       const goalY=clamp(target.y-67,79,WORLD_H-140);
       const seekX=wrappedDelta(p.x,goalX);
       // No pointless 180-turn for an already aligned drop window.
-      heading=Math.atan2(goalY-p.y,Math.abs(seekX)<18?horiz*32:seekX);
+      heading=Math.atan2(clamp((goalY-p.y)*.7,-43,43),Math.abs(seekX)<18?horiz*86:(Math.sign(seekX)*86));
     }
     const error=angleDiff(heading,p.angle);
     p.aiMode=plan==='escape'?'evade':plan==='gain-height'?'climb':
@@ -996,7 +996,7 @@ function plane(type,id,x,y,angle){
         triggerSpecial(p);
         p.aiPlan='escape';p.aiCommit=2.3;p.aiThreatGrace=1.3;
         p.aiEscapeSign=p.y>WORLD_H*.53?-1:1;
-        p.aiBankHeading=p.angle+p.aiEscapeSign*1.10;
+        p.aiBankHeading=Math.atan2(p.aiEscapeSign*.47,horiz);
       }
     }
     return steer;
