@@ -380,6 +380,17 @@ test('Heavy fighter shield reduces damage while active',()=>{
  assert.ok(p.armourTime>0);
  assert.equal(p.specialCooldown,20);
 });
+test('G3A.2 near-ceiling fighter keeps chasing instead of bobbing in ground-recovery mode',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const [player,fighter]=game.internals.state.fliers;
+ assert.equal(fighter.role,'fighter');
+ fighter.y=39;fighter.vy=-13;fighter.vx=-60;fighter.angle=-Math.PI+.2;
+ fighter.aiThink=0;fighter.aiMode='recover';fighter.aiRecoveryTime=0;
+ player.x=170;player.y=115;
+ game.internals.aiInput(fighter,player);
+ assert.equal(fighter.aiMode,'intercept','ceiling is not an emergency ground recovery');
+ assert.equal(fighter.aiRecoveryTime,0,'ground recovery is not reactivated at the top');
+});
 test('Ground-threat prediction still overrides AI pursuit without universal boost',()=>{
  const game=launch();game.listeners.get('start:click')();
  const enemy=game.internals.state.fliers[1];

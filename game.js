@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.3.1',GAME_PHASE='G3A.1'; // stable release identifier
+  const GAME_VERSION='v0.3.2',GAME_PHASE='G3A.2'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -974,7 +974,10 @@ function plane(type,id,x,y,angle){
       return Math.abs(diff)<.095?0:Math.sign(diff);
     }
     if(p.aiThink<=0){
-      if(p.y<46) p.aiMode='recover';
+      // Top-of-screen re-entry already turns a climbing aircraft around.
+      // Never force another ground-style recovery here: doing so repeatedly
+      // breaks fighter pursuit and causes obvious vertical bobbing.
+      if(p.y<46) p.aiMode='intercept';
       else if(target.burstLeft>0&&range<(rankAI?65+talent*52:95)) p.aiMode='evade';
       else if(enemyBehind&&range<(rankAI?54+talent*40:80)) p.aiMode='break';
       else if(p.gunCooldown>0&&range<110) p.aiMode='extend';

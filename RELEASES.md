@@ -16,6 +16,7 @@ branches. Never commit ongoing work to a snapshot branch.
 | v0.2.3 | G2.3 | `releases/g2-3-recorded-guns` | `926d29994067b4d94abe6f215a2592ebee6665e1` | CC0 recorded gunfire, outdoor reflection tails, dynamic compression, legacy synthetic comparison |
 | v0.3.0 | G3A | `releases/g3a-balance-baseline` | This checkpoint's branch head | AI bomber altitude-hold and realistic bombing runs; corrected swoop-physics tournament; 390-match baseline and long-running regression gates |
 | v0.3.1 | G3A.1 | `releases/g3a1-bomber-evasion` | This checkpoint's branch head | Defensive bomber S-turns, physically bounded climbs/dips, threat-response behaviour; 390-fight A/B benchmark and evasion regression gate |
+| v0.3.2 | G3A.2 | `releases/g3a2-fighter-pursuit` | This checkpoint's branch head | Fighter near-ceiling AI no longer enters false ground-recovery mode; verified AI pursuit against 390-match benchmark |
 
 ## Rollback procedure
 
