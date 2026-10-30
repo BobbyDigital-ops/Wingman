@@ -1306,6 +1306,16 @@ function plane(type,id,x,y,angle){
       if(m.life<=0)state.mines.splice(i,1);
     }
   }
+  // Render-only vertical camera. Physics, projectiles, terrain and AI remain
+  // in world coordinates. The total arena is < 1.7 screen heights, so
+  // opposing aircraft can never become three screens apart.
+  function updateCamera(dt){
+    const hero=state.fliers[0];
+    if(!hero)return;
+    const desired=clamp(hero.y-H*.48,0,SKY_EXTRA);
+    state.cameraY=clamp(state.cameraY+(desired-state.cameraY)*
+      Math.min(1,dt*3.1),0,SKY_EXTRA);
+  }
   function update(dt){
     if(state.paused)return;
     state.visualClock+=dt;
@@ -1329,6 +1339,7 @@ function plane(type,id,x,y,angle){
         if(p.alive){const target=nearestEnemy(p);const steer=target?aiInput(p,target):0;updatePlane(p,dt,steer,p.aiBoost);}
       }
       projectiles(dt);
+      updateCamera(dt);
       // Airframes may overlap without dealing damage. No ramming penalty.
       const enemies=state.fliers.slice(1);
       if(state.participants>2){
@@ -1664,6 +1675,7 @@ function plane(type,id,x,y,angle){
     c.setTransform(modelCanvas.width/W,0,0,modelCanvas.height/H,0,0);
     c.clearRect(0,0,W,H);
     c.save();c.beginPath();c.rect(0,31,W,H-31);c.clip();
+    c.translate(0,-state.cameraY);
     window.WingmanOrdnance?.draw(c,state.bullets,state.bombs,state.fliers);
     for(const p of state.fliers)if(p.alive)aircraft(p);
     c.restore();
@@ -1676,7 +1688,7 @@ function plane(type,id,x,y,angle){
       const cue=clamp(hero.tailCue||0,0,1);
       const locked=strength>=.95;
       const sightX=hero.x+Math.cos(hero.angle)*(hero.d.radius+19);
-      const sightY=hero.y+Math.sin(hero.angle)*(hero.d.radius+19);
+      const sightY=hero.y-state.cameraY+Math.sin(hero.angle)*(hero.d.radius+19);
       c.save();c.translate(sightX,sightY);c.rotate(hero.angle);
       // G2.2: a further 34% smaller, dark period reflector sight.
       // A very soft warm outline preserves visibility over storm clouds.
@@ -1844,6 +1856,18 @@ function plane(type,id,x,y,angle){
         g.fillText('⚠ TAIL GUNS',cx,58);
       }
     }
+    // An off-screen arrow preserves the chase when an opponent climbs
+    // just outside the camera. Never shift HUD positions with world altitude.
+    if(e?.alive){
+      const sy=e.y-state.cameraY;
+      if(sy<34||sy>H-27){
+        const x=clamp(e.x,40,W-40);
+        const above=sy<34;
+        g.textAlign='center';g.font='bold 7px monospace';
+        g.fillStyle='#f7cc82';
+        g.fillText(above?'▲ ENEMY ABOVE':'▼ ENEMY BELOW',x,above?48:H-38);
+      }
+    }
     g.restore();
   }
   function damageDiagram(){
@@ -1863,8 +1887,32 @@ function plane(type,id,x,y,angle){
     // Batch D static artwork: use the approved theatre image once loaded.
     // Until its file is present (or while loading), the existing painted scene remains visible.
     const theatre=window.WingmanStaticBackgrounds?.images?.[state.arena];
-    g.drawImage(theatre?.complete&&theatre.naturalWidth?theatre:background,0,0,W,H);
+    const scene=theatre?.complete&&theatre.naturalWidth?theatre:background;
+    const skyGap=SKY_EXTRA-state.cameraY;
+    // Keep the approved scenery at ground level. Extend ONLY its upper sky
+    // using the actual top pixels, with a restrained atmosphere above.
+    if(skyGap>0.5){
+      g.drawImage(scene,0,0,scene.width,Math.min(3,scene.height),
+        0,0,W,skyGap+2);
+      const haze=g.createLinearGradient(0,0,0,skyGap+1);
+      const hues=['rgba(35,65,105,.36)','rgba(42,83,109,.22)',
+        'rgba(108,107,99,.19)','rgba(33,49,80,.34)'];
+      haze.addColorStop(0,hues[state.arena]||hues[0]);
+      haze.addColorStop(1,'rgba(120,160,192,0)');
+      g.fillStyle=haze;g.fillRect(0,0,W,skyGap+2);
+      // High-cloud wisps fade in as the player climbs; no stock art or
+      // replacement of the existing four battlefield images.
+      const amount=clamp(skyGap/140,0,1);
+      g.fillStyle='rgba(231,241,242,'+(amount*.13)+')';
+      for(let k=0;k<5;k++){
+        const cy=(17+k*29)%(skyGap+12);
+        const cx=(W*(k*.21+.09)+Math.sin(state.visualClock*.06+k)*9)%W;
+        g.beginPath();g.ellipse(cx,cy,36+k%3*14,2+k%2,0,0,TAU);g.fill();
+      }
+    }
+    g.drawImage(scene,0,skyGap,W,H);
     drawWind();
+    g.save();g.translate(0,-state.cameraY);
     for(const t of state.trails){
       const fade=1-t.age/t.life;
       g.globalAlpha=fade*(t.contrail?.39:.26);
@@ -1917,6 +1965,7 @@ function plane(type,id,x,y,angle){
       }
     }
     g.globalAlpha=1;
+    g.restore(); // return from world coordinates to fixed-screen HUD
     // Text and meters are rendered only once, at native device resolution.
     // Removing the stretched low-resolution duplicate eliminates fuzzy glyph halos.
     // Draw the entire HUD a second time on the high-DPI overlay, preserving
@@ -1927,8 +1976,8 @@ function plane(type,id,x,y,angle){
     // damage instrument only in cockpit mode, away from MENU controls.
     if(document.getElementById('hud-style')?.value==='cockpit')damageDiagram();
     const pilot=state.fliers[0];
-    if(pilot&&pilot.alive&&pilot.y>H-42){
-      const danger=clamp((pilot.y-(H-42))/29,0,1);
+    if(pilot&&pilot.alive&&pilot.y>WORLD_H-42){
+      const danger=clamp((pilot.y-(WORLD_H-42))/29,0,1);
       g.globalAlpha=.45+danger*.55;
       g.fillStyle='#9a2621';g.fillRect(W/2-55,H-28,110,12);
       g.strokeStyle='#f6ca8b';g.strokeRect(W/2-55,H-28,110,12);
