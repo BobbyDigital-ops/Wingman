@@ -3,14 +3,15 @@
 (() => {
   'use strict';
   let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.3.3',GAME_PHASE='G3A.3'; // stable release identifier
+  const GAME_VERSION='v0.3.7',GAME_PHASE='G3A.3 CLASSIC'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
-  // Swoop is the default; ?physics=classic restores the previous steering and
-  // velocity handling for side-by-side feel testing (same assets and hitboxes).
-  const swoopPhysics=new URLSearchParams(window.location.search).get('physics')==='classic'
-    ? null : (window.WingmanFlightPhysics||null);
+  // Demo recovery: use the proven classic steering/velocity model by default.
+  // The swoop experiment remains available via ?physics=swoop for later tuning.
+  // All aircraft, weapons, UI and campaign systems remain unchanged.
+  const swoopPhysics=new URLSearchParams(window.location.search).get('physics')==='swoop'
+    ? (window.WingmanFlightPhysics||null) : null;
   // All six aircraft use the new 2.5D artwork; ?classic=1 preserves the old renderer for comparison.
   const useHdAircraft=new URLSearchParams(window.location.search).get('classic')!=='1';
   const modelCanvas=document.getElementById('aircraft-layer');
