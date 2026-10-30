@@ -1,0 +1,295 @@
+/* WINGMAN v0.8.3 — v11 fidelity pass.
+   Uses only the approved supplementary menu backgrounds extracted from the v11 HTML.
+   Never changes flight, aircraft/portrait files, campaign state or selection IDs. */
+:root{--wm14-gold:#e0ba72;--wm14-parchment:#e8d5a6;--wm14-ink:#272920;--wm14-navy:#071d2a}
+#stage{background:#071923}
+#stage>.frame{position:relative;isolation:isolate;color:#f5e7cb}
+#stage>.frame:not(.wm-v13-profiles):not(.opening-screen){
+  background-color:#091e2b!important}
+#stage>.opening-screen{
+  background:linear-gradient(90deg,#061725e8 0%,#061725a2 43%,#07192522 100%),
+    url('./v11-art/title.jpg') center/cover no-repeat!important}
+#stage>.wm-v13-profiles{
+  background:linear-gradient(90deg,#061925eb,#0a253bd4 56%,#07192576),
+    url('./v11-art/personnel.jpg') center/cover no-repeat!important}
+#stage>.wm-v12-home{
+  background:linear-gradient(100deg,#061825f2 0%,#061a28d9 41%,#05192774 100%),
+    url('./v11-art/operations.jpg') 70% center/cover no-repeat!important}
+#stage>.wm-v13-ops{
+  background:linear-gradient(100deg,#071926f5 0%,#071c29d4 53%,#0617259b),
+    url('./v11-art/personnel.jpg') center/cover no-repeat!important}
+#stage>.wm-v12-hangar{
+  background:linear-gradient(105deg,#071926c9,#06192582 45%,#061925dd),
+    url('./v11-art/hangar.webp') center/cover no-repeat!important}
+#stage>.wm-v13-campaign{
+  background:linear-gradient(95deg,#0b1415de,#081b26d8 58%,#091924b0),
+    url('./v11-art/campaign.jpg') center/cover no-repeat!important}
+#stage>.options-screen{
+  background:linear-gradient(103deg,#071823e9 0%,#0a2532e6 53%,#081823a9),
+    url('./v11-art/personnel.jpg') center/cover no-repeat!important}
+#stage>.records-screen,#stage>.pilot-screen,#stage>.wm-v11-review,#stage>.career-screen:not(.wm-v13-campaign){
+  background:linear-gradient(110deg,#061923f1,#0b2533cd),
+    url('./v11-art/personnel.jpg') center/cover no-repeat!important}
+#stage>.wm-v12-home::before,#stage>.wm-v12-hangar::before,
+#stage>.wm-v13-campaign::before,#stage>.wm-v13-ops::before{
+  opacity:0!important;pointer-events:none!important}
+#stage>.frame button,#stage>.frame select{touch-action:manipulation}
+#stage>.frame button:focus-visible,#stage>.frame select:focus-visible{
+  outline:2px solid #ffe8aa;outline-offset:2px}
+#stage>.frame .section-header{
+  position:relative;z-index:2;
+  background:linear-gradient(180deg,#071922ec,#122b36b9)!important;
+  border-bottom:1px solid #bda16d!important;
+  box-shadow:0 5px 22px #0008,inset 0 1px #f5d5a81e!important}
+#stage>.frame .section-header h1{
+  color:#f8e9c9!important;text-shadow:0 3px 12px #000a;
+  letter-spacing:.045em}
+#stage>.frame .section-header p{
+  color:#dfc392!important;letter-spacing:.12em!important}
+#stage>.frame .btn:not(.outline),#stage>.frame .wm-v13-tab,
+#stage>.frame .wm-v12-secondary,#stage>.frame .wm-v12-primary{
+  transition:filter .15s,transform .15s,box-shadow .15s;
+  box-shadow:inset 0 2px #fff4,inset 0 -2px #180f0eaa,0 4px 0 #07111a,0 8px 18px #0008}
+#stage>.frame .btn:hover,#stage>.frame .wm-v13-tab:hover{
+  filter:brightness(1.13);transform:translateY(-1px)}
+#stage>.frame .btn:active,#stage>.frame .wm-v13-tab:active{
+  transform:translateY(2px)}
+/* Main menu: v11 home poster, gilt action plates and service plaque */
+.wm-v12-home .wm-v12-home-content{position:relative;z-index:1}
+.wm-v12-home .wm-v12-home-intro h1{
+  font-size:clamp(46px,6.2vw,98px)!important;line-height:.88!important;
+  color:#f9e8c5!important;text-shadow:0 5px 25px #000d}
+.wm-v12-home .wm-v12-home-title{color:#e8bc76!important;letter-spacing:.13em}
+.wm-v12-home .wm-v12-adventure{
+  border:1px solid #c9a873!important;border-left:6px solid #c14d30!important;
+  background:linear-gradient(105deg,#102d3ce9,#2d4a5cce 65%,#5f6b5960)!important;
+  box-shadow:inset 0 2px #fff4,0 14px 30px #0009!important}
+.wm-v12-home .wm-v12-adventure-campaign{
+  border-left-color:#d1a867!important;
+  background:linear-gradient(100deg,#1b2d37ed,#344a4dcd,#6950328c)!important}
+.wm-v12-home .wm-v12-identity{
+  background:linear-gradient(105deg,#122c39ed,#061a28ed)!important;
+  border:1px solid #b69b6e!important;border-left:4px solid #d2a965!important;
+  box-shadow:0 9px 20px #0007}
+/* Profile sheets: keep original portraits/slot selection. */
+.wm-v13-profiles .wm-v13-profile-card{
+  background:linear-gradient(135deg,#eedbb4ee,#b9a079ec)!important;
+  color:#292d2a!important;border:5px solid #765637!important;
+  outline:1px solid #bba071;outline-offset:2px;
+  box-shadow:0 15px 31px #0009,inset 0 0 24px #8b6d3f44!important}
+.wm-v13-profiles .wm-v13-profile-card strong{color:#27343b!important}
+.wm-v13-profiles .wm-v13-profile-number,
+.wm-v13-profiles .wm-v13-profile-meta{color:#665133!important}
+.wm-v13-profiles .wm-v13-profile-card em{
+  color:#f9e8c3!important;background:linear-gradient(#234454,#0a2331)!important;
+  border:1px solid #8f7b56}
+.wm-v13-profiles .wm-v13-profile-card.is-current{
+  outline:2px solid #ffdf8e;outline-offset:2px}
+.wm-v13-ops .wm-v13-ops-left,.wm-v13-ops .wm-v13-ops-right{
+  border:5px solid #694d34!important;outline:1px solid #c6a873;
+  background:linear-gradient(145deg,#ebd8afea,#bfa47aee)!important;
+  box-shadow:0 17px 30px #0009,inset 0 0 20px #7f5e3238!important}
+.wm-v13-ops .wm-v13-ops-left,.wm-v13-ops .wm-v13-ops-right,
+.wm-v13-ops .wm-v13-ops-left label,.wm-v13-ops .wm-v13-ops-right label{color:#273036!important}
+.wm-v13-ops .wm-v13-mission-summary{
+  background:linear-gradient(#193747,#0b2332)!important;
+  border:1px solid #9c835f!important;color:#f7e5be!important}
+.wm-v12-hangar .wm-v12-hangar-hero,.wm-v12-hangar .wm-v12-hangar-dossier,
+.wm-v12-hangar .wm-v12-aircraft-tile,.wm-v13-ops .wm-v12-ops-field{
+  box-shadow:0 12px 23px #0008,inset 0 1px #fff3;
+  border-color:#b49a70!important}
+.wm-v12-hangar .wm-v12-hangar-title h1{color:#fff0cb!important}
+.wm-v12-hangar .wm-v12-actionbar{background:linear-gradient(#122f3e,#071c29)!important;
+  border-top:2px solid #e0bd7b}
+/* Campaign: actual v11 operational chart. Preserve eight-rank scroll & live choices. */
+.wm-v13-campaign .section-header{
+  background:linear-gradient(110deg,#101e25e8,#243334c0)!important}
+.wm-v13-campaign .wm-v13-campaign-status{
+  background:linear-gradient(100deg,#263135f3,#122733ef)!important;
+  border-block:1px solid #bba171bd;
+  box-shadow:inset 0 1px #ffecbf28}
+.wm-v13-campaign .campaign-main{
+  position:relative;
+  border:8px solid #503b2b!important;
+  outline:2px solid #b9965f;
+  outline-offset:-5px;
+  background:linear-gradient(120deg,#dccc9feF,#baa578ed)!important;
+  color:#322c22!important;
+  box-shadow:0 15px 36px #000b,inset 0 0 25px #96734368!important}
+.wm-v13-campaign .campaign-main::before{
+  content:'RAF OPERATIONS  ·  CHART No. 17  ·  CLASSIFIED';
+  display:block;flex:none;
+  font:800 clamp(9px,1vw,12px) 'Barlow Condensed',Impact,sans-serif;
+  letter-spacing:.18em;color:#65492e;text-align:center;
+  border-bottom:1px solid #836a46a8;padding:2px 0 5px}
+.wm-v13-campaign .campaign-ladder-head{
+  background:linear-gradient(100deg,#332e27,#62543d)!important;
+  color:#f7e3b6!important;border:1px solid #9e8256;
+  box-shadow:inset 0 1px #e4c28460}
+.wm-v13-campaign .campaign-ladder-head strong,
+.wm-v13-campaign .campaign-ladder-head span{color:#f6e3b9!important}
+.wm-v13-campaign .campaign-map-legend{
+  background:#e5d4a7e3!important;color:#493b28!important;
+  border-bottom:1px dashed #8a714b!important}
+.wm-v13-campaign .campaign-ladder-scroll{
+  background:repeating-linear-gradient(0deg,#5a4b2d16 0px,#5a4b2d16 1px,transparent 2px,transparent 38px),
+   repeating-linear-gradient(90deg,#6d5a3513 0px,#6d5a3513 1px,transparent 2px,transparent 38px),
+   radial-gradient(ellipse at 52% 40%,#e9dcb7 0%,#c7b387 85%)!important;
+  border:5px double #776246!important;
+  box-shadow:inset 0 0 38px #5a432851!important}
+.wm-v13-campaign .route-map-rank{
+  color:#433827!important;font-weight:900;
+  text-shadow:0 1px #fff3!important}
+.wm-v13-campaign .map-connections path{
+  stroke:#78613d!important;stroke-width:1.2!important;stroke-dasharray:3 3}
+.wm-v13-campaign .route-map-node{
+  background:linear-gradient(150deg,#2a4955,#112e3c)!important;
+  border:2px solid #bd9857!important;box-shadow:0 3px 9px #0007!important}
+.wm-v13-campaign .route-map-node.is-chosen{
+  border-color:#fbd584!important;box-shadow:0 0 0 3px #f4b64c8a,0 5px 13px #0009!important}
+.wm-v13-campaign .route-map-node.is-complete{background:linear-gradient(#486a4f,#234332)!important}
+.wm-v13-campaign .route-map-node.is-future{background:linear-gradient(#64645d,#434940)!important}
+.wm-v13-campaign .route-map-node small{
+  color:#f5eacb!important;text-shadow:0 1px 3px #000d!important}
+.wm-v13-campaign .campaign-rivals-title{
+  color:#f3e0b8;background:#253942;box-shadow:inset 0 1px #fff2}
+.wm-v13-campaign .compact-rival{
+  background:linear-gradient(110deg,#f0dfba,#cdb289)!important;
+  border:3px solid #715737!important;color:#2c2a23!important;
+  box-shadow:0 7px 15px #0007}
+.wm-v13-campaign .compact-rival.selected{border-color:#e6c878!important;outline:2px solid #e1a94f}
+.wm-v13-campaign .campaign-service-side{
+  border:6px solid #5a4531!important;
+  background:linear-gradient(115deg,#e5cf9e,#bca173)!important;
+  box-shadow:0 18px 30px #0009}
+.wm-v13-campaign .service-card{
+  background:linear-gradient(145deg,#ead8b0,#c9ae80)!important;
+  color:#2e2b24!important;border:0!important}
+.wm-v13-campaign .service-card-head,
+.wm-v13-campaign .service-brief{background:linear-gradient(#1a3643,#0b2635)!important;
+  color:#f5e3bd!important;border:1px solid #a28a5c}
+.wm-v13-campaign .service-actions button{box-shadow:inset 0 2px #fff4,0 4px #22170e!important}
+.wm-v13-campaign .wm-v13-campaign-bottom{
+  background:linear-gradient(180deg,#27343a,#081b28)!important;
+  border-top:2px solid #d4b473!important}
+.wm-v13-campaign .wm-v13-tab{
+  border-radius:3px!important;background:linear-gradient(#416075,#152e3c)!important}
+.wm-v13-campaign .wm-v13-tab-gold{
+  background:linear-gradient(#f2d89e,#ac844e)!important;color:#1a2f37!important}
+.wm-v13-campaign .wm-v13-tab.active{border-color:#f5da9d!important}
+/* Options: instrument-console composition faithfully adapted from v11. */
+.wm-v14-options{height:100%!important;min-height:0!important;overflow:hidden!important;
+  display:flex!important;flex-direction:column}
+.wm-v14-options .section-header{flex:none}
+.wm-v14-options-body{
+  display:flex;flex-direction:column;flex:1;min-height:0;gap:clamp(6px,1.3vh,15px);
+  padding:clamp(8px,1.65vh,22px) clamp(12px,2.8vw,42px) clamp(8px,1.6vh,18px);
+  width:min(1450px,100%);margin:auto}
+.wm-v14-options-intro{flex:none}
+.wm-v14-options-intro>span{
+  color:#e8bb72;font:900 clamp(10px,1vw,13px) 'Barlow Condensed',Impact,sans-serif;
+  letter-spacing:.2em}
+.wm-v14-options-intro h2{
+  margin:3px 0;color:#f6e3b9;font:900 clamp(27px,4.5vw,58px)/.95 'Barlow Condensed',Impact,sans-serif}
+.wm-v14-options-intro p{color:#e7d8b8;font-size:clamp(11px,1.1vw,14px);margin:5px 0}
+.wm-v14-options-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(200px,.66fr) minmax(320px,1.34fr);
+  gap:clamp(9px,2vw,28px);align-items:stretch}
+.wm-v14-console{
+  position:relative;min-height:0;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;
+  gap:clamp(8px,1.6vw,22px);padding:20px;
+  background:linear-gradient(145deg,#405056,#17252c 55%,#080f14)!important;
+  border:9px ridge #798184;border-radius:7px;
+  box-shadow:inset 0 13px 35px #000e,0 18px 35px #000a}
+.wm-v14-dial{
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  width:clamp(78px,9.2vw,142px);height:clamp(78px,9.2vw,142px);
+  border:8px ridge #77776e;border-radius:50%;
+  background:radial-gradient(circle at center,#203840 0 40%,#091115 73%);
+  box-shadow:inset 0 0 22px #000d,0 7px 20px #000a;color:#e8d4a3}
+.wm-v14-dial span{font:800 10px Georgia,serif;letter-spacing:.17em}
+.wm-v14-dial strong{font:900 clamp(31px,4vw,57px)/1 'Barlow Condensed',Impact,sans-serif}
+.wm-v14-dial small{font-size:9px;letter-spacing:.1em}
+.wm-v14-console-caption{
+  flex-basis:100%;text-align:center;color:#d5b981;
+  font:800 11px 'Barlow Condensed',Impact,sans-serif;letter-spacing:.13em}
+.wm-v14-option-panel{
+  display:flex;flex-direction:column;min-width:0;min-height:0;
+  background:linear-gradient(135deg,#ead8b0,#c7ad7e)!important;color:#302d27!important;
+  border:8px solid #624b31;outline:1px solid #d3ae78;
+  box-shadow:0 18px 35px #000a,inset 0 0 32px #8766383b;
+  padding:clamp(11px,1.8vw,25px)}
+.wm-v14-kicker{color:#79552a;font:900 clamp(10px,1vw,13px) 'Barlow Condensed',Impact,sans-serif;
+  letter-spacing:.14em}
+.wm-v14-option-panel h3{font:900 clamp(24px,2.7vw,35px)/1 'Barlow Condensed',Impact,sans-serif;
+  margin:5px 0 9px;color:#302f2c}
+.wm-v14-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.wm-v14-tabs button{
+  padding:9px 4px;background:linear-gradient(#233f50,#0c2737);
+  border:1px solid #93815f;color:#f5e3bd;cursor:pointer;
+  font:900 clamp(11px,1.2vw,17px) 'Barlow Condensed',Impact,sans-serif}
+.wm-v14-tabs button[aria-selected=true]{background:linear-gradient(#be6446,#873021);
+  border-color:#edc58c;color:#fff4d7}
+.wm-v14-option-content{flex:1;min-height:0;overflow:auto;padding:clamp(9px,1.8vw,22px) 2px 8px}
+.wm-v14-field{display:grid;grid-template-columns:minmax(120px,.7fr) minmax(150px,1.3fr);
+  gap:12px;align-items:center;padding:12px 0;border-bottom:1px dashed #9b7b52}
+.wm-v14-field label{font:900 clamp(14px,1.3vw,19px) 'Barlow Condensed',Impact,sans-serif;color:#352e24}
+.wm-v14-field select{width:100%;min-width:0;color:#f7e5c2;
+  background:linear-gradient(#25475a,#0b2533);border:1px solid #968364;padding:10px;font-size:13px}
+.wm-v14-instructions{
+  color:#4b402f;font-size:clamp(11px,1.1vw,15px);line-height:1.6;
+  padding:8px 0}
+.wm-v14-instructions strong{color:#302c24}
+.wm-v14-option-actions{flex:none;display:flex;gap:10px;justify-content:space-between;
+  margin-top:8px;border-top:1px solid #9b805a;padding-top:11px}
+.wm-v14-option-actions button{min-height:34px}
+.wm-v14-option-actions .btn.red{background:linear-gradient(#cb6346,#8a2b22)!important}
+.wm-v14-option-actions .btn.navy{background:linear-gradient(#4c6471,#142e3e)!important}
+.wm-v14-instrument-note{color:#d6b87f;font:800 10px 'Barlow Condensed',Impact,sans-serif;
+ letter-spacing:.12em;padding:1px 0}
+@media(max-width:900px){
+ .wm-v14-options-grid{grid-template-columns:minmax(145px,.55fr) minmax(315px,1.45fr);gap:10px}
+ .wm-v14-console{padding:7px;gap:7px;border-width:5px}
+ .wm-v14-dial{width:clamp(70px,10vw,95px);height:clamp(70px,10vw,95px);border-width:5px}
+ .wm-v14-option-panel{padding:12px;border-width:5px}
+ .wm-v14-field{padding:6px 0}
+}
+@media(max-height:520px) and (orientation:landscape){
+ .wm-v14-options-body{padding:5px 10px 5px;gap:4px}
+ .wm-v14-options .section-header{padding-top:4px!important;padding-bottom:4px!important}
+ .wm-v14-options .section-header h1{font-size:clamp(23px,3.2vw,34px)!important}
+ .wm-v14-options-intro h2{font-size:clamp(22px,3.2vw,32px);margin:0}
+ .wm-v14-options-intro p{display:none}
+ .wm-v14-options-grid{grid-template-columns:minmax(150px,.62fr) minmax(340px,1.38fr);gap:7px}
+ .wm-v14-console{gap:4px;padding:6px;align-content:center}
+ .wm-v14-dial{width:clamp(65px,8vw,84px);height:clamp(65px,8vw,84px);border-width:4px}
+ .wm-v14-dial strong{font-size:28px}
+ .wm-v14-dial span,.wm-v14-dial small{font-size:8px}
+ .wm-v14-option-panel{padding:7px 10px;border-width:5px}
+ .wm-v14-option-panel h3{font-size:22px;margin:1px 0 4px}
+ .wm-v14-tabs button{padding:4px;font-size:12px}
+ .wm-v14-option-content{padding:4px 0 2px}
+ .wm-v14-field{grid-template-columns:110px 1fr;padding:4px 0}
+ .wm-v14-field select{min-height:28px;padding:3px;font-size:11px}
+ .wm-v14-option-actions{padding-top:5px;margin-top:4px}
+ .wm-v14-option-actions button{min-height:29px!important;padding:4px 10px!important;font-size:12px!important}
+ .wm-v14-instrument-note{display:none}
+ .wm-v13-campaign .campaign-main{border-width:5px!important}
+ .wm-v13-campaign .campaign-main::before{font-size:9px;padding:0 0 2px}
+ .wm-v13-campaign .campaign-ladder-head{padding:2px 7px!important}
+ .wm-v13-campaign .campaign-map-legend{padding:3px!important}
+ .wm-v13-campaign .campaign-ladder-scroll{border-width:3px!important}
+ .wm-v13-campaign .wm-v13-campaign-status{font-size:10px}
+}
+@media(orientation:portrait) and (max-width:600px){
+ .wm-v14-options{height:auto!important;min-height:100dvh!important;overflow:auto!important}
+ .wm-v14-options-grid{display:flex;flex-direction:column;overflow:visible}
+ .wm-v14-console{min-height:145px;flex:none}
+ .wm-v14-dial{width:85px;height:85px}
+ .wm-v14-option-panel{min-height:310px;overflow:visible}
+ .wm-v14-option-content{overflow:visible}
+ .wm-v14-tabs button{font-size:12px}
+ .wm-v13-campaign .campaign-map-legend{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ #stage>.frame button{transition:none!important}
+}
