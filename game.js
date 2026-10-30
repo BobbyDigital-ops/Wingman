@@ -1109,7 +1109,7 @@ function plane(type,id,x,y,angle){
       p.aiBreakSign=(p.y>WORLD_H*.54?-1:1)*forward;
     }
     const attackRange=rankAI?119+talent*32:
-      state.difficulty==='ace'?151:state.difficulty==='rookie'?118:138;
+      state.difficulty==='ace'?166:state.difficulty==='rookie'?118:150;
     p.aiMode=p.aiEvadeTime>0?'evade':
       p.aiBreakTime>0?'break':range>attackRange?'intercept':'attack';
     // Campaign rivals retain recognisable tendencies without overriding
@@ -1176,8 +1176,7 @@ function plane(type,id,x,y,angle){
     // stop-start binary steering near the sight line.
     const turn=p.aiMode==='break'?p.aiBreakSign:
       Math.abs(error)<.045?0:
-        clamp(error*((state.difficulty==='rookie'&&!rankAI?2.0:2.35)+
-          talent*(state.difficulty==='rookie'&&!rankAI?1.4:1.45)),-1,1);
+        clamp(error*(2.0+talent*1.4),-1,1);
     p.aiBoost=false;
 
     // Actual guns use their own firing axis, not the tail-position waypoint.
