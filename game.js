@@ -1082,11 +1082,11 @@ function plane(type,id,x,y,angle){
     // of airspace to pull out at speed. Do not wait for screen-edge contact.
     // Bomber uses the SAME fighter tactical planner, but needs earlier
     // dive recovery because it has more yaw inertia and a wider turn radius.
-    const projected=p.y+descent*(p.role==='heavy'?4.7:strikeBomber?6:3.35)+
+    const projected=p.y+descent*(p.role==='heavy'?4.7:strikeBomber?7:3.35)+
       Math.max(0,Math.sin(p.angle))*(p.role==='heavy'?22:strikeBomber?22:16);
-    const floorBuffer=(p.role==='heavy'?118:strikeBomber?138:101)+(1-integrity)*8;
-    const floorDanger=p.y>(p.role==='heavy'?WORLD_H-255:strikeBomber?WORLD_H-275:WORLD_H-235)&&projected>WORLD_H-floorBuffer;
-    p.aiRecoveryTime=floorDanger?Math.max(p.aiRecoveryTime||0,p.role==='heavy'?1.70:strikeBomber?2.0:1.05):
+    const floorBuffer=(p.role==='heavy'?118:strikeBomber?150:101)+(1-integrity)*8;
+    const floorDanger=p.y>(p.role==='heavy'?WORLD_H-255:strikeBomber?WORLD_H-300:WORLD_H-235)&&projected>WORLD_H-floorBuffer;
+    p.aiRecoveryTime=floorDanger?Math.max(p.aiRecoveryTime||0,p.role==='heavy'?1.70:strikeBomber?2.4:1.05):
       Math.max(0,(p.aiRecoveryTime||0)-STEP);
     if(p.vy< -10&&p.y<WORLD_H-38)p.aiRecoveryTime=0;
     if(p.aiRecoveryTime>0){
