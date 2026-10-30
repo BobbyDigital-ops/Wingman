@@ -509,7 +509,7 @@ function plane(type,id,x,y,angle){
       p.corkscrewTime=CORKSCREW_SPIN_TIME;
       p.corkscrewDuration=CORKSCREW_SPIN_TIME;
       p.corkscrewRecovery=0;
-      p.speed=Math.min(p.d.speed*1.5,Math.max(p.speed,p.d.speed*1.27));
+      p.speed=Math.min(p.d.speed*1.5,Math.max(p.speed,p.d.speed*1.40));
       p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*.38;
       p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*.38;
       emit(p.x,p.y,13,'#d4e9f5',25);
@@ -708,7 +708,7 @@ function plane(type,id,x,y,angle){
     if(p.angle< -Math.PI)p.angle+=TAU;
     const power=1-.15*clamp((.6-p.health/p.d.hull)/.6,0,1);
     // A powerful but bounded Spitfire speed burst; Bf 109 retains Overdrive.
-    const boostGain=p.boosting?(p.type==='fighter'?1.55:1.40):1;
+    const boostGain=p.boosting?(p.type==='fighter'?1.94:1.40):1;
     const wanted=p.d.speed*engine*(p.engineCutTime>0?.42:1)*(p.diveTime>0?1.15:1)*power*(.87+.13*p.energy/100)*boostGain*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
     // Airspeed gained in a dive carries through a level-out, then fades.
     const drag=p.role==='fighter'?1.08:p.role==='heavy'?.93:.79;
@@ -720,7 +720,7 @@ function plane(type,id,x,y,angle){
     p.speed+=dt*exchange*(DIVE_SPEED_GAIN*dive*dive-29*climb*climb);
     if(p.diveTime>0){p.speed+=dt*11;p.vy+=dt*36;}
     // Higher but bounded dive ceiling; proportional Overdrive headroom.
-    const speedLimit=p.boosting?1.78:DIVE_OVERSPEED_LIMIT;
+    const speedLimit=p.boosting?(p.type==='fighter'?2.08:1.78):DIVE_OVERSPEED_LIMIT;
     p.speed=clamp(p.speed,p.d.speed*.43,p.d.speed*engine*speedLimit);
     // The velocity vector gently follows the fuselage, rather than snapping.
     const follow=Math.min(1,dt*(p.role==='bomber'?3.2:p.role==='heavy'?4:5.1));
