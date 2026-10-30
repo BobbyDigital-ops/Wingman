@@ -1,0 +1,19 @@
+name: Wingman AI Regression
+on:
+  push:
+    branches:
+      - dev/tactical-ai-rebuild-v034
+  workflow_dispatch:
+jobs:
+  wingman-ai:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Unit smoke and deterministic flight balance
+        run: npm run test:unit
+      - name: Real-flight tournament, ace difficulty
+        run: node tests/balance-tournament.cjs --reps=1 --seconds=55 --arena=alpine --difficulty=ace
