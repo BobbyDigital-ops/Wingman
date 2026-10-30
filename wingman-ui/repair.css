@@ -365,3 +365,16 @@ button.route-map-node:hover{transform:translateX(-50%) scale(1.12);box-shadow:0 
 .route-map-row.is-current{z-index:2}
 .route-map-row.is-cleared .route-map-lines path{stroke:#89a898;opacity:.85}
 @media(max-height:560px) and (orientation:landscape){.campaign-map-legend{font-size:9px;gap:2px 7px}.route-map-node small{font-size:8px}.route-map-node .node-symbol{font-size:18px}}
+
+/* Draw one connected SVG behind the map nodes: unlike isolated row paths these
+   endpoints align to each adjacent encounter centre. */
+.campaign-map-canvas{position:relative;width:100%;height:840px;min-height:840px;isolation:isolate}
+.campaign-map-canvas .route-map-row{position:relative;z-index:2;isolation:auto}
+.map-connections{display:block;position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible}
+.map-connections path{fill:none;stroke:#7395a3;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;opacity:.83}
+.campaign-map-canvas .route-map-node{z-index:3}
+.campaign-map-canvas .route-map-row.is-current{z-index:4}
+@media(max-height:560px) and (orientation:landscape){
+ .campaign-map-canvas{height:720px;min-height:720px}
+ .campaign-map-canvas .route-map-nodes{inset:26px 0 0}
+}

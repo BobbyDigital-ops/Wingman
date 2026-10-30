@@ -97,8 +97,8 @@ function career(){
  };
  const ladder=mapRows.map((rank,idx)=>{
   const final=rank===8,now=rank===currentRank,passed=rank<currentRank;
-  const linePaths=idx===7?'':laneX.map((x,lane)=>[lane,(lane+1)%3].map(dest=>'<path d="M '+x+' 20 L '+laneX[dest]+' 100" />').join('')).join('');
-  return '<div class="route-map-row '+(now?'is-current':passed?'is-cleared':'is-ahead')+'" data-map-rank="'+rank+'"><span class="route-map-rank">RANK '+rank+' · '+esc(rankTitles[rank-1])+'</span><svg class="route-map-lines" viewBox="0 0 100 120" preserveAspectRatio="none" aria-hidden="true">'+linePaths+'</svg><div class="route-map-nodes">'+laneX.map((x,lane)=>{
+
+  return '<div class="route-map-row '+(now?'is-current':passed?'is-cleared':'is-ahead')+'" data-map-rank="'+rank+'"><span class="route-map-rank">RANK '+rank+' · '+esc(rankTitles[rank-1])+'</span><div class="route-map-nodes">'+laneX.map((x,lane)=>{
    if(final&&!now&&lane!==1)return '';
    const actual=now?choices[lane]:null,meta=now?encounterMeta(actual?.mission):final?{icon:'★',name:'FINAL ACE'}:passed?{icon:'✓',name:'CLEARED'}:{icon:'?',name:'UNREVEALED'};
    const chosen=now&&lane===Math.min(S.choice,2),state=now?'is-available':passed?'is-complete':'is-future';
@@ -107,6 +107,14 @@ function career(){
    return '<'+tag+' class="route-map-node '+(chosen?'is-chosen ':'')+state+'" style="left:'+x+'%" title="'+esc(label)+'" aria-label="'+esc(label)+'"'+attrs+'><span class="node-symbol">'+meta.icon+'</span><small>'+esc(meta.name)+'</small></'+tag+'>';
   }).join('')+'</div></div>';
  }).join('');
+ const mapEdges=mapRows.slice(0,-1).map((rank,row)=>{
+  const sources=rank===8?[1]:[0,1,2];
+  return sources.map(lane=>{
+   const destinations=rank===8?[0,1,2]:lane===0?(row%2===0?[0,1]:[0]):lane===1?(row%2===0?[1,2]:[0,1]):(row%2===0?[2]:[1,2]);
+   return destinations.map(dest=>'<path d="M '+laneX[lane]+' '+(48+row*105)+' L '+laneX[dest]+' '+(48+(row+1)*105)+'" />').join('');
+  }).join('');
+ }).join('');
+ const connectedLadder='<div class="campaign-map-canvas"><svg class="map-connections" viewBox="0 0 100 840" preserveAspectRatio="none" aria-hidden="true">'+mapEdges+'</svg>'+ladder+'</div>';
  const rivals=choices.map((c,i)=>{
   const rival=rivalFor(c),stat=saved.records?.[c.id]||{},fought=(stat.wins||0)+(stat.losses||0);
   return '<button type="button" class="compact-rival '+(i===S.choice?'selected':'')+'" data-choice="'+i+'" aria-pressed="'+(i===S.choice)+'"><span class="compact-rival-photo">'+atlas(rival)+'</span><span class="compact-rival-info"><strong>'+esc(rival?.name||c.label)+'</strong><small>'+esc(c.mission||'DOGFIGHT')+' · '+esc(rival?.signature||'ROLL').toUpperCase()+'</small><span class="compact-rival-description">'+esc(rival?.bio||'A formidable pilot with a fearsome reputation in the skies.')+'</span><em>'+ (fought?('YOUR ENCOUNTERS '+fought+' · W '+(stat.wins||0)+' / L '+(stat.losses||0)):'UNDEFEATED IN YOUR SERVICE RECORD')+'</em></span></button>';
@@ -114,7 +122,7 @@ function career(){
  return `<section class="frame career-screen campaign-rework">${header('KING OF THE SKIES','RANK '+currentRank+' / 8 · '+run.lives+' LIVES')}
  <div class="campaign-rework-content"><div class="campaign-main">
  <div class="campaign-ladder-head"><strong>ROAD TO ACE</strong><span>BRANCHING ROUTES · CLIMB TO THE FINAL ACE</span></div>
- <div class="campaign-map-legend"><span>✈ INTERCEPT</span><span>⚔ DUEL</span><span>⌖ PATROL</span><span>✦ DOUBLE ACE</span><span>★ FINAL ACE</span><span>? UNREVEALED</span></div><div class="campaign-ladder-scroll" data-rank="${currentRank}" aria-label="Branching eight-rank campaign map">${ladder}</div>
+ <div class="campaign-map-legend"><span>✈ INTERCEPT</span><span>⚔ DUEL</span><span>⌖ PATROL</span><span>✦ DOUBLE ACE</span><span>★ FINAL ACE</span><span>? UNREVEALED</span></div><div class="campaign-ladder-scroll" data-rank="${currentRank}" aria-label="Branching eight-rank campaign map">${connectedLadder}</div>
  <div class="campaign-rivals-title"><strong>CHOOSE YOUR NEXT OPPONENT</strong><small>THREE ROUTES · YOUR DECISION</small></div>
  <div class="campaign-rivals">${rivals}</div>
  </div>
