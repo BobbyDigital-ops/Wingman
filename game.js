@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, SKY_EXTRA=150, WORLD_H=H+SKY_EXTRA, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.6.1',GAME_PHASE='F2.1 SKY & TACTICS'; // stable release identifier
+  const GAME_VERSION='v0.6.2',GAME_PHASE='F2.2 BOMBER & UI'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -323,8 +323,29 @@ function plane(type,id,x,y,angle){
     document.getElementById('bomb')?.setAttribute('hidden','');
     background=makeBackground();newRound();window.WingmanAudio?.startEngine();
   }
+  // Direct launch avoids the obsolete hidden setup screen / synthetic clicks.
+  // startMatch remains authoritative for round setup and campaign preservation.
+  function launchArcade({mode='duel',aircraft='fighter',difficulty='standard',arena=0}={}){
+    if(state.phase==='playing'||!Object.prototype.hasOwnProperty.call(PLANES,aircraft))return false;
+    if(!['duel','survival','triple','teams','challenge'].includes(mode))return false;
+    if(!['rookie','standard','ace'].includes(difficulty))return false;
+    const theatre=Number(arena);
+    if(!Number.isInteger(theatre)||theatre<0||theatre>3)return false;
+    const set=(id,value)=>{
+      const field=document.getElementById(id);
+      if(field){field.value=String(value);field.dispatchEvent(new Event('change',{bubbles:true}));}
+    };
+    state.selected=aircraft;
+    state.campaignEncounter=null;state.campaignAirframe=null;
+    set('mode-select',mode==='teams'?'duel':mode==='triple'?'duel':mode);
+    set('pilots-select',mode==='teams'?4:mode==='triple'?3:2);
+    set('team-select',mode==='teams'?'teams':'ffa');
+    set('difficulty-select',difficulty);set('arena-select',theatre);
+    startMatch();
+    return state.phase==='playing';
+  }
   window.WingmanGame={
-    startCampaignFight,showMenu:()=>showMenu(),
+    launchArcade,startCampaignFight,showMenu:()=>showMenu(),
     isPlaying:()=>state.phase==='playing',
     aircraftSpecs:()=>Object.fromEntries(Object.entries(PLANES).map(([id,p])=>
       [id,{speed:p.speed,turn:p.turn,armour:p.armour,hull:p.hull,damage:(id==='bomber'||id==='he111')?2.9:p.damage,radius:p.radius}]))
