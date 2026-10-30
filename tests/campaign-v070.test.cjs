@@ -25,18 +25,18 @@ test('24 deterministic branching encounters across all eight ranks',()=>{
   assert.equal(enc.rank,rank);
   assert.ok(['LOW','MEDIUM','HIGH'].includes(enc.risk));
   assert.ok(enc.aiRank>=rank&&enc.aiRank<=8);
-  assert.ok(enc.timeLimit>=54);
+  assert.ok(enc.timeLimit>=49);
   assert.ok(enc.types.length>=1&&enc.types.length<=3);
   assert.equal(enc.suppliesAward,rank===8?3:lane+1);
   assert.equal(enc.objective==='final',rank===8);
   kinds.add(enc.objective);risks.add(enc.risk);
  }
  assert.deepEqual([...risks].sort(),['HIGH','LOW','MEDIUM']);
- for(const name of ['duel','intercept','outnumbered','escort','final'])assert.ok(kinds.has(name));
+ for(const name of ['duel','intercept','recon','ace-hunt','outnumbered','escort','final'])assert.ok(kinds.has(name));
 });
 test('real bomber interception and escort compositions exist for both factions',()=>{
  for(const faction of ['Allies','Axis']){
-  const b=mission(3,0,faction).enc;
+  const b=mission(4,0,faction).enc;
   assert.equal(b.objective,'intercept');
   assert.equal(b.types[0],faction==='Allies'?'he111':'bomber');
   const e=mission(4,1,faction).enc;
@@ -81,6 +81,6 @@ test('campaign escort and bomber deadline objectives run in real game engine',()
  const report=runAI({game:load('game.js'),physics:load('src/physics/swoop-flight.js'),
   aircraft:load('src/art/aircraft.js'),scenery:load('src/art/scenery.js')},
   {seconds:1,reps:1,scenarios:['duel'],difficulty:'standard',campaignCheck:true});
- assert.deepEqual(report.campaignChecks,{escortPresent:true,escortSurvived:true,escortLost:true,interceptionDeadline:true,campaignBonusesApplied:true,noFriendlyFire:true});
+ assert.deepEqual(report.campaignChecks,{escortPresent:true,escortSurvived:true,escortLost:true,interceptionDeadline:true,reconSurvivalWin:true,reconPilotLost:true,aceHuntTimedOut:true,campaignBonusesApplied:true,noFriendlyFire:true});
  assert.equal(report.groundCrashes,0);
 });
