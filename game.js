@@ -1384,10 +1384,10 @@ function plane(type,id,x,y,angle){
     }
     sound(cause==='BOMB'||cause==='MINE'?'bombImpact':'boom');
     for(const p of state.fliers){
-      if(!p.alive||p.id===owner||((state.teams||state.mode==='campaign')&&state.fliers[owner]?.team===p.team))continue;
+      if(!p.alive||p.id===owner||((state.teams||state.mode==='campaign')&&state.fliers.find(q=>q.id===owner)?.team===p.team))continue;
       const d=Math.hypot(x-p.x,y-p.y);
       // Explosions must not masquerade as ramming damage when airframes touch.
-      const source=state.fliers[owner];
+      const source=state.fliers.find(q=>q.id===owner);
       if(source&&distance(source,p)<source.d.radius+p.d.radius+5)continue;
       if(d<r+p.d.radius)hit(p,damage*(1-clamp(d/(r+p.d.radius),0,.75)),x,y,undefined,cause,owner);
     }
@@ -1413,7 +1413,7 @@ function plane(type,id,x,y,angle){
         }
       }
       b.x+=(b.vx+state.wind.current*.18)*dt;b.y+=b.vy*dt;b.life-=dt;b.age=(b.age||0)+dt;
-      const shooter=state.fliers[b.owner];
+      const shooter=state.fliers.find(q=>q.id===b.owner);
       const targets=state.fliers.filter(p=>p.id!==b.owner&&p.alive&&(!(state.teams||state.mode==='campaign')||p.team!==shooter?.team));
       // Neither a gun muzzle nor a bomber can inflict disguised impact damage
       // by touching another airframe: rounds must leave the collision envelope.
@@ -1454,7 +1454,7 @@ function plane(type,id,x,y,angle){
       if(b.delay>0)continue;
       b.age=(b.age||0)+dt;
       b.vy+=94*dt;b.x+=(b.vx+state.wind.current*.4)*dt;b.y+=b.vy*dt;b.life-=dt;
-      const target=state.fliers.find(p=>p.id!==b.owner&&p.alive&&(!state.teams||p.team!==state.fliers[b.owner]?.team)&&distance(b,p)<p.d.radius+4);
+      const target=state.fliers.find(p=>p.id!==b.owner&&p.alive&&(!state.teams||p.team!==state.fliers.find(q=>q.id===b.owner)?.team)&&distance(b,p)<p.d.radius+4);
       if(b.y>=WORLD_H-8||(b.age>.24&&target)){
         explosion(b.x,Math.min(b.y,WORLD_H-8),27,b.owner,40);
         state.bombs.splice(i,1);continue;
@@ -1463,7 +1463,7 @@ function plane(type,id,x,y,angle){
     }
     for(let i=state.mines.length-1;i>=0;i--){
       const m=state.mines[i];m.arm-=dt;m.life-=dt;m.phase+=dt*2;
-      const target=state.fliers.find(p=>p.id!==m.owner&&p.alive&&(!state.teams||p.team!==state.fliers[m.owner]?.team)&&distance(m,p)<p.d.radius+6);
+      const target=state.fliers.find(p=>p.id!==m.owner&&p.alive&&(!state.teams||p.team!==state.fliers.find(q=>q.id===m.owner)?.team)&&distance(m,p)<p.d.radius+6);
       if(m.arm<=0&&target&&target.alive&&distance(m,target)<target.d.radius+6){
         explosion(m.x,m.y,21,m.owner,54,'MINE');state.mines.splice(i,1);continue;
       }
