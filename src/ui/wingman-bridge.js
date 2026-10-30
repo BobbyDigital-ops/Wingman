@@ -95,7 +95,7 @@ function mount(){
  if(by('wingman-new-interface'))return;
  cover=document.createElement('div');cover.id='wingman-new-interface';cover.setAttribute('aria-label','Wingman illustrated main menu');
  cover.style.cssText='position:fixed;inset:0;z-index:60;background:#061824;display:block;overflow:hidden';
- iframe=document.createElement('iframe');iframe.src='./wingman-ui/index.html?v=81';iframe.title='Wingman RAF illustrated menus';
+ iframe=document.createElement('iframe');iframe.src='./wingman-ui/index.html?v=82';iframe.title='Wingman RAF illustrated menus';
  iframe.style.cssText='width:100%;height:100%;border:0;display:block;background:#061824';
  iframe.setAttribute('allowfullscreen','');cover.appendChild(iframe);
  const app=document.querySelector('.app')||document.body;app.appendChild(cover);
@@ -110,6 +110,8 @@ function mount(){
  sync();
 }
 window.WingmanUIBridge={show,hide,choosePilot,beginCareer,startCareer,startArcade,continueCareer,
+ listProfileSlots(){return window.WingmanProfileSlots?.slots?.()||[];},
+ selectProfileSlot(index){return window.WingmanProfileSlots?.select?.(index)||{ok:false,error:'profile-manager-unavailable'};},
  claimCampaignReward(id){
   return !!window.WingmanCareer?.claimReward?.(id);
  },
