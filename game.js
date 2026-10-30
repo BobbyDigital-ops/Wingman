@@ -117,7 +117,7 @@ function pilotFactors(p){
 }
 function plane(type,id,x,y,angle){
     const d=PLANES[type];
-    return {overdriveTime:0,corkscrewTime:0,corkscrewDuration:0,corkscrewRecovery:0,bombQueue:0,bombInterval:0,bombRunId:0,attributes:pilotAttributes(),pilotSkill:'roll',skillCooldown:0,smokescreen:0,hardenTime:0,deadeyeTime:0,engineCutTime:0,diveTime:0,id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
+    return {overdriveTime:0,corkscrewTime:0,corkscrewDuration:0,corkscrewRecovery:0,bombAssistTime:0,bombQueue:0,bombInterval:0,bombRunId:0,attributes:pilotAttributes(),pilotSkill:'roll',skillCooldown:0,smokescreen:0,hardenTime:0,deadeyeTime:0,engineCutTime:0,diveTime:0,id,type,role:d.class||type,team:state.teams?(id===0||id===2?0:1):id,d,x,y,angle,speed:d.speed*.8,vx:Math.cos(angle)*d.speed*.8,
       vy:Math.sin(angle)*d.speed*.8,health:d.hull,armour:d.armour,rearCooldown:0,rearShots:0,rearShotTime:0,aiBombDelay:id>0?4.5:0,turretFlash:0,
       critical:false,criticalCause:'',flightRisk:0,climbLoad:0,aiRecoveryTime:0,tailAssist:0,
       gunCooldown:0,burstLeft:0,shotTimer:0,specialCooldown:0,boostCharge:100,boosting:false,aiBoost:false,
@@ -538,10 +538,16 @@ function plane(type,id,x,y,angle){
       p.armourTime=4;
       emit(p.x,p.y,6,'#a9dced',11);
     }else{
-      // Three staggered releases from one activation. Bombs are distinct,
-      // and a later explosion has diminishing damage on the same target.
-      p.specialCooldown=20;
-      p.bombQueue=3;p.bombInterval=0;
+      // One-button assisted bombing for the human pilot. The aircraft must
+      // actually fly over a viable predicted drop path; nothing is homing.
+      if(p.id===0){
+        if(p.bombAssistTime>0)return;
+        p.bombAssistTime=4.2;
+        p.skillFeedback='BOMB RUN ARMED · LINE UP ABOVE TARGET';
+        p.skillFeedbackTime=1.7;
+        sound('special');return;
+      }
+      p.specialCooldown=20;p.bombQueue=3;p.bombInterval=0;
       emit(p.x,p.y,4,'#efd1a2',9);
     }
     sound('special');
@@ -1104,6 +1110,27 @@ function plane(type,id,x,y,angle){
     p.hitFlash=Math.max(0,p.hitFlash-dt);p.muzzleFlash=Math.max(0,p.muzzleFlash-dt);
     p.damageNotice=Math.max(0,p.damageNotice-dt);
     p.specialCooldown=Math.max(0,p.specialCooldown-dt);
+    if(p.id===0&&p.role==='bomber'&&p.bombAssistTime>0){
+      p.bombAssistTime=Math.max(0,p.bombAssistTime-dt);
+      const target=nearestEnemy(p);
+      if(target?.alive){
+        const dy=target.y-p.y,range=combatDistance(p,target);
+        if(dy>=27&&dy<=122&&range<185&&target.spawnSafe<=0){
+          const fall=clamp(Math.sqrt(Math.max(0,2*(dy-7)/94)),.25,1.15);
+          const releaseX=p.x+p.vx*.035;
+          const predicted=target.x+(target.vx-p.vx*.58)*fall;
+          if(Math.abs(wrappedDelta(releaseX,predicted))<36){
+            p.bombAssistTime=0;p.bombQueue=3;p.bombInterval=0;
+            p.specialCooldown=20;p.skillFeedback='BOMBS AWAY';p.skillFeedbackTime=1.2;
+            emit(p.x,p.y,4,'#efd1a2',9);sound('special');
+          }
+        }
+      }
+      if(p.bombAssistTime<=0&&p.bombQueue===0&&p.specialCooldown===0){
+        // Failed runs are cheap to retry, not an unwanted 20-second lockout.
+        p.specialCooldown=5;p.skillFeedback='NO RELEASE · REPOSITION';p.skillFeedbackTime=1.15;
+      }
+    }
     p.aiBombDelay=Math.max(0,(p.aiBombDelay||0)-dt);
     p.turretFlash=Math.max(0,(p.turretFlash||0)-dt);
     for(const key of ['skillCooldown','smokescreen','hardenTime','deadeyeTime','engineCutTime','diveTime'])p[key]=Math.max(0,(p[key]||0)-dt);
@@ -1741,7 +1768,7 @@ function plane(type,id,x,y,angle){
       const role=p.role;
       const baseLabel=p.type==='fighter'?'CORKSCREW':role==='fighter'?'BOOST':role==='heavy'?'SHIELD':'BOMBS';
       const cooldown=Math.max(0,p.specialCooldown||0);
-      const label=cooldown>0?(p.type==='fighter'?'CORK':baseLabel)+' '+Math.ceil(cooldown)+'s':baseLabel;
+      const label=p.role==='bomber'&&p.bombAssistTime>0?'BOMB RUN '+Math.ceil(p.bombAssistTime)+'s':cooldown>0?(p.type==='fighter'?'CORK':baseLabel)+' '+Math.ceil(cooldown)+'s':baseLabel;
       if(specialButton.textContent!==label)specialButton.textContent=label;
       specialButton.setAttribute('aria-label',baseLabel+(cooldown>0?' recharging '+Math.ceil(cooldown)+' seconds':' ready'));
       specialButton.classList.toggle('on-cooldown',cooldown>0);
