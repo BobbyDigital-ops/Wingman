@@ -427,6 +427,17 @@ test('G3B defensive evasions respond to a gun threat, not random passing',()=>{
  game.internals.aiInput(p,target);
  assert.notEqual(p.aiMode,'evade','opponent facing away cannot force evasive orbit');
 });
+test('G3B heavy interceptor plans a safe climb before a dangerous diving pass',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const [target,p]=game.internals.state.fliers;
+ p.type='bf110';p.role='heavy';p.d=game.internals.PLANES.bf110;
+ p.x=175;p.y=100;p.vx=65;p.vy=55;p.angle=.4;
+ target.x=260;target.y=165;target.spawnSafe=0;
+ const steer=game.internals.aiInput(p,target);
+ assert.equal(p.aiMode,'recover','wide-turning heavy must predict ground danger earlier');
+ assert.ok(p.aiRecoveryTime>0&&steer<0,'heavy recovers through ordinary upward steering');
+});
+
 test('G3B ground recovery interrupts an unfinished pursuit break',()=>{
  const game=launch();game.listeners.get('start:click')();
  const [target,p]=game.internals.state.fliers;
