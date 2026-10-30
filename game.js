@@ -989,7 +989,7 @@ function plane(type,id,x,y,angle){
     // The ceiling is not a second ground. Ease out of climbing only when
     // actually approaching it; otherwise keep chasing across the full sky.
     if(p.y<56&&p.vy< -12){
-      p.aiMode='recover';p.aiBoost=false;
+      p.aiMode='intercept';p.aiBoost=false;
       const heading=Math.atan2(.38,p.vx>=0?1:-1);
       return clamp(angleDiff(heading,p.angle)*2,-1,1);
     }
