@@ -50,7 +50,7 @@ function startCareer(index,type){
  if(!click('#active-rung [data-choice="'+index+'"]',by('career-screen')))return false;
  if(!click('[data-sortie-plane="'+type+'"]',by('career-screen')))return false;
  if(!click('[data-action="confirm-sortie-aircraft"]',by('career-screen')))return false;
- hide();return true;
+ if(window.WingmanGame?.isPlaying?.())hide();return true;
 }
 function startArcade({mode,aircraft,difficulty,arena}){
  if(!['duel','survival','triple','teams','challenge'].includes(mode))return false;
@@ -65,6 +65,8 @@ function startArcade({mode,aircraft,difficulty,arena}){
  setValue('difficulty-select',difficulty);
  setValue('arena-select',arena);
  if(!click('#start'))return false;
+ // Game state, rather than overlay timing, authoritatively confirms launch.
+ if(!window.WingmanGame?.isPlaying?.())return false;
  hide();return true;
 }
 function continueCareer(){openCareer('ladder');show()}
@@ -74,6 +76,8 @@ function sync(){
   const result=visible(by('result'));
   const campaign=visible(by('career-screen'));
   const menu=visible(by('menu'));
+  const playing=window.WingmanGame?.isPlaying?.();
+  if(playing){hide();resultSeen=false;return;}
   if(result){
    show();
    const value=by('result-title')?.textContent||'SORTIE COMPLETE';
