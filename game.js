@@ -1991,38 +1991,53 @@ function plane(type,id,x,y,angle){
     const theatre=window.WingmanStaticBackgrounds?.images?.[state.arena];
     const scene=theatre?.complete&&theatre.naturalWidth?theatre:background;
     const skyGap=SKY_EXTRA-state.cameraY;
-    if(skyGap>0.5){
-      // World-space extended sky: the previous implementation stretched a
-      // three-pixel source strip across 150 logical pixels. Never scale an
-      // image strip vertically to fill altitude. Paint at native geometry.
-      const palette=[
-        ['#213d68','#4d789d'], // Alpine
-        ['#366581','#83a8b4'], // Channel
-        ['#607081','#b9aaa1'], // North Africa
-        ['#27364e','#647788']  // Storm
-      ][state.arena]||['#213d68','#4d789d'];
-      const shade=g.createLinearGradient(0,-state.cameraY,0,skyGap);
-      shade.addColorStop(0,palette[0]);
-      shade.addColorStop(.65,palette[1]);
-      shade.addColorStop(1,palette[1]);
-      g.fillStyle=shade;g.fillRect(0,0,W,skyGap+1);
-      // Native-size distant cloud wisps, painted instead of stretched.
-      const cloudTone=state.arena===3?'rgba(197,211,221,.11)':
-        state.arena===2?'rgba(238,224,192,.12)':'rgba(230,241,241,.14)';
-      for(let k=0;k<7;k++){
-        const wy=19+k*21,sy=wy-state.cameraY;
-        if(sy< -9||sy>skyGap+7)continue;
-        const cx=W*(.08+(k*.18)%0.83)+Math.sin(k*2.6)*19;
-        g.fillStyle=cloudTone;
-        g.beginPath();g.ellipse(cx,sy,20+(k%3)*11,2.4+(k%2),0,0,TAU);g.fill();
-        g.beginPath();g.ellipse(cx+14,sy+3,15+(k%2)*9,1.4,0,0,TAU);g.fill();
-      }
-      // Preserve a thin, unscaled image-edge transition with the original
-      // artwork. Its height remains two pixels, regardless of camera travel.
-      if(skyGap>=2)g.drawImage(scene,0,0,scene.width,Math.min(2,scene.height),
-        0,skyGap-2,W,2);
+    // Make the upper atmosphere actually CONNECT to the theatre art.
+    // The original image is composited with a 60px feathered top edge;
+    // no stretched strips, drawn seam or uniformly coloured rectangle.
+    if(!draw.skyCache||draw.skyCache.source!==scene){
+      const fade=document.createElement('canvas');
+      fade.width=scene.width;fade.height=scene.height;
+      const fc=fade.getContext('2d');
+      fc.drawImage(scene,0,0);
+      let edge=[82,143,189];
+      try{
+        const sample=fc.getImageData(Math.round(fade.width*.5),
+          Math.max(1,Math.round(fade.height*.035)),1,1).data;
+        if(sample[3]>0)edge=[sample[0],sample[1],sample[2]];
+      }catch(_){}
+      fc.globalCompositeOperation='destination-in';
+      const feather=fc.createLinearGradient(0,0,0,fade.height*60/H);
+      feather.addColorStop(0,'rgba(0,0,0,0)');
+      feather.addColorStop(.45,'rgba(0,0,0,.50)');
+      feather.addColorStop(1,'rgba(0,0,0,1)');
+      fc.fillStyle=feather;
+      fc.fillRect(0,0,fade.width,fade.height*60/H+1);
+      fc.globalCompositeOperation='source-over';
+      draw.skyCache={source:scene,fade,edge};
     }
-    g.drawImage(scene,0,skyGap,W,H);
+    const edge=draw.skyCache.edge;
+    const upper=[
+      [27,56,86], // Alpine
+      [37,75,102],// Channel
+      [91,100,110],// Desert
+      [24,37,56]  // Storm
+    ][state.arena]||[27,56,86];
+    const sky=g.createLinearGradient(0,-state.cameraY,0,Math.max(H,skyGap+65));
+    sky.addColorStop(0,'rgb('+upper.join(',')+')');
+    sky.addColorStop(1,'rgb('+edge.join(',')+')');
+    g.fillStyle=sky;g.fillRect(0,0,W,H);
+    // These are transparent, individually drawn cloud banks with native
+    // geometry, not an image scaled to the height of the expanded world.
+    const cloudAlpha=state.arena===3?.105:.13;
+    for(let k=0;k<8;k++){
+      const worldY=28+k*28,cy=worldY-state.cameraY;
+      if(cy< -8||cy>skyGap+6)continue;
+      const cx=W*(.07+(k*.173)%0.86)+Math.sin(k*3.7)*12;
+      g.fillStyle='rgba(234,243,240,'+cloudAlpha+')';
+      g.beginPath();g.ellipse(cx,cy,21+(k%3)*13,1.7+(k%2),0,0,TAU);g.fill();
+      g.beginPath();g.ellipse(cx+13,cy+2,16+(k%2)*9,1.2,0,0,TAU);g.fill();
+    }
+    g.drawImage(draw.skyCache.fade,0,skyGap,W,H);
     drawWind();
     g.save();g.translate(0,-state.cameraY);
     for(const t of state.trails){
