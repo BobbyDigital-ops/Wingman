@@ -1,0 +1,233 @@
+/* Wingman v0.8.2 — approved v11 UX sequence and mobile layout correction.
+   Append after v12; scoped to new screens and campaign views only.
+   Never changes aircraft/pilot images or game flight behaviour. */
+.wm-v13-profiles{
+ height:100%!important;min-height:0!important;display:flex!important;flex-direction:column;
+ background:linear-gradient(100deg,#071e2de9,#0b2b3bd9),
+ var(--art-operations-painting,linear-gradient(#284555,#061a27)) center/cover no-repeat!important;
+ color:#f5e5c8!important;overflow:hidden!important}
+.wm-v13-profiles-content{display:flex;flex-direction:column;flex:1;min-height:0;max-width:1450px;width:100%;
+ margin:auto;padding:clamp(49px,8vh,82px) clamp(14px,3.5vw,45px) 14px}
+.wm-v13-profiles-content header{flex:none}
+.wm-v13-profiles-content h1{color:#fff0d0;font:900 clamp(37px,5.1vw,75px)/.94 'Barlow Condensed',Impact,sans-serif;
+ letter-spacing:.022em;margin:8px 0}
+.wm-v13-profiles-content header p{margin:1px 0 14px;color:#cad7d1;font:600 clamp(11px,1.18vw,15px) Barlow,Arial,sans-serif}
+.wm-v13-profiles-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));flex:1;min-height:0;gap:clamp(8px,1.5vw,19px);align-items:stretch}
+.wm-v13-profile-card{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;min-height:0;
+ padding:clamp(10px,1.5vw,19px);border:2px solid #b9a077ab;
+ color:#f2e0bf;background:linear-gradient(145deg,#284553e8,#0c2433ef);text-align:left;
+ box-shadow:inset 0 1px #fff2,0 9px 27px #0008;cursor:pointer}
+.wm-v13-profile-card:hover,.wm-v13-profile-card:focus-visible{border-color:#f6d493;background:#294d5d}
+.wm-v13-profile-card.is-current{border-color:#ebc478}
+.wm-v13-profile-number{color:#e5c184;font:900 clamp(10px,1.04vw,13px) 'Barlow Condensed',Impact,sans-serif;letter-spacing:.12em}
+.wm-v13-profile-photo{width:clamp(62px,11vw,148px);height:clamp(63px,21vh,175px);border:3px solid #c9b085;
+ background:#102b3c;overflow:hidden;display:flex;align-items:center;justify-content:center;flex:none}
+.wm-v13-empty-portrait{font:900 70px 'Barlow Condensed',Impact,sans-serif;color:#d9c7a3}
+.wm-v13-profile-card strong{font:900 clamp(19px,2.4vw,33px)/1 'Barlow Condensed',Impact,sans-serif;overflow-wrap:anywhere}
+.wm-v13-profile-meta{font:700 clamp(10px,1vw,13px)/1.2 'Barlow Condensed',Impact,sans-serif;color:#b9d1d0}
+.wm-v13-profile-card em{display:block;align-self:stretch;margin-top:auto;padding:8px;background:#c99f62;color:#132938;
+ font:900 clamp(12px,1.3vw,17px) 'Barlow Condensed',Impact,sans-serif;font-style:normal;letter-spacing:.03em}
+.wm-v13-profiles-content footer{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:54px;flex:none}
+.wm-v13-profile-back{border:1px solid #bfa880;background:#173646;color:#f8e8c6;
+ font:900 15px 'Barlow Condensed',Impact,sans-serif;padding:8px 18px;cursor:pointer}
+.wm-v13-profiles-content footer span{color:#b8c4b9;font:700 10px 'Barlow Condensed',Impact,sans-serif}
+.wm-v13-home-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.wm-v13-home-actions button{min-height:39px;background:linear-gradient(#244557,#122a39);border:1px solid #bca376a1;
+ color:#efdfc0;font:900 15px 'Barlow Condensed',Impact,sans-serif;letter-spacing:.06em;cursor:pointer}
+.wm-v13-home-actions button:hover{background:#32576a}
+.wm-v13-ops .wm-v13-ops-content{flex:1;min-height:0;max-width:1480px;width:100%;margin:auto;
+ padding:clamp(50px,8vh,77px) clamp(16px,4vw,60px) 17px;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.wm-v13-ops .wm-v12-ops-title{flex:none}
+.wm-v13-ops .wm-v12-ops-title h1{margin:4px 0;font-size:clamp(38px,5.1vw,72px)}
+.wm-v13-ops-grid{display:grid;grid-template-columns:minmax(260px,.9fr) minmax(300px,1.1fr);
+ gap:clamp(10px,1.7vw,23px);flex:1;min-height:0;align-items:stretch}
+.wm-v13-ops-left,.wm-v13-ops-right{padding:clamp(12px,1.6vw,22px);background:linear-gradient(145deg,#102d3ce7,#071c29f3);
+ border:1px solid #b99c7399;display:flex;flex-direction:column;min-height:0;min-width:0;gap:11px}
+.wm-v13-field-label{display:block;color:#f2d1a0;font:900 clamp(14px,1.6vw,23px) 'Barlow Condensed',Impact,sans-serif;letter-spacing:.08em}
+.wm-v13-ops-left>select{display:block;width:100%;min-width:0;min-height:clamp(37px,7vh,58px);padding:9px 12px;
+ color:#f6e7c8;background:#1a3b4c;border:2px solid #d6b37d;font:900 clamp(15px,1.8vw,23px) 'Barlow Condensed',Impact,sans-serif}
+.wm-v13-mission-summary{padding:clamp(9px,1.5vw,20px);background:linear-gradient(#1d4050b8,#0e2634bd);border-left:3px solid #d2ae77;
+ display:flex;flex-direction:column;gap:6px;flex:1;min-height:0}
+.wm-v13-mission-summary h2{font:900 clamp(25px,2.9vw,45px)/1 'Barlow Condensed',Impact,sans-serif;color:#ffebc8;margin:0}
+.wm-v13-mission-summary>strong{font:900 13px 'Barlow Condensed',Impact,sans-serif;color:#e6c08a;letter-spacing:.05em}
+.wm-v13-mission-summary p{font:500 clamp(10px,1.1vw,14px)/1.4 Barlow,Arial,sans-serif;color:#d3ddd8;margin:3px 0}
+.wm-v13-ops-right .wm-v12-ops-field{flex:none;gap:10px}
+.wm-v13-ops-right .wm-v12-ops-field label{font-size:12px}
+.wm-v13-ops-note{flex:1;padding:12px;border:1px solid #b5a47b80;background:#19374899}
+.wm-v13-ops-note p{color:#c9d8d0;font-size:13px;line-height:1.4}
+.wm-v13-ops select{touch-action:manipulation}
+.wm-v13-campaign{height:100%!important;min-height:0!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;
+ background:linear-gradient(#0b293a,#071a29)!important}
+.wm-v13-campaign .section-header{flex:none!important;min-height:0!important;padding:8px clamp(12px,2vw,27px)!important;
+ padding-right:clamp(270px,29vw,470px)!important}
+.wm-v13-campaign .section-header h1{font-size:clamp(28px,3.1vw,47px)!important;line-height:.95!important;margin:0!important}
+.wm-v13-campaign .section-header p{margin:2px 0 0!important;font-size:11px!important}
+.wm-v13-campaign-status{flex:none;min-height:27px;display:flex;align-items:center;gap:clamp(9px,2vw,25px);
+ padding:3px clamp(12px,2vw,25px);border-top:1px solid #bca47862;border-bottom:1px solid #bca47862;
+ color:#e8d2ac;background:#0d2938;font:800 clamp(10px,1vw,14px) 'Barlow Condensed',Impact,sans-serif}
+.wm-v13-campaign-status b{color:#ffe4ab}
+.wm-v13-campaign .campaign-rework-content{flex:1!important;min-height:0!important;width:100%!important;
+ max-width:none!important;padding:clamp(6px,.8vw,12px)!important;gap:clamp(6px,.8vw,12px)!important;overflow:hidden!important}
+.wm-v13-campaign .campaign-main{min-height:0!important;overflow:hidden!important;padding:clamp(7px,1vw,13px)!important}
+.wm-v13-campaign-bottom{display:flex;flex:none;min-height:48px;gap:10px;align-items:center;justify-content:space-between;
+ padding:6px clamp(9px,1.5vw,20px) calc(6px + env(safe-area-inset-bottom,0px));
+ background:linear-gradient(#0b2b3b,#051927);border-top:2px solid #d7b779}
+.wm-v13-tab{min-height:37px;min-width:0;padding:5px clamp(10px,2vw,23px);background:#193a4c;
+ color:#f4e4c4;border:1px solid #b8a27b;font:900 clamp(13px,1.7vw,21px) 'Barlow Condensed',Impact,sans-serif;cursor:pointer}
+.wm-v13-tab:hover{border-color:#ffe0ab}
+.wm-v13-tab.active{background:#31566b;border-color:#f2c77b}
+.wm-v13-tab-gold{min-width:clamp(185px,25vw,360px);color:#112838;background:linear-gradient(#f3d498,#c59c61);border-color:#ffe0a4}
+.wm-v13-tab-gold:hover{background:#ffe7ab}
+.wm-v13-campaign.wm-v13-ladder .campaign-rework-content{display:block!important}
+.wm-v13-campaign.wm-v13-ladder .campaign-main{height:100%!important;width:100%!important;display:flex!important;flex-direction:column!important}
+.wm-v13-campaign.wm-v13-ladder .campaign-ladder-scroll{flex:1!important;min-height:0!important;overflow-y:auto!important;
+ scrollbar-width:thin;overscroll-behavior:contain}
+.wm-v13-campaign.wm-v13-ladder .campaign-service-side,
+.wm-v13-campaign.wm-v13-ladder .campaign-rivals-title,
+.wm-v13-campaign.wm-v13-ladder .campaign-rivals{display:none!important}
+.wm-v13-campaign.wm-v13-ladder .route-map-node{width:clamp(38px,3.7vw,54px)!important;height:clamp(38px,3.7vw,54px)!important}
+.wm-v13-campaign.wm-v13-ladder .route-map-node small{font-size:clamp(10px,1vw,13px)!important}
+.wm-v13-campaign.wm-v13-sortie .campaign-rework-content{display:grid!important;
+ grid-template-columns:minmax(0,1.15fr) minmax(295px,.85fr)!important}
+.wm-v13-campaign.wm-v13-sortie .campaign-ladder-head,
+.wm-v13-campaign.wm-v13-sortie .campaign-map-legend,
+.wm-v13-campaign.wm-v13-sortie .campaign-ladder-scroll{display:none!important}
+.wm-v13-campaign.wm-v13-sortie .campaign-main{justify-content:flex-start!important}
+.wm-v13-campaign.wm-v13-sortie .campaign-rivals-title{flex:none}
+.wm-v13-campaign.wm-v13-sortie .campaign-rivals{flex:1!important;min-height:0!important;display:grid!important;
+ grid-template-columns:1fr!important;gap:8px!important;overflow-y:auto!important;overscroll-behavior:contain!important}
+.wm-v13-campaign.wm-v13-sortie .compact-rival{min-height:clamp(104px,18vh,155px)!important;
+ grid-template-columns:clamp(76px,10vw,140px) minmax(0,1fr)!important}
+.wm-v13-campaign.wm-v13-sortie .compact-rival-info strong{font-size:clamp(16px,1.8vw,24px)!important}
+.wm-v13-campaign.wm-v13-sortie .compact-rival-description{font-size:clamp(11px,1.1vw,14px)!important}
+.wm-v13-campaign.wm-v13-sortie .campaign-service-side{min-height:0;overflow-y:auto!important;overscroll-behavior:contain}
+.wm-v13-campaign.wm-v13-sortie .service-card{height:auto!important;min-height:100%!important}
+.wm-v13-campaign.wm-v13-sortie .service-actions{display:none!important}
+@media(max-width:800px){
+ .wm-v13-profiles-content h1{font-size:36px}
+ .wm-v13-profiles-grid{gap:6px}
+ .wm-v13-profile-card{padding:7px}
+ .wm-v13-profile-card strong{font-size:19px}
+ .wm-v13-ops-grid{grid-template-columns:1fr 1fr;gap:7px}
+ .wm-v13-ops-left,.wm-v13-ops-right{padding:8px}
+ .wm-v13-campaign.wm-v13-sortie .campaign-rework-content{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)!important}
+ .wm-v13-campaign.wm-v13-sortie .service-card{padding:7px!important}
+}
+@media(max-height:520px) and (orientation:landscape){
+ .wm-v13-profiles-content{padding:42px 10px 4px;overflow:hidden}
+ .wm-v13-profiles-content h1{font-size:clamp(28px,3.4vw,43px);margin:2px 0}
+ .wm-v13-profiles-content header p{font-size:10px;margin:1px 0 7px}
+ .wm-v13-profiles-grid{gap:7px}
+ .wm-v13-profile-card{gap:3px;padding:7px 9px}
+ .wm-v13-profile-photo{width:64px;height:58px;border-width:2px}
+ .wm-v13-profile-number{font-size:10px}
+ .wm-v13-profile-card strong{font-size:18px}
+ .wm-v13-profile-meta{font-size:10px}
+ .wm-v13-profile-card em{padding:5px;font-size:12px}
+ .wm-v13-profiles-content footer{min-height:33px}
+ .wm-v13-profile-back{padding:5px 12px;font-size:12px}
+ .wm-v13-profiles-content footer span{font-size:9px}
+ .wm-v13-home-actions button{min-height:29px;font-size:12px}
+ .wm-v13-ops .wm-v13-ops-content{padding:43px 11px 5px;gap:4px;overflow:hidden!important}
+ .wm-v13-ops .wm-v12-ops-title h1{font-size:35px;margin:0}
+ .wm-v13-ops .wm-v12-ops-title p{margin:1px 0 4px;font-size:10px}
+ .wm-v13-ops-grid{grid-template-columns:1fr 1fr;gap:7px;min-height:0}
+ .wm-v13-ops-left,.wm-v13-ops-right{padding:8px;gap:6px}
+ .wm-v13-field-label{font-size:15px}
+ .wm-v13-ops-left>select{min-height:36px;font-size:16px;padding:5px}
+ .wm-v13-mission-summary{padding:7px;gap:2px}
+ .wm-v13-mission-summary h2{font-size:23px}
+ .wm-v13-mission-summary>strong{font-size:10px}
+ .wm-v13-mission-summary p{font-size:10px;line-height:1.25}
+ .wm-v13-ops-right .wm-v12-ops-field{gap:5px}
+ .wm-v13-ops-right .wm-v12-ops-field label{font-size:10px;gap:2px}
+ .wm-v13-ops-right select{min-height:30px!important;padding:4px 6px;font-size:11px}
+ .wm-v13-ops-note{display:none}
+ .wm-v13-campaign .section-header{padding:5px 10px!important;padding-right:290px!important}
+ .wm-v13-campaign .section-header h1{font-size:clamp(23px,3vw,32px)!important}
+ .wm-v13-campaign .section-header p{font-size:9px!important}
+ .wm-v13-campaign-status{min-height:24px;gap:13px;padding:2px 9px;font-size:10px}
+ .wm-v13-campaign .campaign-rework-content{padding:4px!important;gap:4px!important}
+ .wm-v13-campaign .campaign-main{padding:5px!important;gap:3px!important}
+ .wm-v13-campaign-bottom{min-height:42px;padding:4px 8px}
+ .wm-v13-tab{min-height:32px;font-size:13px;padding:3px 9px}
+ .wm-v13-campaign.wm-v13-ladder .campaign-ladder-scroll{min-height:0!important;padding:4px 8px!important}
+ .wm-v13-campaign.wm-v13-ladder .route-map-node{width:35px!important;height:35px!important}
+ .wm-v13-campaign.wm-v13-ladder .route-map-node small{font-size:9px!important}
+ .wm-v13-campaign.wm-v13-sortie .campaign-rivals-title strong{font-size:17px}
+ .wm-v13-campaign.wm-v13-sortie .campaign-rivals{gap:4px!important}
+ .wm-v13-campaign.wm-v13-sortie .compact-rival{min-height:92px!important;
+  grid-template-columns:clamp(51px,6.9vw,80px) minmax(0,1fr)!important;padding:4px!important}
+ .wm-v13-campaign.wm-v13-sortie .compact-rival-info strong{font-size:15px!important}
+ .wm-v13-campaign.wm-v13-sortie .compact-rival-description{font-size:10px!important;-webkit-line-clamp:2}
+ .wm-v13-campaign.wm-v13-sortie .service-identity{grid-template-columns:56px 1fr!important}
+ .wm-v13-campaign.wm-v13-sortie .service-stat-grid{display:none!important}
+ .wm-v13-campaign.wm-v13-sortie .service-card{gap:5px!important;border-width:2px!important}
+ .wm-v13-campaign.wm-v13-sortie .service-brief{padding:5px!important}
+ .wm-v13-campaign.wm-v13-sortie .service-specialism{font-size:10px}
+ /* Primary Android-landscape requirement: all hangar controls fit in viewport;
+    never require scrolling to find READY FOR SORTIE. */
+ .wm-v12-hangar .wm-v12-hangar-scroll{overflow:hidden!important;overscroll-behavior:none!important;
+  padding:43px 9px 5px!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important;
+  gap:4px!important;max-height:100%!important}
+ .wm-v12-hangar .wm-v12-hangar-title{min-height:0;overflow:hidden}
+ .wm-v12-hangar .wm-v12-hangar-title .wm-v12-kicker{font-size:9px}
+ .wm-v12-hangar .wm-v12-hangar-title h1{font-size:clamp(27px,4.2vw,42px)!important;margin:0!important}
+ .wm-v12-hangar .wm-v12-hangar-title p{display:none!important}
+ .wm-v12-hangar .wm-v12-hangar-main{display:grid!important;
+  grid-template-columns:minmax(69px,11%) minmax(170px,1.14fr) minmax(175px,.86fr)!important;
+  min-height:0!important;gap:5px!important;overflow:hidden!important}
+ .wm-v12-hangar .wm-v12-faction-rail{grid-column:auto!important;flex-direction:column!important;gap:4px!important}
+ .wm-v12-hangar .wm-v12-locked-nation{display:none!important}
+ .wm-v12-hangar .wm-v12-faction,.wm-v12-hangar .wm-v12-service-locked{min-height:32px!important;
+  font-size:12px!important;padding:4px!important}
+ .wm-v12-hangar .wm-v12-faction span{font-size:12px}
+ .wm-v12-hangar .wm-v12-hangar-hero{min-height:0!important;height:auto!important;overflow:hidden!important}
+ .wm-v12-hangar .wm-v12-hero-aircraft{padding:3px!important}
+ .wm-v12-hangar .wm-v12-hero-aircraft img{max-height:100%!important}
+ .wm-v12-hangar .wm-v12-hero-caption{min-height:34px!important;padding:4px 7px!important}
+ .wm-v12-hangar .wm-v12-hero-caption strong{font-size:20px!important}
+ .wm-v12-hangar .wm-v12-hero-caption span{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .wm-v12-hangar .wm-v12-hangar-dossier{min-height:0!important;overflow:hidden!important;padding:7px!important;gap:3px!important}
+ .wm-v12-hangar .wm-v12-dossier-head{font-size:9px}
+ .wm-v12-hangar .wm-v12-hangar-dossier h2{font-size:20px!important;margin:0!important}
+ .wm-v12-hangar .wm-v12-dossier-role{font-size:9px}
+ .wm-v12-hangar .wm-v12-stats{gap:2px!important;margin:0!important}
+ .wm-v12-hangar .wm-v12-figure{grid-template-columns:58px 1fr 42px!important;gap:3px!important}
+ .wm-v12-hangar .wm-v12-figure>span{font-size:9px}
+ .wm-v12-hangar .wm-v12-figure b{font-size:13px!important}
+ .wm-v12-hangar .wm-v12-figure b small{display:none}
+ .wm-v12-hangar .wm-v12-dossier-weapon{padding-top:3px!important;gap:2px!important}
+ .wm-v12-hangar .wm-v12-dossier-weapon b{font-size:13px!important}
+ .wm-v12-hangar .wm-v12-dossier-weapon p{display:none}
+ .wm-v12-hangar .wm-v12-specialist{font-size:9px}
+ .wm-v12-hangar .wm-v12-hangar-lower{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,.76fr)!important;
+  gap:5px!important;min-height:0!important}
+ .wm-v12-hangar .wm-v12-hangar-cards{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:4px!important}
+ .wm-v12-hangar .wm-v12-aircraft-tile{min-height:52px!important;display:grid!important;
+  grid-template-columns:clamp(30px,4.5vw,55px) minmax(0,1fr) 8px!important;gap:3px!important;padding:3px!important}
+ .wm-v12-hangar .wm-v12-tile-image{height:37px!important}
+ .wm-v12-hangar .wm-v12-tile-info strong{font-size:clamp(10px,1.5vw,14px)!important}
+ .wm-v12-hangar .wm-v12-tile-info small{display:none}
+ .wm-v12-hangar .wm-v12-tile-mark{font-size:14px}
+ .wm-v12-hangar .wm-v12-hangar-settings{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:3px!important;padding:3px!important}
+ .wm-v12-hangar .wm-v12-hangar-settings label{font-size:9px!important;gap:2px!important}
+ .wm-v12-hangar .wm-v12-hangar-settings select{width:100%;min-width:0;
+  min-height:28px!important;font-size:10px!important;padding:3px!important}
+ .wm-v12-hangar .wm-v12-campaign-note{font-size:10px!important;padding:4px!important}
+ .wm-v12-hangar .wm-v12-actionbar{flex:none!important;min-height:42px!important;padding:4px 8px!important}
+ .wm-v12-hangar .wm-v12-actionbar button{min-height:32px!important;font-size:13px!important}
+}
+@media(orientation:portrait) and (max-width:600px){
+ .wm-v13-profiles-content{padding-top:70px;overflow-y:auto}
+ .wm-v13-profiles-grid{grid-template-columns:1fr}
+ .wm-v13-profile-card{min-height:145px}
+ .wm-v13-profile-photo{height:60px}
+ .wm-v13-ops .wm-v13-ops-content{overflow-y:auto!important}
+ .wm-v13-ops-grid{grid-template-columns:1fr}
+ .wm-v13-campaign .campaign-rework-content{overflow:hidden}
+ .wm-v13-campaign.wm-v13-sortie .campaign-rework-content{grid-template-columns:1fr!important;overflow-y:auto!important}
+ .wm-v13-campaign.wm-v13-sortie .campaign-main{min-height:420px!important}
+ .wm-v13-campaign.wm-v13-sortie .campaign-service-side{min-height:430px}
+}
