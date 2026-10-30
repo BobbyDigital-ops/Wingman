@@ -1,0 +1,15 @@
+/* Wingman v0.8.0 — extra campaign depth; RAF menu assets unchanged. */
+.campaign-rework .campaign-map-legend{font-size:10px;align-content:center;gap:4px 12px}
+.campaign-rework .compact-rival-info em{display:block;color:#f3d19d!important;font-size:10px!important;line-height:1.23}
+.campaign-rework .compact-rival.selected{border-color:#f6ce79!important;background:linear-gradient(140deg,#27485b,#102938)!important}
+.campaign-rework .service-brief small{color:#eacb93!important}
+.campaign-rework .service-brief em{line-height:1.2}
+.wg-v7-reward-card.wg-v8-elite{border-color:#edc47f;background:linear-gradient(145deg,#64442d,#302a30 70%,#143140)}
+.wg-v7-reward-card.wg-v8-elite span{color:#ffe6a9}
+.wg-v7-reward-card.wg-v8-elite strong{color:#fff2ca}
+.wg-v7-reward-card.wg-v8-elite:hover,.wg-v7-reward-card.wg-v8-elite:focus-visible{box-shadow:0 0 0 2px #f1d19780,0 8px 28px #0008}
+.wg-v7-debrief-stats span:last-child{border-color:#ddc184;color:#ffdc9e}
+@media(max-height:440px){
+ .campaign-rework .compact-rival-info em{font-size:9px!important}
+ .wg-v7-reward-card.wg-v8-elite strong{font-size:16px}
+}
