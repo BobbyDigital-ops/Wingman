@@ -257,11 +257,17 @@ function draw(c,landscape,W,H,distance,time,wind){
  if(!landscape?.images)return false;
  const speed=clamp(Number(distance)||0,-1e8,1e8);
  const windDrift=wind?.active?(Number(wind.current)||0):0;
+ const previousSmoothing=c.imageSmoothingEnabled;
  for(const layer of landscape.images){
   const drift=Math.sin((speed*layer.depth+time*(.35+layer.depth*1.8)+windDrift*.8)/170)*landscape.margin*.83;
-  const sx=clamp((landscape.margin+drift)*landscape.scale,0,layer.canvas.width-W*landscape.scale);
-  c.drawImage(layer.canvas,sx,0,W*landscape.scale,layer.canvas.height,0,0,W,H);
+  // Pixel-align the source window and disable the second bilinear pass.
+  // Previously a fractional crop plus scaling filtered the art every frame.
+  const sampleW=Math.round(W*landscape.scale);
+  const sx=Math.round(clamp((landscape.margin+drift)*landscape.scale,0,layer.canvas.width-sampleW));
+  c.imageSmoothingEnabled=false;
+  c.drawImage(layer.canvas,sx,0,sampleW,layer.canvas.height,0,0,W,H);
  }
+ c.imageSmoothingEnabled=previousSmoothing;
  return true;
 }
 if(window.WingmanScenery){
