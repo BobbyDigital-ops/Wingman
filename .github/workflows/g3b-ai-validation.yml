@@ -1,0 +1,21 @@
+name: Wingman G3B flight-AI verification
+on:
+  push:
+    branches:
+      - dev/tactical-ai-rebuild-v034
+  workflow_dispatch:
+jobs:
+  flight-ai:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Unit and tactical flight regression tests
+        run: npm run test:unit
+      - name: Real-physics AI balance simulation
+        run: npm run balance:tournament
