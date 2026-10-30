@@ -111,7 +111,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
  const document={hidden:false,documentElement:{style:{setProperty:noop}},getElementById:k=>k==='game'||k==='aircraft-layer'?canvas:(elements[k]??={value:'',hidden:false,textContent:'',classList:{add:noop,remove:noop,toggle:noop},setAttribute:noop,addEventListener:noop}),createElement:()=>({getContext:()=>ctx}),querySelectorAll:()=>[],addEventListener:noop};
  const window={location:{search:''},matchMedia:()=>({matches:false}),devicePixelRatio:1,innerWidth:1280,innerHeight:720,addEventListener:noop},Params=class{get(){return null}};
  let seed=1;const math=Object.create(Math);math.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
- for(const script of [sources.physics,sources.aircraft,sources.scenery])new Function('window','document','Math',script)(window,document,math);
+ for(const script of [sources.physics,sources.aircraft,sources.scenery,sources.roster,sources.pilotAI].filter(Boolean))new Function('window','document','Math',script)(window,document,math);
  new Function('window','document','requestAnimationFrame','localStorage','URLSearchParams','Math',source)(window,document,noop,{getItem:()=>null,setItem:noop},Params,math);
  const types=['fighter','bf109','heavy','bf110','bomber','he111'];
  const summary={reversalsByType:{},reEngagementsByType:{},maxTailByType:{},evadeDisengagementsByType:{},games:0,groundCrashes:0,byType:{},bombSalvos:0,gunShots:0,tailSeconds:0,pursuitSeconds:0,firingOpportunitySeconds:0,damageTaken:[0,0],hitsTaken:[0,0],enemyVictories:0,bomberAboveSeconds:0,bomberClimbingSeconds:0,ceilingContact:0,modeChanges:0,modes:{},scenarios:{},samples:[]};
