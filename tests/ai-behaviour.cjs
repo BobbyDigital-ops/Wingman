@@ -30,7 +30,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
   }
  },
  tick(maxFrames){
-  const ground=[false,false],tail=[0,0],closing=[0,0],opportunities=[0,0],modes=[{},{}],planChanges=[0,0],ceiling=[0,0];
+  const ground=[false,false],tail=[0,0],closing=[0,0],opportunities=[0,0],modes=[{},{}],planChanges=[0,0],ceiling=[0,0],above=[0,0],climbing=[0,0];
   const prevPlan=['',''],prevTop=[0,0];let frames=0;
   for(let n=0;n<maxFrames&&state.phase==='playing';n++){
    const distBefore=combatDistance(state.fliers[0],state.fliers[1]);update(STEP);frames++;
@@ -40,6 +40,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
     const plan=p.aiPlan||p.aiMode;if(plan!==prevPlan[i]){planChanges[i]++;prevPlan[i]=plan;}
     const top=+(p.topRecovery>0);if(top&&!prevTop[i])ceiling[i]++;prevTop[i]=top;
     if(!p.alive&&p.damageCause==='GROUND')ground[i]=true;
+    if(p.alive&&t.alive&&['bomber','he111'].includes(p.type)){if(t.y-p.y>45)above[i]+=STEP;if(p.vy< -12)climbing[i]+=STEP;}
     const dx=wrappedDelta(t.x,p.x),dy=p.y-t.y;
     const along=dx*Math.cos(t.angle)+dy*Math.sin(t.angle);
     const lateral=Math.abs(dx*Math.sin(t.angle)-dy*Math.cos(t.angle));
@@ -48,7 +49,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
     if(state.qaScenario==='escape'&&i===1&&d<distBefore)closing[i]+=STEP;
    }
   }
-  return {frames,ground,tail,closing,opportunities,modes,planChanges,ceiling,
+  return {frames,ground,tail,closing,opportunities,modes,planChanges,ceiling,above,climbing,
    bombs:state.fliers.map(p=>p.bombRunId||0),shots:state.fliers.map(p=>p.tracerCount||0),damage:state.qaDamage.slice(),hits:state.qaHits.slice(),winner:state.qaWinner};
  },probeCamera(){
    const hero=state.fliers[0],original=hero.y,initial=state.cameraY;
@@ -68,7 +69,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
  for(const script of [sources.physics,sources.aircraft,sources.scenery])new Function('window','document','Math',script)(window,document,math);
  new Function('window','document','requestAnimationFrame','localStorage','URLSearchParams','Math',source)(window,document,noop,{getItem:()=>null,setItem:noop},Params,math);
  const types=['fighter','bf109','heavy','bf110','bomber','he111'];
- const summary={games:0,groundCrashes:0,byType:{},bombSalvos:0,gunShots:0,tailSeconds:0,pursuitSeconds:0,firingOpportunitySeconds:0,damageTaken:[0,0],hitsTaken:[0,0],enemyVictories:0,ceilingContact:0,modeChanges:0,modes:{},scenarios:{},samples:[]};
+ const summary={games:0,groundCrashes:0,byType:{},bombSalvos:0,gunShots:0,tailSeconds:0,pursuitSeconds:0,firingOpportunitySeconds:0,damageTaken:[0,0],hitsTaken:[0,0],enemyVictories:0,bomberAboveSeconds:0,bomberClimbingSeconds:0,ceilingContact:0,modeChanges:0,modes:{},scenarios:{},samples:[]};
  for(const t of types)summary.byType[t]={games:0,groundCrashes:0,bombSalvos:0,tailSeconds:0,ceilingContact:0};
  for(const scenario of scenarios){
   summary.scenarios[scenario]={games:0,groundCrashes:0,tailSeconds:0,evadeSeconds:0,pursuitSeconds:0,playerDamage:0,playerHits:0};
@@ -79,7 +80,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
     summary.games++;summary.scenarios[scenario].games++;summary.scenarios[scenario].playerDamage+=x.damage[0];summary.scenarios[scenario].playerHits+=x.hits[0];if(x.winner===1)summary.enemyVictories++;
     for(let side=0;side<2;side++){
      const type=side===0?a:b,t=summary.byType[type],sc=summary.scenarios[scenario];
-     t.games++;t.groundCrashes+=+x.ground[side];t.bombSalvos+=x.bombs[side];t.tailSeconds+=x.tail[side];t.ceilingContact+=x.ceiling[side];
+     t.games++;t.groundCrashes+=+x.ground[side];if(['bomber','he111'].includes(type)){summary.bomberAboveSeconds+=x.above[side];summary.bomberClimbingSeconds+=x.climbing[side];}t.bombSalvos+=x.bombs[side];t.tailSeconds+=x.tail[side];t.ceilingContact+=x.ceiling[side];
      summary.groundCrashes+=+x.ground[side];sc.groundCrashes+=+x.ground[side];
      summary.damageTaken[side]+=x.damage[side];summary.hitsTaken[side]+=x.hits[side];summary.bombSalvos+=x.bombs[side];summary.gunShots+=x.shots[side];summary.tailSeconds+=x.tail[side];sc.tailSeconds+=x.tail[side];
      summary.pursuitSeconds+=x.closing[side];sc.pursuitSeconds+=x.closing[side];
@@ -98,6 +99,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
  for(const x of Object.values(summary.scenarios))for(const k of ['tailSeconds','evadeSeconds','pursuitSeconds'])x[k]=round(x[k]);
  for(const x of Object.values(summary.byType))x.tailSeconds=round(x.tailSeconds);
  for(const [k,v] of Object.entries(summary.modes))summary.modes[k]=round(v);
+ summary.bomberAboveSeconds=round(summary.bomberAboveSeconds);summary.bomberClimbingSeconds=round(summary.bomberClimbingSeconds);
  return summary;
 }
 if(typeof module!=='undefined')module.exports={runAI};
