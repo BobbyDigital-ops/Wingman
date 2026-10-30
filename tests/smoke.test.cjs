@@ -427,6 +427,18 @@ test('G3B defensive evasions respond to a gun threat, not random passing',()=>{
  game.internals.aiInput(p,target);
  assert.notEqual(p.aiMode,'evade','opponent facing away cannot force evasive orbit');
 });
+test('G3B ground recovery interrupts an unfinished pursuit break',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const [target,p]=game.internals.state.fliers;
+ p.type='bf109';p.role='fighter';p.d=game.internals.PLANES.bf109;
+ p.x=170;p.y=174;p.vy=92;p.angle=.9;p.aiBreakTime=.38;
+ target.x=103;target.y=160;target.spawnSafe=0;
+ const steer=game.internals.aiInput(p,target);
+ assert.equal(p.aiMode,'recover');
+ assert.equal(p.aiBreakTime,0,'old break turn must be cancelled, never resumed after recovering');
+ assert.ok(steer<0,'recover toward safe altitude');
+});
+
 test('G3B medium altitude does not trigger premature ground escape',()=>{
  const game=launch();game.listeners.get('start:click')();
  const [target,p]=game.internals.state.fliers;
