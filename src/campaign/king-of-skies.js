@@ -19,7 +19,8 @@ const ELITE_UPGRADES=[
  {id:'combat-throttle',name:'COMBAT THROTTLE',detail:'+9% airspeed for the rest of the run',mods:{speed:.09},elite:true},
  {id:'reinforced-frame',name:'REINFORCED AIRFRAME',detail:'+14% hull for the rest of the run',mods:{hull:.14},elite:true},
  {id:'ace-control-cables',name:'ACE CONTROL CABLES',detail:'+11% handling for the rest of the run',mods:{turn:.11},elite:true},
- {id:'flak-armouring',name:'FLAK ARMOURING',detail:'+17% armour for the rest of the run',mods:{armour:.17},elite:true}
+ {id:'flak-armouring',name:'FLAK ARMOURING',detail:'+17% armour for the rest of the run',mods:{armour:.17},elite:true},
+ {id:'ace-war-chest',name:'ACE WAR CHEST',detail:'Restore 20 aircraft condition and collect 5 repair supplies',condition:20,supplies:5,elite:true}
 ];
 const SETBACKS=[
  {id:'engine-wear',name:'ENGINE WEAR',detail:'-5% speed until repaired',mods:{speed:-.05}},
@@ -142,9 +143,9 @@ function offerReward(run,encounter){
  const lane=n(encounter?.lane,0,2);
  const seed=hash(run.seed,run.rank,run.visits,encounter?.id,lane);
  const available=UPGRADES.filter(u=>!run.effects.includes(u.id)||!u.mods);
- const premium=ELITE_UPGRADES.filter(u=>!run.effects.includes(u.id));
+ const premium=ELITE_UPGRADES.filter(u=>u.mods&&!run.effects.includes(u.id));
  const offers=[];
- if(lane===2&&premium.length)offers.push(pick(premium,seed>>>2).id);
+ if(lane===2)offers.push(premium.length?pick(premium,seed>>>2).id:'ace-war-chest');
  const target=lane===0?2:3;
  for(let i=0;i<target*3&&offers.length<target;i++){
   const pool=available.filter(u=>!offers.includes(u.id));
@@ -165,8 +166,10 @@ function claim(run,id){
  if(reward.mods){
    run.effects=run.effects.filter(e=>e!==id&&byId[e]?.mods);
    run.effects.push(id);
- }else if(reward.condition)run.condition=n(run.condition+reward.condition,15,100);
- else if(reward.supplies)run.supplies=n(run.supplies+reward.supplies,0,MAX_SUPPLIES);
+ }else{
+   if(reward.condition)run.condition=n(run.condition+reward.condition,15,100);
+   if(reward.supplies)run.supplies=n(run.supplies+reward.supplies,0,MAX_SUPPLIES);
+ }
  // Easy-route drawback lasts until a repair; never silently overwrite perks.
  if(pending.setback&&!run.effects.includes(pending.setback))run.effects.push(pending.setback);
  run.effects=run.effects.slice(-MAX_EFFECTS);
