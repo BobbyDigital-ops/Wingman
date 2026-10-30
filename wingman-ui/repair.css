@@ -352,3 +352,16 @@ html,body,.app{height:100%;width:100%;margin:0;overflow:hidden}
 .route-map-node.is-chosen{border-color:#fff0ae;background:#b58b47;color:#102c3d;box-shadow:0 0 0 4px #d8b45f44,0 0 18px #f1bd67}
 .route-map-row.is-current .route-map-rank{color:#ffdc9b}
 @media(max-height:560px) and (orientation:landscape){.route-map-row{height:90px;min-height:90px}.route-map-rank{font-size:10px}.route-map-node{height:31px;width:31px;font-size:19px}.route-map-lines{height:90px}}
+
+/* Batch B: meaningful encounter symbols, current-rank default viewport and map legend. */
+.campaign-map-legend{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:2px 12px;padding:1px 4px;color:#b5cfd6;font:800 clamp(9px,.8vw,11px) 'Barlow Condensed',sans-serif;letter-spacing:.05em}
+.campaign-map-legend span{white-space:nowrap}
+.route-map-node{padding:0;flex-direction:column;gap:0;line-height:1}
+.route-map-node small{position:absolute;top:100%;left:50%;transform:translateX(-50%);font:800 9px/1.15 'Barlow Condensed',sans-serif;white-space:nowrap;letter-spacing:.02em;color:#d4d7ca;margin-top:3px;pointer-events:none}
+.route-map-node .node-symbol{font-size:22px}
+button.route-map-node{cursor:pointer;transition:transform .12s,box-shadow .12s}
+button.route-map-node:hover{transform:translateX(-50%) scale(1.12);box-shadow:0 0 0 4px #d5a64f50,0 0 15px #ffe1a4}
+.route-map-node.is-future small{color:#8b9fa7}
+.route-map-row.is-current{z-index:2}
+.route-map-row.is-cleared .route-map-lines path{stroke:#89a898;opacity:.85}
+@media(max-height:560px) and (orientation:landscape){.campaign-map-legend{font-size:9px;gap:2px 7px}.route-map-node small{font-size:8px}.route-map-node .node-symbol{font-size:18px}}

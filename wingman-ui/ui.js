@@ -87,14 +87,24 @@ function career(){
  const campaignRanks=Array.from({length:8},(_,i)=>8-i);
  const currentRank=run.rank||1;
  const laneX=[17,50,83],mapRows=Array.from({length:8},(_,i)=>8-i);
- const nodeType=(rank,lane)=>rank===8?'★':rank===currentRank?['✦','✈','⚔'][lane]:rank%3===0?['★','⚔','✦'][lane]:['✈','✦','⚔'][(lane+rank)%3];
+ const encounterMeta=mission=>{
+  const key=String(mission||'').toUpperCase();
+  if(key.includes('FINAL'))return {icon:'★',name:'FINAL ACE'};
+  if(key.includes('DOUBLE'))return {icon:'✦',name:'DOUBLE ACE'};
+  if(key.includes('HIGH-ALTITUDE'))return {icon:'⚔',name:'HIGH-ALTITUDE DUEL'};
+  if(key.includes('HUNTER'))return {icon:'⌖',name:'HUNTER PATROL'};
+  return {icon:'✈',name:'INTERCEPTION'};
+ };
  const ladder=mapRows.map((rank,idx)=>{
   const final=rank===8,now=rank===currentRank,passed=rank<currentRank;
-  const linePaths=idx===7?'':laneX.map((x,lane)=>{const next=[lane,(lane+1)%3].filter((v,i,a)=>a.indexOf(v)===i);return next.map(dest=>'<path d="M '+x+' 20 L '+laneX[dest]+' 100" />').join('')}).join('');
-  return '<div class="route-map-row '+(now?'is-current':passed?'is-cleared':'is-ahead')+'"><span class="route-map-rank">RANK '+rank+' · '+esc(rankTitles[rank-1])+'</span><svg class="route-map-lines" viewBox="0 0 100 120" preserveAspectRatio="none" aria-hidden="true">'+linePaths+'</svg><div class="route-map-nodes">'+laneX.map((x,lane)=>{
-   if(final&&lane!==1)return '';
-   const type=nodeType(rank,lane),chosen=now&&lane===Math.min(S.choice,2);
-   return '<span class="route-map-node '+(chosen?'is-chosen ':'')+(now?'is-available':passed?'is-complete':'is-future')+'" style="left:'+x+'%" title="'+(now?'AVAILABLE ENCOUNTER '+(lane+1):'FUTURE ROUTE')+'">'+type+'</span>';
+  const linePaths=idx===7?'':laneX.map((x,lane)=>[lane,(lane+1)%3].map(dest=>'<path d="M '+x+' 20 L '+laneX[dest]+' 100" />').join('')).join('');
+  return '<div class="route-map-row '+(now?'is-current':passed?'is-cleared':'is-ahead')+'" data-map-rank="'+rank+'"><span class="route-map-rank">RANK '+rank+' · '+esc(rankTitles[rank-1])+'</span><svg class="route-map-lines" viewBox="0 0 100 120" preserveAspectRatio="none" aria-hidden="true">'+linePaths+'</svg><div class="route-map-nodes">'+laneX.map((x,lane)=>{
+   if(final&&!now&&lane!==1)return '';
+   const actual=now?choices[lane]:null,meta=now?encounterMeta(actual?.mission):final?{icon:'★',name:'FINAL ACE'}:passed?{icon:'✓',name:'CLEARED'}:{icon:'?',name:'UNREVEALED'};
+   const chosen=now&&lane===Math.min(S.choice,2),state=now?'is-available':passed?'is-complete':'is-future';
+   const label=now?(meta.name+' · '+(actual?.label||'CHOOSE A RIVAL')):meta.name;
+   const tag=now&&actual?'button':'span',attrs=now&&actual?' type="button" data-choice="'+lane+'" aria-pressed="'+(chosen?'true':'false')+'"':'';
+   return '<'+tag+' class="route-map-node '+(chosen?'is-chosen ':'')+state+'" style="left:'+x+'%" title="'+esc(label)+'" aria-label="'+esc(label)+'"'+attrs+'><span class="node-symbol">'+meta.icon+'</span><small>'+esc(meta.name)+'</small></'+tag+'>';
   }).join('')+'</div></div>';
  }).join('');
  const rivals=choices.map((c,i)=>{
@@ -104,7 +114,7 @@ function career(){
  return `<section class="frame career-screen campaign-rework">${header('KING OF THE SKIES','RANK '+currentRank+' / 8 · '+run.lives+' LIVES')}
  <div class="campaign-rework-content"><div class="campaign-main">
  <div class="campaign-ladder-head"><strong>ROAD TO ACE</strong><span>BRANCHING ROUTES · CLIMB TO THE FINAL ACE</span></div>
- <div class="campaign-ladder-scroll" aria-label="Branching eight-rank campaign map">${ladder}</div>
+ <div class="campaign-map-legend"><span>✈ INTERCEPT</span><span>⚔ DUEL</span><span>⌖ PATROL</span><span>✦ DOUBLE ACE</span><span>★ FINAL ACE</span><span>? UNREVEALED</span></div><div class="campaign-ladder-scroll" data-rank="${currentRank}" aria-label="Branching eight-rank campaign map">${ladder}</div>
  <div class="campaign-rivals-title"><strong>CHOOSE YOUR NEXT OPPONENT</strong><small>THREE ROUTES · YOUR DECISION</small></div>
  <div class="campaign-rivals">${rivals}</div>
  </div>
@@ -142,7 +152,10 @@ function records(){
 }
 function options(){return `<section class="frame options-screen">${header('OPTIONS','TACTICS · CONTROLS · THEATRE')}<div class="inner option-rows"><div class="option-card"><h2>FLIGHT CONDITIONS</h2><label>DIFFICULTY <select data-setting="difficulty"><option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></label><label>THEATRE <select data-setting="theatre"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">STORM</option></select></label></div><div class="option-card"><h2>CONTROLS & SOUND</h2><p>A/D — STEER · SPACE — FIRE · E — AIRCRAFT ABILITY · Q — PILOT SKILL</p>${confirmButton('SOUND '+(S.sound?'ON':'OFF'),'sound','navy')}${confirmButton('SERVICE RECORD','records','navy')}</div></div><div class="inner">${confirmButton('← BACK','back','outline')}</div></section>`;}
 function outcome(){const saved=playerSave(),result=S.lastResult||'SORTIE COMPLETE',isCareer=!!S.lastCareer;return `<section class="frame career-screen v4-career">${header('AFTER ACTION REPORT','FIGHTER COMMAND · COMBAT DEBRIEF')}<div class="inner career-intro-layout"><div class="career-hangar-art"><span class="art-stamp">AIRCRAFT RETURNING · 1940</span></div><div class="career-block"><span class="notice">SORTIE LOG</span><h2>${esc(result)}</h2><p>${isCareer?(esc(saved?.profile?.name||'Pilot')+' · '+(saved?.wins||0)+' VICTORIES · '+(saved?.losses||0)+' LOSSES'):'THE BATTLE IS FINISHED. READY FOR YOUR NEXT SORTIE?'}</p>${isCareer?confirmButton('CONTINUE KING OF THE SKIES →','career-continue'):confirmButton('FLY AGAIN →','fly-again')}${isCareer?'':confirmButton('CHANGE AIRCRAFT','change-aircraft','navy')}${confirmButton('RETURN TO MENU','return-home','outline')}</div></div></section>`;}
-function show(){const views={title,home,operations,aircraft,pilots,career,records,options,outcome};stage.innerHTML=(views[S.screen]||home)();document.querySelector('.utility-home').hidden=S.screen==='home';document.querySelector('.utility-settings').hidden=S.screen!=='career';document.querySelector('.career-settings-popup').hidden=true;nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===S.screen?'page':'false'));document.querySelector('#squadron strong').textContent=playerSave()?.profile?.name||'Guest Pilot';stage.querySelectorAll('select[data-setting]').forEach(sel=>sel.value=S[sel.dataset.setting]);stage.scrollTop=0;}
+function show(){const views={title,home,operations,aircraft,pilots,career,records,options,outcome};const oldMap=stage.querySelector('.campaign-ladder-scroll');const mapMemory=oldMap?{rank:oldMap.dataset.rank,top:oldMap.scrollTop}:null;
+stage.innerHTML=(views[S.screen]||home)();
+const newMap=stage.querySelector('.campaign-ladder-scroll');
+if(newMap){if(mapMemory&&mapMemory.rank===newMap.dataset.rank)newMap.scrollTop=mapMemory.top;else{const current=newMap.querySelector('.route-map-row.is-current');if(current){const top=current.getBoundingClientRect().top-newMap.getBoundingClientRect().top+newMap.scrollTop;newMap.scrollTop=Math.max(0,Math.min(newMap.scrollHeight-newMap.clientHeight,top-newMap.clientHeight*.65));}}}document.querySelector('.utility-home').hidden=S.screen==='home';document.querySelector('.utility-settings').hidden=S.screen!=='career';document.querySelector('.career-settings-popup').hidden=true;nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===S.screen?'page':'false'));document.querySelector('#squadron strong').textContent=playerSave()?.profile?.name||'Guest Pilot';stage.querySelectorAll('select[data-setting]').forEach(sel=>sel.value=S[sel.dataset.setting]);stage.scrollTop=0;}
 function go(screen){if(S.screen!==screen){S.back.push(S.screen);S.screen=screen;show()}}
 function back(){S.screen=S.back.pop()||'home';if(S.screen!=='aircraft')S.career=false;show()}
 function beginCareer(){const a=api();if(!a?.beginCareer?.())return;S.choice=0;S.career=false;S.screen='career';show()}
