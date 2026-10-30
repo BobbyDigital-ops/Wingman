@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.3.0',GAME_PHASE='G3A'; // stable release identifier
+  const GAME_VERSION='v0.3.1',GAME_PHASE='G3A.1'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -886,33 +886,53 @@ function plane(type,id,x,y,angle){
     p.aiThink=0;
   }
   function bomberFlightPlan(p,target){
-    // A bomber is a high-altitude weapons platform, not a dogfighter.
-    // Hold its current horizontal direction, regulate altitude with a shallow
-    // pitch and let rear gunners / physical bomb runs do the fighting.
-    // No upward velocity hacks, teleports or faster-than-player turning.
+    // G3A.1: bomber pilots can weave defensively without dogfighting.
+    // Their S-shaped escapes use the same yaw, roll-response, inertia and
+    // ground-collision model as every other airframe. No magic dodge frames.
     p.aiBoost=false;
-    const direction=p.vx>=0?1:-1;
-    const desiredAltitude=clamp(Math.min(target.y-43,H*.36),61,101);
-    // Recover early enough that a very slow-turning Lancaster can still
-    // trade its dive momentum for a safe climb within the normal flight model.
-    const unsafe=p.y>H*.54||(p.y>H*.44&&p.vy>10);
-    const waypointY=unsafe?H*.245:desiredAltitude;
-    const climb=clamp((waypointY-p.y)*.58,-53,33);
-    const goal=Math.atan2(climb,direction*110);
-    const error=angleDiff(goal,p.angle);
-    p.aiMode=unsafe?'recover':'bomb-run';
-    p.aiRecoveryTime=unsafe?1.0:Math.max(0,(p.aiRecoveryTime||0)-STEP);
-    // Smooth steering proportional to heading error, capped by the existing
-    // bomber yaw/roll physics. Avoid the old bang-bang turning oscillation.
-    const steer=Math.abs(error)<.035?0:clamp(error*1.65,-1,1);
-    const dropHeight=target.y-p.y;
-    if(!unsafe&&p.aiBombDelay<=0&&p.specialCooldown<=0&&target.spawnSafe<=0&&
-       dropHeight>=32&&dropHeight<=112){
-      const fallTime=clamp(Math.sqrt(Math.max(0,2*(dropHeight-7)/94)),.25,1.1);
-      const releaseX=p.x+p.vx*.035;
-      const projectedX=target.x+(target.vx-p.vx*.58)*fallTime;
-      const aligned=Math.abs(wrappedDelta(releaseX,projectedX))<24;
-      if(aligned&&combatDistance(p,target)<158)triggerSpecial(p);
+    const direction=p.vx>=0?1:-1,range=combatDistance(p,target);
+    const dx=wrappedDelta(p.x,target.x),dy=target.y-p.y;
+    const behind=dx*Math.cos(p.angle)+dy*Math.sin(p.angle)<-10;
+    const incoming=Math.atan2(-dy,wrappedDelta(target.x,p.x));
+    const aimed=Math.abs(angleDiff(incoming,target.angle))<.61;
+    const threatened=target.role!=='bomber'&&
+      ((range<148&&(behind||aimed))||(range<168&&target.burstLeft>0&&aimed));
+    // Persistent but short reaction makes it possible to track and anticipate
+    // a bomber, rather than grant invulnerability or random direction flips.
+    p.aiDefensiveTimer=threatened?3:Math.max(0,(p.aiDefensiveTimer||0)-STEP);
+    const evading=p.aiDefensiveTimer>0;
+    p.aiDefenceBlend=clamp((p.aiDefenceBlend||0)+STEP*(evading?2.9:-1.35),0,1);
+    p.aiLegTime=(p.aiLegTime||0)-STEP;
+    if(evading&&p.aiLegTime<=0){
+      p.aiLegTime=p.type==='he111'?1.10:1.15;
+      p.aiLegDirection=p.aiLegDirection===-1?1:-1;
+    }
+    let leg=p.aiLegDirection||-1;
+    // Respect the boundaries. There must be room to complete a slow bomber turn.
+    if(p.y>H*.49)leg=-1;
+    else if(p.y<H*.23)leg=1;
+    const cruiseAltitude=clamp(Math.min(target.y-43,H*.37),66,100);
+    const danger=p.y>H*.54||(p.y>H*.44&&p.vy>10);
+    const calm=clamp((cruiseAltitude-p.y)*.65,-40,34);
+    // Actual desired pitch is at most ~33deg, and the bomber's own slow turn
+    // response makes this a smooth banked climb or descent, never a fighter roll.
+    const pitch=p.type==='he111'?.66:.68;
+    const climb=danger?clamp((H*.25-p.y)*1.3,-70,-25):
+      calm*(1-p.aiDefenceBlend)+pitch*97*leg*p.aiDefenceBlend;
+    const heading=Math.atan2(climb,direction*97);
+    const error=angleDiff(heading,p.angle);
+    p.aiMode=danger?'recover':evading?'evade':'bomb-run';
+    p.aiRecoveryTime=danger?1:Math.max(0,(p.aiRecoveryTime||0)-STEP);
+    const steer=Math.abs(error)<.025?0:clamp(error*3,-1,1);
+    // Evasion may spoil a bomb run, but a real alignment should still permit
+    // ordnance release. Do not withhold bomb attacks purely for evading.
+    const height=target.y-p.y;
+    if(!danger&&p.aiBombDelay<=0&&p.specialCooldown<=0&&target.spawnSafe<=0&&
+      height>=32&&height<=112){
+      const time=clamp(Math.sqrt(Math.max(0,2*(height-7)/94)),.25,1.1);
+      const from=p.x+p.vx*.035;
+      const to=target.x+(target.vx-p.vx*.58)*time;
+      if(Math.abs(wrappedDelta(from,to))<24&&range<158)triggerSpecial(p);
     }
     return steer;
   }

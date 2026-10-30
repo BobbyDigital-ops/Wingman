@@ -44,3 +44,16 @@ test('G3A: severe crosswind remains physically stable',()=>{
  assert.ok(result.summary.bomber.groundPct<=15);
  assert.ok(result.summary.he111.groundPct<=15);
 });
+
+test('G3A.1 bomber pilots perform real evasive flight without losing bomb runs',()=>{
+ const result=tournament({reps:1,seconds:55,wind:'off',arenaFilter:'alpine',difficultyFilter:'standard'});
+ assert.equal(result.meta.games,30);
+ assert.ok(result.matches.every(x=>!x.bad),'evasive steering must remain physically stable');
+ for(const type of ['bomber','he111']){
+   const rows=result.matches.filter(m=>m.a===type||m.b===type);
+   const frames=rows.reduce((sum,m)=>sum+(m.a===type?m.evadeFrames[0]:m.evadeFrames[1]),0);
+   assert.ok(frames>90,type+' must visibly evade fighters rather than cruise straight');
+   assert.equal(result.summary[type].ground,0,type+' must not reintroduce routine crashes');
+   assert.ok(result.summary[type].bombs>=10,type+' must still execute actual bombing runs');
+ }
+});

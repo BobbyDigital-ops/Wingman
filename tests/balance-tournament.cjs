@@ -32,15 +32,15 @@ function launch(){
  'state.bench=true;state.benchWinner=null;window.s={shots:[0,0],hits:[0,0],bombs:[0,0]};',
  '},',
  'run(frames){',
- 'const initial=state.fliers.map(p=>p.health+p.armour),ground=[false,false];let framesElapsed=0,bad=false;',
+ 'const initial=state.fliers.map(p=>p.health+p.armour),ground=[false,false],evadeFrames=[0,0];let framesElapsed=0,bad=false;',
  'for(let k=0;k<frames&&state.phase==="playing";k++){update(STEP);framesElapsed++;',
- 'for(const p of state.fliers){if(!p.alive&&p.damageCause==="GROUND")ground[p.id]=true;if(![p.x,p.y,p.vx,p.vy,p.health].every(Number.isFinite))bad=true;}',
+ 'for(const p of state.fliers){if(p.role==="bomber"&&p.aiMode==="evade"&&p.alive)evadeFrames[p.id]++;if(!p.alive&&p.damageCause==="GROUND")ground[p.id]=true;if(![p.x,p.y,p.vx,p.vy,p.health].every(Number.isFinite))bad=true;}',
  'if(bad)break;',
  '}',
  'const remaining=state.fliers.map(p=>p.health+p.armour);const fractions=remaining.map((x,i)=>x/initial[i]);',
  'const timedOut=state.phase==="playing";',
  'const winner=timedOut?(Math.abs(fractions[0]-fractions[1])<.025?-1:fractions[0]>fractions[1]?0:1):state.benchWinner;',
- 'return {winner,seconds:framesElapsed*STEP,timeout:timedOut,ground,bad,shots:window.s.shots,hits:window.s.hits,bombs:window.s.bombs,damage:[initial[1]-remaining[1],initial[0]-remaining[0]]};',
+ 'return {winner,seconds:framesElapsed*STEP,timeout:timedOut,ground,bad,evadeFrames,shots:window.s.shots,hits:window.s.hits,bombs:window.s.bombs,damage:[initial[1]-remaining[1],initial[0]-remaining[0]]};',
  '},state',
  '};'
  ].join('\n');
