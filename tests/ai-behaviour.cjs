@@ -48,6 +48,12 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer']}
   }
   return {frames,ground,tail,closing,opportunities,modes,planChanges,ceiling,
    bombs:state.fliers.map(p=>p.bombRunId||0),shots:state.fliers.map(p=>p.tracerCount||0)};
+ },probeCamera(){
+   const hero=state.fliers[0],original=hero.y,initial=state.cameraY;
+   hero.y=45;updateCamera(1);const top=state.cameraY;
+   hero.y=WORLD_H-45;updateCamera(1);const bottom=state.cameraY;
+   hero.y=original;
+   return {initial,top,bottom,maxPan:SKY_EXTRA,worldHeight:WORLD_H,viewportHeight:H};
  }};
   // All scenery is painted once;`);
  const noop=()=>{};
@@ -83,6 +89,9 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer']}
    }
   }
  }
+ summary.camera=window.aiQA.probeCamera();
+ if(summary.camera.top>1||Math.abs(summary.camera.bottom-summary.camera.maxPan)>1)
+   throw Error('Camera must follow the full altitude range without going beyond the world');
  const round=n=>+n.toFixed(1);for(const k of ['tailSeconds','pursuitSeconds','firingOpportunitySeconds'])summary[k]=round(summary[k]);
  for(const x of Object.values(summary.scenarios))for(const k of ['tailSeconds','evadeSeconds','pursuitSeconds'])x[k]=round(x[k]);
  for(const x of Object.values(summary.byType))x.tailSeconds=round(x.tailSeconds);
