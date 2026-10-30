@@ -169,16 +169,59 @@ function records(){
  <div class="licence-pilot-tally">SELECTED PILOT · ${pilotFlights.length} ARCADE SORTIES · ${pilotWins} VICTORIES · ${pilotKills} KILLS <small>(Earlier arcade sorties were not assigned to a pilot.)</small></div>
  </div></div>
  <div class="licence-seal"><span>✦ ${p?.faction==='Axis'?'LUFTWAFFE':'RAF FIGHTER COMMAND'}</span><span>SERVICE NO. ${esc(p?.id||'UNASSIGNED').toUpperCase()}</span><span class="licence-stamp">ACTIVE SERVICE</span></div>
- <div class="licence-honours"><b>DECORATIONS &amp; HONOURS</b><p>${saved?.medals?.length?saved.medals.map(m=>esc(m.replace(/-/g,' ').toUpperCase())).join(' · '):'No campaign decorations recorded yet.'} · ARCADE HONOURS ${arc?.unlocks?.length||0}</p></div></div>
+ <div class="licence-honours"><b>DECORATIONS &amp; HONOURS</b><p>${saved?.medals?.length?saved.medals.map(m=>esc(m.replace(/-/g,' ').toUpperCase())).join(' · '):'No campaign decorations recorded yet.'} · ARCADE HONOURS ${arc?.unlocks?.length||0}</p></div>
+ <div class="wg-v7-records-log"><strong>RECENT CAMPAIGN SORTIES</strong>${(saved?.service||[]).slice(-6).reverse().map(e=>
+  '<div><span>'+esc(e.won?'VICTORY':'SHOT DOWN')+'</span><b>R'+esc(e.rank)+' · '+esc(e.mission||'SORTIE')+'</b><small>'+esc(e.rival||'RIVAL')+'</small></div>').join('')||'<p>No campaign sorties recorded.</p>'}</div></div>
  <div class="licence-actions">${confirmButton('← BACK','back','outline')}${confirmButton('KING OF THE SKIES →','career')}</div></section>`;
 }
 function options(){return `<section class="frame options-screen">${header('OPTIONS','TACTICS · CONTROLS · THEATRE')}<div class="inner option-rows"><div class="option-card"><h2>FLIGHT CONDITIONS</h2><label>DIFFICULTY <select data-setting="difficulty"><option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></label><label>THEATRE <select data-setting="theatre"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">STORM</option></select></label></div><div class="option-card"><h2>CONTROLS & SOUND</h2><p>A/D — STEER · SPACE — FIRE · E — AIRCRAFT ABILITY · Q — PILOT SKILL</p>${confirmButton('SOUND '+(S.sound?'ON':'OFF'),'sound','navy')}${confirmButton('SERVICE RECORD','records','navy')}</div></div><div class="inner">${confirmButton('← BACK','back','outline')}</div></section>`;}
-function outcome(){const saved=playerSave(),result=S.lastResult||'SORTIE COMPLETE',isCareer=!!S.lastCareer;return `<section class="frame career-screen v4-career">${header('AFTER ACTION REPORT','FIGHTER COMMAND · COMBAT DEBRIEF')}<div class="inner career-intro-layout"><div class="career-hangar-art"><span class="art-stamp">AIRCRAFT RETURNING · 1940</span></div><div class="career-block"><span class="notice">SORTIE LOG</span><h2>${esc(result)}</h2><p>${isCareer?(esc(saved?.profile?.name||'Pilot')+' · '+(saved?.wins||0)+' VICTORIES · '+(saved?.losses||0)+' LOSSES'):'THE BATTLE IS FINISHED. READY FOR YOUR NEXT SORTIE?'}</p>${isCareer?confirmButton('CONTINUE KING OF THE SKIES →','career-continue'):confirmButton('FLY AGAIN →','fly-again')}${isCareer?'':confirmButton('CHANGE AIRCRAFT','change-aircraft','navy')}${confirmButton('RETURN TO MENU','return-home','outline')}</div></div></section>`;}
+function outcome(){
+ const saved=playerSave(),run=saved?.run,pending=run?.pendingReward;
+ const isCareer=!!S.lastCareer||!!pending;
+ const report=saved?.lastOutcome||{},title=S.lastResult|| (report.won?'VICTORY':'SORTIE COMPLETE');
+ const completed=!run&&!!saved?.lastCompleted?.rank;
+ const flightLog=(saved?.service||[]).slice(-3).reverse();
+ const rewards=pending?.offers?.map(id=>{
+  const perk=perkById(id);if(!perk)return '';
+  return '<button type="button" class="wg-v7-reward-card" data-reward="'+esc(id)+'"><span>SELECT REWARD</span><strong>'+esc(perk.name)+'</strong><small>'+esc(perk.detail)+'</small></button>';
+ }).join('')||'';
+ if(!isCareer)return `<section class="frame career-screen v4-career">${header('AFTER ACTION REPORT','FIGHTER COMMAND · COMBAT DEBRIEF')}
+ <div class="inner career-intro-layout"><div class="career-hangar-art"><span class="art-stamp">AIRCRAFT RETURNING · 1940</span></div>
+ <div class="career-block"><span class="notice">SORTIE LOG</span><h2>${esc(title)}</h2><p>THE BATTLE IS FINISHED. READY FOR YOUR NEXT SORTIE?</p>
+ ${confirmButton('FLY AGAIN →','fly-again')}${confirmButton('CHANGE AIRCRAFT','change-aircraft','navy')}${confirmButton('RETURN TO MENU','return-home','outline')}</div></div></section>`;
+ return `<section class="frame career-screen wg-v7-debrief">
+  ${header(pending?'CHOOSE YOUR REWARD':'AFTER ACTION REPORT','KING OF THE SKIES · RAF OPERATIONS DESK')}
+  <div class="wg-v7-debrief-layout">
+   <div class="wg-v7-debrief-banner"><div class="wg-v7-debrief-pilot">${atlas(player())}</div>
+    <small>${esc(saved?.profile?.name||'PILOT')} · RANK ${run?.rank||8}</small>
+    <h2>${esc(pending?'VICTORY — CLAIM YOUR SPOILS':completed?'KING OF THE SKIES — LEGEND':title)}</h2>
+    <p>${esc(report.mission||'COMBAT SORTIE')} · ${esc(report.label||'ENEMY SQUADRON')}</p>
+    <div class="wg-v7-debrief-stats"><span>${saved?.wins||0} VICTORIES</span><span>${saved?.losses||0} LOSSES</span>
+    <span>${run?run.lives+' LIVES LEFT':'RUN FINISHED'}</span></div>
+    <small>Recent operations</small><div class="wg-v7-debrief-log">${flightLog.map(e=>'<div>'+esc(e.won?'✓':'✕')+' R'+esc(e.rank)+' · '+esc(e.mission||'DOGFIGHT')+' · '+esc(e.rival||'RIVAL')+'</div>').join('')}</div>
+   </div>
+   <div class="wg-v7-debrief-choice">
+    ${pending?`<span class="wg-v7-overline">${esc(pending.risk)} RISK MISSION · REWARD EARNED</span>
+      <h3>CHOOSE ONE UPGRADE</h3>
+      <p>Upgrades stay with your aircraft for the rest of this campaign. A low-risk sortie may also leave a temporary setback, repairable with supplies.</p>
+      <div class="wg-v7-reward-options">${rewards}</div>
+      ${pending.setback?'<p class="wg-v7-warning">FIELD REPORT: '+esc(perkById(pending.setback)?.name||'MECHANICAL ISSUE')+' — repair to clear the setback.</p>':''}
+      <p class="wg-v7-locked">A reward must be selected before your next sortie.</p>`:`
+      <span class="wg-v7-overline">SORTIE CLOSED · RECORD SAVED</span>
+      <h3>${completed?'CAMPAIGN COMPLETE':run?'READY FOR NEXT SORTIE':'TO THE HANGAR'}</h3>
+      <p>${run?'Supplies '+(run.supplies||0)+' · Aircraft condition '+Math.round(run.condition??100)+'%. Choose your next route or make field repairs.':'Your record and campaign honours have been saved.'}</p>
+      ${confirmButton(run?'RETURN TO CAMPAIGN →':'VIEW PILOT LICENCE →',run?'career-continue':'licence','red')}
+      ${confirmButton('RETURN TO MENU','return-home','outline')}`}
+   </div>
+  </div>
+ </section>`;
+}
 function missionReview(){
  const p=PLANES[S.plane],career=S.career,op=OPS[S.op];
+ const selectedMission=career?playerSave()?.run?.choices?.[S.choice]:null;
  const sites=['ALPINE FRONT','ENGLISH CHANNEL','NORTH AFRICA','STORM FRONT'];
  const pilot=playerSave()?.profile?.name||'GUEST PILOT';
- const detail=career?'KING OF THE SKIES · ACTIVE SORTIE':op[0]+' · '+op[1].toUpperCase();
+ const detail=career?(selectedMission?.mission||'KING OF THE SKIES · ACTIVE SORTIE'):op[0]+' · '+op[1].toUpperCase();
  const role=p[1].split('·').pop().trim();
  const description=esc(p[3]);
  return `<section class="frame wm-v11-review">
@@ -197,13 +240,14 @@ function missionReview(){
       <div><small>PILOT</small><strong>${esc(pilot)}</strong></div>
       <div><small>MISSION</small><strong>${esc(detail)}</strong></div>
       <div><small>THEATRE</small><strong>${career?'CAMPAIGN ASSIGNMENT':esc(sites[Number(S.theatre)]||sites[0])}</strong></div>
-      <div><small>DIFFICULTY</small><strong>${career?'MISSION-DEFINED':esc(S.difficulty.toUpperCase())}</strong></div>
+      <div><small>DIFFICULTY</small><strong>${career?esc(selectedMission?.risk||'MISSION DEFINED')+' RISK':esc(S.difficulty.toUpperCase())}</strong></div>
+      ${career?'<div><small>RIVAL / TARGET</small><strong>'+esc(selectedMission?.label||'UNKNOWN')+'</strong></div>':''}
       ${!career&&OPS[S.op][3]==='duel'?'<div><small>OPPONENT AIRCRAFT</small><strong>'+esc(S.opponent==='random'?'RANDOM OPPONENT':PLANES[TYPES.indexOf(S.opponent)]?.[0]||'RANDOM OPPONENT')+'</strong></div>':''}
      </div>
     </div>
     <div class="wm-v11-mission-orders">
-     <div><small>FLIGHT OBJECTIVE</small><strong>${career?'COMPLETE THE ASSIGNED ENCOUNTER':'ENGAGE AND DEFEAT THE ENEMY AIRCRAFT'}</strong>
-      <p>Maintain airspeed, protect your tail, and use altitude to control the engagement.</p></div>
+     <div><small>FLIGHT OBJECTIVE</small><strong>${career?esc(selectedMission?.mission||'COMPLETE THE ASSIGNED ENCOUNTER'):'ENGAGE AND DEFEAT THE ENEMY AIRCRAFT'}</strong>
+      <p>${career?esc(selectedMission?.briefing||'COMPLETE YOUR SORTIE')+' · '+(selectedMission?.timeLimit||120)+'s deadline.':'Maintain airspeed, protect your tail, and use altitude to control the engagement.'}</p></div>
      <div><small>AIRCRAFT NOTES</small><strong>${esc(p[2])}</strong><p>${description}</p></div>
     </div>
    </div>
@@ -240,7 +284,8 @@ function action(v){
  if(v==='career-aircraft'){if(!playerSave()?.run)return;S.career=true;S.faction=playerSave().profile.faction;S.plane=TYPES.indexOf(playerSave().profile.plane);return go('aircraft')}
  if(v==='launch-arcade'){const ok=api()?.startArcade?.({mode:OPS[S.op][3],aircraft:TYPES[S.plane],opponent:S.opponent,difficulty:S.difficulty,arena:S.theatre});if(ok){S.launchError='';api()?.hide?.()}else{S.launchError='UNABLE TO LAUNCH · TRY AGAIN';show()}return}
  if(v==='launch-career'){const ok=api()?.startCareer?.(S.choice,TYPES[S.plane]);if(ok){S.career=false;api()?.hide?.()}return}
- if(v==='career-continue'){api()?.continueCareer?.();S.lastResult=null;S.screen='career';S.back=[];return show()}
+ if(v==='career-continue'){if(playerSave()?.run?.pendingReward)return show();api()?.continueCareer?.();S.lastResult=null;S.screen='career';S.back=[];return show()}
+ if(v==='repair-airframe'){if(api()?.repairCampaignAircraft?.())show();return;}
  if(v==='fly-again'){api()?.rematch?.();return}
  if(v==='change-aircraft'){api()?.changeAircraft?.();S.screen='aircraft';S.career=false;S.back=[];return show()}
  if(v==='return-home'){api()?.home?.();S.screen='home';S.career=false;S.back=[];return show()}
@@ -249,6 +294,12 @@ function action(v){
 document.addEventListener('click',e=>{
  const el=e.target.closest('button');if(!el)return;
  if(el.dataset.go){S.career=false;return go(el.dataset.go)}
+ if(el.dataset.reward){
+   if(api()?.claimCampaignReward?.(el.dataset.reward)){
+     S.screen='career';S.lastCareer=false;S.lastResult=null;S.back=[];show();
+   }
+   return;
+ }
  if(el.dataset.action)return action(el.dataset.action);
  if(el.dataset.op!=null){S.op=Number(el.dataset.op);return show()}
  if(el.dataset.plane!=null){S.plane=Number(el.dataset.plane);return show()}
