@@ -59,7 +59,7 @@ test('mission variants for both factions use real expected aircraft',()=>{
 });
 test('high-risk wins offer exclusive elite modifications; low routes do not',()=>{
  const owned=new Set(C.ELITE_UPGRADES.map(x=>x.id));
- assert.equal(owned.size,5);
+ assert.equal(owned.size,6);
  for(let rank=1;rank<=7;rank++){
   for(let lane=0;lane<3;lane++){
    const {run,enc}=mission(rank,lane);
@@ -84,7 +84,7 @@ test('performance grades reflect surviving health and speed, not mission risk',(
 });
 test('all saved elite perks survive migration, remain bounded, and repair setbacks',()=>{
  const run=C.normalizeRun({rank:7,supplies:6,condition:68,
-  effects:[...C.ELITE_UPGRADES.map(x=>x.id),'engine-wear','wing-strain']});
+  effects:[...C.ELITE_UPGRADES.filter(x=>x.mods).map(x=>x.id),'engine-wear','wing-strain']});
  assert.equal(run.effects.length,7);
  const m=C.sortieBonuses(run,'fighter',true);
  for(const [key,value] of Object.entries(m))assert.ok(value>=.68&&value<=1.3,key);
@@ -92,5 +92,17 @@ test('all saved elite perks survive migration, remain bounded, and repair setbac
  assert.equal(run.condition,100);
  assert.equal(run.supplies,4);
  assert.ok(!run.effects.includes('wing-strain')&&!run.effects.includes('engine-wear'));
- assert.equal(run.effects.filter(x=>C.ELITE_UPGRADES.some(y=>y.id===x)).length,5);
+ assert.equal(run.effects.filter(x=>C.ELITE_UPGRADES.some(y=>y.id===x&&y.mods)).length,5);
+});
+test('after every elite upgrade is owned the war chest remains useful',()=>{
+ const run=C.normalizeRun({rank:7,visits:17,seed:8,supplies:1,condition:53,
+  effects:C.ELITE_UPGRADES.filter(x=>x.mods).map(x=>x.id)});
+ const encounter=mission(7,2).enc;
+ const pending=C.offerReward(run,encounter);
+ assert.equal(pending.offers[0],'ace-war-chest');
+ run.pendingReward=pending;
+ assert.equal(C.claim(run,'ace-war-chest'),true);
+ assert.equal(run.supplies,6);
+ assert.equal(run.condition,73);
+ assert.equal(run.effects.filter(id=>C.ELITE_UPGRADES.some(x=>x.id===id&&x.mods)).length,5);
 });
