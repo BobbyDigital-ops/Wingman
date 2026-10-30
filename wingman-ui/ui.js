@@ -86,15 +86,25 @@ function career(){
  const run=saved.run,choices=run.choices||[],selected=choices[S.choice]||choices[0],p=player(),played=Math.max(0,(saved.wins||0)+(saved.losses||0)),rate=played?Math.round((saved.wins||0)/played*100):0;
  const campaignRanks=Array.from({length:8},(_,i)=>8-i);
  const currentRank=run.rank||1;
- const ladder=campaignRanks.map(n=>'<div class="campaign-ladder-step '+(n===currentRank?'active':n<currentRank?'cleared':'locked')+'"><span class="campaign-ladder-number">'+(n===8?'★':n)+'</span><span><strong>'+esc(rankTitles[n-1]||'RANK '+n)+'</strong><small>RANK '+n+(n===currentRank?' · CURRENT SORTIE':n<currentRank?' · CLEARED':' · AHEAD')+'</small></span></div>').join('');
+ const laneX=[17,50,83],mapRows=Array.from({length:8},(_,i)=>8-i);
+ const nodeType=(rank,lane)=>rank===8?'★':rank===currentRank?['✦','✈','⚔'][lane]:rank%3===0?['★','⚔','✦'][lane]:['✈','✦','⚔'][(lane+rank)%3];
+ const ladder=mapRows.map((rank,idx)=>{
+  const final=rank===8,now=rank===currentRank,passed=rank<currentRank;
+  const linePaths=idx===7?'':laneX.map((x,lane)=>{const next=[lane,(lane+1)%3].filter((v,i,a)=>a.indexOf(v)===i);return next.map(dest=>'<path d="M '+x+' 20 L '+laneX[dest]+' 100" />').join('')}).join('');
+  return '<div class="route-map-row '+(now?'is-current':passed?'is-cleared':'is-ahead')+'"><span class="route-map-rank">RANK '+rank+' · '+esc(rankTitles[rank-1])+'</span><svg class="route-map-lines" viewBox="0 0 100 120" preserveAspectRatio="none" aria-hidden="true">'+linePaths+'</svg><div class="route-map-nodes">'+laneX.map((x,lane)=>{
+   if(final&&lane!==1)return '';
+   const type=nodeType(rank,lane),chosen=now&&lane===Math.min(S.choice,2);
+   return '<span class="route-map-node '+(chosen?'is-chosen ':'')+(now?'is-available':passed?'is-complete':'is-future')+'" style="left:'+x+'%" title="'+(now?'AVAILABLE ENCOUNTER '+(lane+1):'FUTURE ROUTE')+'">'+type+'</span>';
+  }).join('')+'</div></div>';
+ }).join('');
  const rivals=choices.map((c,i)=>{
   const rival=rivalFor(c),stat=saved.records?.[c.id]||{},fought=(stat.wins||0)+(stat.losses||0);
   return '<button type="button" class="compact-rival '+(i===S.choice?'selected':'')+'" data-choice="'+i+'" aria-pressed="'+(i===S.choice)+'"><span class="compact-rival-photo">'+atlas(rival)+'</span><span class="compact-rival-info"><strong>'+esc(rival?.name||c.label)+'</strong><small>'+esc(c.mission||'DOGFIGHT')+' · '+esc(rival?.signature||'ROLL').toUpperCase()+'</small><span class="compact-rival-description">'+esc(rival?.bio||'A formidable pilot with a fearsome reputation in the skies.')+'</span><em>'+ (fought?('YOUR ENCOUNTERS '+fought+' · W '+(stat.wins||0)+' / L '+(stat.losses||0)):'UNDEFEATED IN YOUR SERVICE RECORD')+'</em></span></button>';
  }).join('');
  return `<section class="frame career-screen campaign-rework">${header('KING OF THE SKIES','RANK '+currentRank+' / 8 · '+run.lives+' LIVES')}
  <div class="campaign-rework-content"><div class="campaign-main">
- <div class="campaign-ladder-head"><strong>ROAD TO ACE</strong><span>EIGHT RANKS · CLIMB TO THE FINAL ACE</span></div>
- <div class="campaign-ladder-scroll" aria-label="Eight rank campaign ladder">${ladder}</div>
+ <div class="campaign-ladder-head"><strong>ROAD TO ACE</strong><span>BRANCHING ROUTES · CLIMB TO THE FINAL ACE</span></div>
+ <div class="campaign-ladder-scroll" aria-label="Branching eight-rank campaign map">${ladder}</div>
  <div class="campaign-rivals-title"><strong>CHOOSE YOUR NEXT OPPONENT</strong><small>THREE ROUTES · YOUR DECISION</small></div>
  <div class="campaign-rivals">${rivals}</div>
  </div>

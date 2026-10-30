@@ -336,3 +336,19 @@ html,body,.app{height:100%;width:100%;margin:0;overflow:hidden}
 .opening-content small{font:700 12px 'Barlow Condensed',sans-serif;letter-spacing:.15em}
 .opening-start{min-height:52px!important;font-size:24px!important;padding:12px 35px!important}
 @media(max-height:520px){.opening-content{gap:8px}.opening-content h1{font-size:clamp(56px,10vw,100px)}.opening-start{min-height:37px!important;font-size:19px!important}}
+
+/* Branching strategic campaign map. Nodes ahead are illustrative until a rank is reached;
+   selected current encounter is tied to the three live rival cards beneath. */
+.campaign-ladder-scroll{padding:9px 14px!important;scroll-behavior:smooth;overflow-y:auto;overflow-x:hidden;background:radial-gradient(ellipse at 50% 70%,#163c4b,#061b29 70%)!important}
+.route-map-row{height:105px;min-height:105px;position:relative;isolation:isolate}
+.route-map-rank{position:absolute;left:0;top:2px;font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:.1em;color:#a9c1c9;z-index:3}
+.route-map-lines{position:absolute;top:20px;left:0;width:100%;height:110px;overflow:visible;z-index:-1}
+.route-map-lines path{stroke:#587886;stroke-width:.55;fill:none;stroke-dasharray:1.5 1.5;opacity:.8}
+.route-map-nodes{position:absolute;inset:29px 0 0}
+.route-map-node{position:absolute;transform:translateX(-50%);width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#173e50;border:2px solid #79939c;box-shadow:0 3px 9px #0009;color:#ecdec2;font:900 23px 'Barlow Condensed',sans-serif;z-index:4}
+.route-map-node.is-future{opacity:.72}
+.route-map-node.is-complete{border-color:#8cb39d;background:#28574b}
+.route-map-node.is-available{border-color:#d6ac66;background:#5a4937;box-shadow:0 0 12px #edb96655}
+.route-map-node.is-chosen{border-color:#fff0ae;background:#b58b47;color:#102c3d;box-shadow:0 0 0 4px #d8b45f44,0 0 18px #f1bd67}
+.route-map-row.is-current .route-map-rank{color:#ffdc9b}
+@media(max-height:560px) and (orientation:landscape){.route-map-row{height:90px;min-height:90px}.route-map-rank{font-size:10px}.route-map-node{height:31px;width:31px;font-size:19px}.route-map-lines{height:90px}}
