@@ -173,7 +173,22 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
   window.aiQA.state.bullets.push({x:hero.x-16,y:hero.y,vx:2100,vy:0,life:.8,age:.12,owner:ally.id,damage:45});
   window.aiQA.projectileStep();
   const noFriendlyFire=hero.health===before;
-  summary.campaignChecks={escortPresent,escortSurvived,escortLost,interceptionDeadline,campaignBonusesApplied,noFriendlyFire};
+  const reconnaissance={objective:'recon',rank:3,aiRank:3,types:['bf109'],
+    opponents:[{id:'ace-recon',name:'Recon Interceptor',plane:'bf109'}],
+    label:'Recon Mission',timeLimit:52,difficulty:'standard'};
+  window.aiQA.mission(reconnaissance);
+  window.aiQA.state.time=.005;
+  const reconSurvivalWin=window.aiQA.advance(2).winner===0;
+  window.aiQA.mission(reconnaissance);
+  window.aiQA.state.fliers[0].alive=false;window.aiQA.state.time=.005;
+  const reconPilotLost=window.aiQA.advance(2).winner===1;
+  const aceHunt={objective:'ace-hunt',rank:3,aiRank:5,types:['bf109'],
+    opponents:[{id:'ace-hunt',name:'Ace Opponent',plane:'bf109'}],
+    label:'Ace Hunt',timeLimit:56,difficulty:'ace'};
+  window.aiQA.mission(aceHunt);window.aiQA.state.time=.005;
+  const aceHuntTimedOut=window.aiQA.advance(2).winner===1;
+  summary.campaignChecks={escortPresent,escortSurvived,escortLost,interceptionDeadline,
+   reconSurvivalWin,reconPilotLost,aceHuntTimedOut,campaignBonusesApplied,noFriendlyFire};
   if(Object.values(summary.campaignChecks).some(value=>!value))
     throw Error('Campaign mission objective regression: '+JSON.stringify(summary.campaignChecks));
  }
