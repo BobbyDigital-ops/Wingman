@@ -81,6 +81,6 @@ test('campaign escort and bomber deadline objectives run in real game engine',()
  const report=runAI({game:load('game.js'),physics:load('src/physics/swoop-flight.js'),
   aircraft:load('src/art/aircraft.js'),scenery:load('src/art/scenery.js')},
   {seconds:1,reps:1,scenarios:['duel'],difficulty:'standard',campaignCheck:true});
- assert.deepEqual(report.campaignChecks,{escortPresent:true,escortSurvived:true,escortLost:true,interceptionDeadline:true});
+ assert.deepEqual(report.campaignChecks,{escortPresent:true,escortSurvived:true,escortLost:true,interceptionDeadline:true,campaignBonusesApplied:true,noFriendlyFire:true});
  assert.equal(report.groundCrashes,0);
 });
