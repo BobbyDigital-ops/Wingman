@@ -958,15 +958,14 @@ function plane(type,id,x,y,angle){
     const targetLateral=Math.abs(dx*targetNoseY-dy*targetNoseX);
     const shotFromTarget=Math.atan2(-dy,wrappedDelta(target.x,p.x));
     const targetAiming=Math.abs(angleDiff(shotFromTarget,target.angle))<.48;
-    const trueThreat=target.spawnSafe<=0&&range<128&&targetAiming&&
-      (target.burstLeft>0||range<83&&targetAhead< -10);
+    const trueThreat=target.spawnSafe<=0&&range<128&&targetAiming&&target.burstLeft>0;
     p.aiEvadeTime=Math.max(0,(p.aiEvadeTime||0)-STEP);
     p.aiEvadeCooldown=Math.max(0,(p.aiEvadeCooldown||0)-STEP);
     if(trueThreat&&p.aiEvadeTime<=0&&p.aiEvadeCooldown<=0){
       // Commit to a banked break once, not a fresh random heading each frame.
       p.aiEvadeTime=.52+talent*.38;
       p.aiEvadeCooldown=2.7-talent*.65;
-      p.aiEscapeSign=p.y>H*.54?-1:p.y<H*.32?1:(p.id%2?1:-1);
+      p.aiEscapeSign=p.y>H*.43?-1:p.y<H*.30?1:(p.id%2?1:-1);
     }
 
     // Ground avoidance is bounded by actual descent and available turning
@@ -974,10 +973,10 @@ function plane(type,id,x,y,angle){
     // and repeatedly hijacked pursuit with an artificial upward orbit.
     const descent=Math.max(0,p.vy);
     const integrity=clamp(p.health/Math.max(1,p.d.hull),0,1);
-    const projected=p.y+descent*(p.role==='heavy'?1.42:1.20)+
+    const projected=p.y+descent*(p.role==='heavy'?1.85:1.70)+
       Math.max(0,Math.sin(p.angle))*13;
-    const floorBuffer=(p.role==='heavy'?62:52)+(1-integrity)*8;
-    const floorDanger=p.y>H-122&&projected>H-floorBuffer;
+    const floorBuffer=(p.role==='heavy'?75:68)+(1-integrity)*8;
+    const floorDanger=p.y>H-150&&projected>H-floorBuffer;
     p.aiRecoveryTime=floorDanger?Math.max(p.aiRecoveryTime||0,.72):
       Math.max(0,(p.aiRecoveryTime||0)-STEP);
     if(p.vy< -10&&p.y<H-38)p.aiRecoveryTime=0;
@@ -995,9 +994,19 @@ function plane(type,id,x,y,angle){
     }
 
     const behindNose=ahead< -13;
+    // A genuine reversal is a committed bank, not a new shortest-path
+    // calculation every frame. Prefer the half of the sky with room to turn.
+    p.aiBreakCooldown=Math.max(0,(p.aiBreakCooldown||0)-STEP);
+    p.aiBreakTime=Math.max(0,(p.aiBreakTime||0)-STEP);
+    if(behindNose&&range<100&&p.aiEvadeTime<=0&&
+       p.aiBreakCooldown<=0&&p.aiBreakTime<=0){
+      p.aiBreakTime=1.04+(p.role==='heavy'?.30:.08);
+      p.aiBreakCooldown=3.1;
+      const forward=Math.cos(p.angle)>=0?1:-1;
+      p.aiBreakSign=(p.y>H*.48?-1:1)*forward;
+    }
     p.aiMode=p.aiEvadeTime>0?'evade':
-      behindNose&&range<115?'break':
-      range>118?'intercept':'attack';
+      p.aiBreakTime>0?'break':range>118?'intercept':'attack';
     // Campaign rivals retain recognisable tendencies without overriding
     // their fundamental need to close, track and shoot their opponent.
     if(rankAI&&p.aiMode==='attack'&&style==='survivor'&&
@@ -1047,12 +1056,13 @@ function plane(type,id,x,y,angle){
       const wing=state.fliers.find(q=>q.id>0&&q.id!==p.id&&q.id<=2&&q.alive);
       if(wing&&combatDistance(p,wing)<82)ty+=(p.id===1?-1:1)*16;
     }
-    ty=clamp(ty,p.role==='heavy'?71:54,p.role==='heavy'?H-78:H-43);
+    ty=clamp(ty,p.role==='heavy'?71:54,p.role==='heavy'?H-108:H-95);
     const goal=Math.atan2(ty-p.y,wrappedDelta(p.x,tx));
     const error=angleDiff(goal,p.angle);
     // A held directional turn is visibly stronger than the previous
     // stop-start binary steering near the sight line.
-    const turn=Math.abs(error)<.045?0:clamp(error*2.2,-1,1);
+    const turn=p.aiMode==='break'?p.aiBreakSign:
+      Math.abs(error)<.045?0:clamp(error*2.2,-1,1);
     p.aiBoost=false;
 
     // Actual guns use their own firing axis, not the tail-position waypoint.
