@@ -42,28 +42,90 @@ function atlas(p){
 }
 function header(title,subtitle){return '<div class="section-header"><h1>'+title+'</h1><p>'+subtitle+'</p></div>'}
 function title(){return `<section class="frame poster-home v4-home opening-screen"><div class="opening-content"><div class="home-roundel"><i class="roundel"></i><span>RAF FIGHTER COMMAND · 1940</span></div><h1>WINGMAN</h1><p>THE SKIES ARE CALLING</p><button class="btn red opening-start" data-action="opening-start">PRESS TO START →</button><small>CHOOSE YOUR PILOT · EARN YOUR WINGS</small></div></section>`}
-function home(){const saved=playerSave(),p=player();return `<section class="frame poster-home v4-home"><div class="home-left"><div class="home-identity"><div class="home-roundel"><i class="roundel"></i><span>RAF FIGHTER COMMAND · 1940</span></div><h1 class="home-wordmark">WINGMAN</h1></div><div class="home-buttons">
-${confirmButton('BEGIN OPERATIONS <span class="chevron">›</span>','operations')}
-${confirmButton('KING OF THE SKIES <span class="chevron">›</span>','career','navy')}
-${confirmButton('HANGAR <span class="chevron">›</span>','aircraft','navy')}
-${confirmButton('OPTIONS <span class="chevron">›</span>','options','navy')}</div><div class="home-subnote">NO. 11 GROUP · OPERATIONS ROOM</div></div>${p?'<button class="home-licence-thumb" type="button" data-action="licence" aria-label="Open your pilot licence"><span class="mini-licence-top">RAF · FIGHTER COMMAND</span><span class="mini-licence-body"><span class="mini-licence-photo">'+atlas(p)+'</span><span><strong>'+esc(p.name)+'</strong><small>'+esc(p.archetype)+' · '+esc(p.signature.toUpperCase())+'</small><em>VIEW LICENCE →</em></span></span></button>':''}</section>`}
-function operations(){return `<section class="frame poster-operations"><div class="operations-top" role="img" aria-label="Painted RAF operations artwork"></div><div class="operations-main"><div class="operations-scene"><strong>OPERATIONS<br>1940</strong></div><div class="operation-area"><div class="operation-list">${OPS.map((op,i)=>`<button type="button" class="operation-ref ${i===S.op?'selected':''}" data-op="${i}" aria-pressed="${i===S.op}"><img class="operation-cover" src="${photo(['operation-art-0','operation-art-1','operations-painting','operation-art-3','raf-hangar-scene'][i])}" alt=""/><span class="operation-copy"><strong>${op[0]}</strong><small>${op[1].toUpperCase()}</small><span>${op[2]}</span></span><b class="operation-chevron">›</b></button>`).join('')}</div><div class="screen-actions">${confirmButton('← BACK','back','outline')}${confirmButton('CONTINUE →','operations-next')}</div></div></div></section>`}
+function home(){
+ const saved=playerSave(),p=player(),rank=saved?.run?.rank||1;
+ const careerDetail=saved?.run?'CONTINUE · RANK '+rank+' / 8':'EIGHT RANKS · ONE LEGEND';
+ return '<section class="frame wm-v12-home">'+
+   '<div class="wm-v12-home-content">'+
+   '<div class="wm-v12-home-intro"><span class="wm-v12-kicker">RAF FIGHTER COMMAND · OPERATIONS ROOM · 1940</span>'+
+   '<h1>WINGMAN</h1><div class="wm-v12-home-title">CHOOSE YOUR ADVENTURE</div>'+
+   '<p>ONE WAR. TWO WAYS TO MAKE YOUR NAME.</p>'+
+   (p?'<button type="button" class="wm-v12-identity" data-action="licence"><span class="wm-v12-identity-photo">'+atlas(p)+'</span><span><small>YOUR SERVICE RECORD</small><strong>'+esc(p.name)+'</strong><em>VIEW PILOT LICENCE ›</em></span></button>':
+       '<button type="button" class="wm-v12-identity" data-action="pilots"><span>PERSONNEL OFFICE · SELECT YOUR PILOT ›</span></button>')+
+   '</div><div class="wm-v12-home-choices">'+
+   '<button class="wm-v12-adventure wm-v12-adventure-arcade" type="button" data-action="operations"><span class="wm-v12-adventure-no">01 / FREE FLIGHT</span>'+
+   '<strong>SKIRMISH</strong><span>YOUR AIRCRAFT. YOUR RULES.</span><p>Classic dogfights, squadron battles, survival and challenges.</p>'+
+   '<em>CONFIGURE A SORTIE <b>›</b></em></button>'+
+   '<button class="wm-v12-adventure wm-v12-adventure-campaign" type="button" data-action="career"><span class="wm-v12-adventure-no">02 / FIGHTER COMMAND</span>'+
+   '<strong>KING OF<br>THE SKIES</strong><span>'+esc(careerDetail)+'</span><p>Choose your route, win upgrades and take on the Luftwaffe’s best.</p>'+
+   '<em>OPEN OPERATIONS DESK <b>›</b></em></button>'+
+   '<div class="wm-v12-quick-actions"><button data-action="aircraft">HANGAR ›</button><button data-action="pilots">PILOTS ›</button><button data-action="options">OPTIONS ›</button></div>'+
+   '</div></div><span class="wm-v12-footer-stamp">NO. 11 GROUP · FIGHTER COMMAND · CLASSIFIED</span></section>';
+}
+function operations(){
+ const mode=OPS[S.op];
+ const choices=OPS.map((op,i)=>
+   '<button type="button" class="wm-v12-mode '+(i===S.op?'is-selected':'')+'" data-op="'+i+'" aria-pressed="'+(i===S.op)+'">'+
+   '<span class="wm-v12-mode-no">'+String(i+1).padStart(2,'0')+'</span><span class="wm-v12-mode-main"><strong>'+esc(op[0])+'</strong><small>'+esc(op[1]).toUpperCase()+'</small></span><span class="wm-v12-mode-arrow">›</span></button>').join('');
+ return '<section class="frame wm-v12-ops"><div class="wm-v12-ops-scroll">'+
+  '<header class="wm-v12-ops-title"><span class="wm-v12-kicker">RAF FIGHTER COMMAND · FORM 01</span><h1>SKIRMISH</h1><p>Configure your operation. The aircraft and pilot portraits remain your own.</p></header>'+
+  '<div class="wm-v12-ops-layout"><section class="wm-v12-ops-missions"><h2>01 · MISSION TYPE</h2>'+
+  '<div class="wm-v12-mode-list">'+choices+'</div></section>'+
+  '<section class="wm-v12-ops-config"><span class="wm-v12-kicker">OPERATIONAL ORDERS</span><h2>'+esc(mode[0])+'</h2>'+
+  '<p class="wm-v12-ops-description">'+esc(mode[2])+'</p>'+
+  '<div class="wm-v12-ops-field"><label>DIFFICULTY<select data-setting="difficulty"><option value="rookie">ROOKIE · BASIC TRAINING</option><option value="standard">REGULAR · EXPERIENCED</option><option value="ace">ACE · DEADLY OPPONENTS</option></select></label>'+
+  '<label>THEATRE<select data-setting="theatre"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">STORM FRONT</option></select></label>'+
+  (mode[3]==='duel'?'<label class="wm-v12-span-all">ENEMY AIRCRAFT<select data-setting="opponent"><option value="random">RANDOM OPPONENT</option>'+TYPES.map((type,i)=>'<option value="'+type+'">'+esc(PLANES[i][0])+'</option>').join('')+'</select></label>':'')+
+  '</div><div class="wm-v12-ops-order"><span>FLIGHT ORDERS</span><strong>'+esc(mode[1]).toUpperCase()+'</strong><p>'+esc(mode[2])+'</p></div>'+
+  '</section></div></div>'+
+  '<div class="wm-v12-actionbar"><button type="button" class="wm-v12-secondary" data-action="back">← BACK TO COMMAND</button>'+
+  '<button type="button" class="wm-v12-primary" data-action="operations-next">SELECT AIRCRAFT ›</button></div></section>';
+}
 function statBar(name,value,max){return '<div class="grid-plane-stat"><span>'+name+'</span><i class="grid-plane-track"><i style="width:'+(Math.min(100,Math.round(value/max*100)))+'%"></i></i><em>'+value+'</em></div>'}
 function aircraft(){
  const save=playerSave(),career=S.career&&!!save?.run;
  const faction=career?save.profile.faction:S.faction;
- const types=faction==='Axis'?[3,4,5]:[0,1,2];
- if(!types.includes(S.plane))S.plane=types[0];
- const speciality=save?.profile?.plane;
- const selection=PLANES[S.plane];
- return `<section class="frame aircraft-screen wm-live-aircraft"><div class="aircraft-head"><h1>${career?'SELECT AIRCRAFT · RANK '+save.run.rank:'PREPARE FOR TAKEOFF'}</h1><small>${career?'KING OF THE SKIES · '+esc(save?.run?.choices?.[S.choice]?.mission||'SORTIE'):'FIGHTER COMMAND · AIRCRAFT SELECTION'}</small></div><div class="aircraft-content">
- <div class="faction-bar"><strong>CHOOSE YOUR AIRCRAFT</strong><div class="faction-buttons">${career?'<span class="notice">'+(faction==='Axis'?'LUFTWAFFE':'RAF')+' · YOUR SQUADRON</span>':['Allies','Axis'].map(n=>'<button type="button" class="btn '+(n===faction?'gold':'navy')+'" data-faction="'+n+'">'+(n==='Axis'?'✠ LUFTWAFFE':'◉ RAF / ALLIES')+'</button>').join('')}</div></div>
- <div class="grid-of-planes">${types.map(i=>{
-  const p=PLANES[i],selected=i===S.plane,fav=career&&speciality===TYPES[i],bonus=fav?1.1:1;
-  return '<button type="button" class="grid-plane-card '+(selected?'selected':'')+'" data-plane="'+i+'" aria-pressed="'+selected+'"><img src="'+photo('aircraft-art-'+i)+'" alt="'+p[0]+' painted reference aircraft"><div class="grid-plane-body"><div class="grid-plane-name"><strong>'+p[0]+'</strong><span class="selection-stamp">'+(selected?'✓ SELECTED':'SELECT')+'</span></div><span class="grid-plane-role">'+p[1]+'</span><div class="grid-plane-stats">'+statBar('SPEED',p[4],96)+statBar('TURN',p[5].toFixed(2),3.5)+statBar('ARMOUR',Math.round(p[6]*bonus),140)+statBar('GUN DMG',+(p[7]*bonus).toFixed(1),19)+'</div><span class="plane-ability">✦ ABILITY: '+p[2]+'<small>'+(['E · Spinning escape and powerful speed burst.','E · Temporarily reduces incoming damage.','Weak automatic rear defence. E · Arm assisted bombing; releases only when aligned.'][i%3])+'</small></span>'+(fav?'<span class="specialist">★ SPECIALIST +10% HULL / ARMOUR / GUN DMG</span>':'')+'</div></button>';
- }).join('')}</div>
- ${!career?`<div class="conditions">${OPS[S.op][3]==='duel'?`<label class="wm-duel-choice">OPPONENT AIRCRAFT<select data-setting="opponent"><option value="random">RANDOM OPPONENT</option>${TYPES.map((type,i)=>`<option value="${type}">${esc(PLANES[i][0])}</option>`).join('')}</select></label>`:''}<label>AI DIFFICULTY <select data-setting="difficulty"><option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></label><label>THEATRE<select data-setting="theatre"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">STORM FRONT</option></select></label></div>`:`<div class="notice">YOUR PILOT: ${esc(save.profile.name)} · PREFERRED AIRCRAFT: ${esc(PLANES[TYPES.indexOf(speciality)]?.[0]||'FIGHTER')}</div>`}
- <div class="screen-actions">${confirmButton('← BACK','back','outline')}${confirmButton('READY FOR SORTIE →','mission-review',career?'red':'gold')}</div></div></section>`;
+ const options=faction==='Axis'?[3,4,5]:[0,1,2];
+ if(!options.includes(S.plane))S.plane=options[0];
+ const selected=PLANES[S.plane],speciality=save?.profile?.plane;
+ const fav=career&&speciality===TYPES[S.plane],bonus=fav?1.1:1;
+ const typeName=faction==='Axis'?'LUFTWAFFE':'ROYAL AIR FORCE';
+ const specs=[['AIRSPEED',selected[4],100,'IAS'],['HANDLING',Number(selected[5]).toFixed(2),3.6,'TURN'],['ARMOUR',Math.round(selected[6]*bonus),140,'ARM'],['FIREPOWER',Number(selected[7]*bonus).toFixed(1),22,'DMG']];
+ const figures=specs.map(([label,num,max,unit])=>
+   '<div class="wm-v12-figure"><span>'+label+'</span><div class="wm-v12-figure-track"><i style="width:'+Math.min(100,Math.round(Number(num)/max*100))+'%"></i></div><b>'+num+' <small>'+unit+'</small></b></div>').join('');
+ const craft=options.map(i=>{const p=PLANES[i],active=i===S.plane;
+   return '<button class="wm-v12-aircraft-tile '+(active?'selected':'')+'" type="button" data-plane="'+i+'" aria-pressed="'+active+'" aria-label="Select '+esc(p[0])+'">'+
+     '<span class="wm-v12-tile-image"><img src="'+photo('aircraft-art-'+i)+'" alt="'+esc(p[0])+' aircraft — original approved image"></span>'+
+     '<span class="wm-v12-tile-info"><strong>'+esc(p[0])+'</strong><small>'+esc(p[1])+'</small></span>'+
+     '<span class="wm-v12-tile-mark">'+(active?'✓':'›')+'</span></button>';
+ }).join('');
+ const rail=career?
+   '<div class="wm-v12-service-locked">'+esc(typeName)+'<small>YOUR ACTIVE SQUADRON</small></div>':
+   ['Allies','Axis'].map(n=>'<button class="wm-v12-faction '+(n===faction?'selected':'')+'" type="button" data-faction="'+n+'" aria-pressed="'+(n===faction)+'">'+(n==='Axis'?'✠ LUFTWAFFE':'◉ RAF')+' <span>›</span></button>').join('');
+ const settings=!career?
+  '<div class="wm-v12-hangar-settings"><label>DIFFICULTY<select data-setting="difficulty"><option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></label>'+
+  '<label>THEATRE<select data-setting="theatre"><option value="0">ALPINE</option><option value="1">CHANNEL</option><option value="2">N. AFRICA</option><option value="3">STORM</option></select></label>'+
+  (OPS[S.op][3]==='duel'?'<label>OPPONENT<select data-setting="opponent"><option value="random">RANDOM</option>'+TYPES.map((t,i)=>'<option value="'+t+'">'+esc(PLANES[i][0])+'</option>').join('')+'</select></label>':'')+'</div>':
+  '<div class="wm-v12-campaign-note">★ '+esc(save.profile.name)+' · '+esc(save.run.choices?.[S.choice]?.mission||'CAMPAIGN SORTIE')+
+  (fav?' · SPECIALIST +10% HULL / ARMOUR / DAMAGE':'')+'</div>';
+ return '<section class="frame wm-v12-hangar">'+
+   '<div class="wm-v12-hangar-scroll"><header class="wm-v12-hangar-title"><span class="wm-v12-kicker">RAF FIGHTER COMMAND · 1940</span>'+
+   '<h1>SELECT AIRCRAFT</h1><p>Choose your machine. Every aircraft has a character of its own.</p></header>'+
+   '<div class="wm-v12-hangar-main"><nav class="wm-v12-faction-rail" aria-label="Aircraft nation">'+rail+
+   '<span class="wm-v12-locked-nation" aria-disabled="true">USAAF <small>COMING LATER</small></span>'+
+   '<span class="wm-v12-locked-nation" aria-disabled="true">IJN <small>COMING LATER</small></span></nav>'+
+   '<div class="wm-v12-hangar-hero"><div class="wm-v12-hero-aircraft"><img src="'+photo('aircraft-art-'+S.plane)+'" alt="'+esc(selected[0])+' existing game aircraft painting"></div>'+
+   '<div class="wm-v12-hero-caption"><strong>'+esc(selected[0])+'</strong><span>'+esc(selected[3])+'</span></div></div>'+
+   '<aside class="wm-v12-hangar-dossier"><span class="wm-v12-dossier-head">'+esc(typeName)+' · AIRCRAFT RECORD</span>'+
+   '<h2>'+esc(selected[0])+'</h2><span class="wm-v12-dossier-role">'+esc(selected[1])+'</span>'+
+   '<div class="wm-v12-stats">'+figures+'</div>'+
+   '<div class="wm-v12-dossier-weapon"><span>PRIMARY ABILITY</span><b>'+esc(selected[2])+'</b>'+
+   '<p>'+esc(selected[3])+'</p></div>'+
+   (fav?'<div class="wm-v12-specialist">★ YOUR PILOT’S SPECIALIST AIRCRAFT · +10% HULL, ARMOUR AND DAMAGE</div>':'')+
+   '</aside></div>'+
+   '<div class="wm-v12-hangar-lower"><div class="wm-v12-hangar-cards">'+craft+'</div>'+settings+'</div>'+
+   '</div><div class="wm-v12-actionbar"><button type="button" class="wm-v12-secondary" data-action="back">← BACK</button>'+
+   '<button type="button" class="wm-v12-primary" data-action="mission-review">READY FOR SORTIE ›</button></div></section>';
 }
 function pilots(){
  const saved=playerSave(),list=roster.filter(p=>p.faction===S.pilotFilter);
