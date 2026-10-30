@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, SKY_EXTRA=150, WORLD_H=H+SKY_EXTRA, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.6.4',GAME_PHASE='F2.4 DISPLAY & LAUNCH'; // stable release identifier
+  const GAME_VERSION='v0.6.5',GAME_PHASE='F2.5 TACTICAL AI'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -944,13 +944,33 @@ function plane(type,id,x,y,angle){
     // Establish a distinct altitude advantage before attempting to bomb.
     const desiredHeight=clamp(target.y-85,68,WORLD_H-166);
     const altitudeAdvantage=target.y-p.y;
-    const safeBottom=p.y>WORLD_H-185&&(p.vy>3||p.y>WORLD_H-143);
+    // Rookie bomber control has slower recovery: allow extra room.
+    const safeBottom=state.difficulty==='rookie'?
+      p.y>WORLD_H-240&&(p.vy>0||p.y>WORLD_H-180):
+      p.y>WORLD_H-185&&(p.vy>3||p.y>WORLD_H-143);
     const nearCeiling=p.y<152&&(p.vy< -5||p.y<100);
-    if((alarm||safeBottom)&&p.aiPlan!=='escape'&&p.aiThreatGrace<=0){
+    // Allow an actual heading reversal after overshooting the enemy.
+    // A reversal stays committed until the velocity changes direction;
+    // simply setting aiMode='reverse' is NOT enough for acceptance.
+    p.aiReverseCooldown=Math.max(0,(p.aiReverseCooldown||0)-STEP);
+    if(p.aiPlan==='reverse'){
+      if(Math.cos(p.angle)*(p.aiReverseTo||1)>.65&&Math.abs(p.vx)>12){
+        p.aiPlan='intercept';p.aiCommit=1.6;p.aiReverseCooldown=4.5;
+      }else if(p.aiCommit<=0){
+        p.aiPlan='intercept';p.aiReverseCooldown=4;p.aiCommit=1;
+      }
+    }else if(p.aiReverseCooldown<=0&&target.y-p.y>20&&
+      ((Math.sign(dx)!==horiz&&Math.abs(dx)>65)||
+       (p.aiPlan==='intercept'&&range>140))&&p.y>95&&p.y<168){
+       // Start the turn only in a recoverable high-airspace corridor.
+       p.aiPlan='reverse';p.aiCommit=4.1;
+       p.aiReverseTo=-horiz;p.aiReverseSign=1;
+    }
+    if((alarm||safeBottom)&&p.aiPlan!=='escape'&&p.aiPlan!=='reverse'&&p.aiThreatGrace<=0){
       p.aiPlan='escape';p.aiCommit=2.6;p.aiThreatGrace=3.2;
       p.aiEscapeSign=p.y>WORLD_H*.58?-1:p.y<124?1:(target.y>p.y?-1:1);
       p.aiBankHeading=Math.atan2((p.aiEscapeSign||-1)*.45,horiz);
-    }else if(p.aiCommit<=0||!p.aiPlan){
+    }else if((p.aiCommit<=0||!p.aiPlan)&&p.aiPlan!=='reverse'){
       if(altitudeAdvantage<55){
         p.aiPlan='gain-height';p.aiCommit=3.6;
       }else if(Math.abs(dx)>65||Math.abs(target.vx-p.vx)>42){
@@ -970,6 +990,9 @@ function plane(type,id,x,y,angle){
     }else if(nearCeiling){
       plan='recover';
       heading=Math.atan2(.48,horiz);
+    }else if(plan==='reverse'){
+      // One sustained bank. No position changes or instantaneous flips.
+      heading=Math.atan2(.3,p.aiReverseTo||-horiz);
     }else if(plan==='escape'){
       // Held 75-degree bank: visibly different from a shallow S-curve.
       heading=p.aiBankHeading;
@@ -992,10 +1015,10 @@ function plane(type,id,x,y,angle){
     }
     const error=angleDiff(heading,p.angle);
     p.aiMode=plan==='escape'?'evade':plan==='gain-height'?'climb':
-      plan==='bomb-run'?'bomb-run':plan==='recover'?'recover':'intercept';
+      plan==='bomb-run'?'bomb-run':plan==='reverse'?'reverse':plan==='recover'?'recover':'intercept';
     // Aggressive but physical stick input; inertia and actual bomber turn
     // limits prevent fighter-like snapshots.
-    const steer=Math.abs(error)<.055?0:clamp(error*3.0,-1,1);
+    const steer=plan==='reverse'?p.aiReverseSign:Math.abs(error)<.055?0:clamp(error*3.0,-1,1);
     if(!safeBottom&&!nearCeiling&&p.aiBombDelay<=0&&p.specialCooldown<=0&&
       target.spawnSafe<=0&&altitudeAdvantage>=28&&altitudeAdvantage<=135){
       const fall=clamp(Math.sqrt(Math.max(0,2*(altitudeAdvantage-7)/94)),.25,1.17);
@@ -1153,7 +1176,8 @@ function plane(type,id,x,y,angle){
     // stop-start binary steering near the sight line.
     const turn=p.aiMode==='break'?p.aiBreakSign:
       Math.abs(error)<.045?0:
-        clamp(error*(2.0+talent*1.4),-1,1);
+        clamp(error*((state.difficulty==='rookie'&&!rankAI?2.0:2.35)+
+          talent*(state.difficulty==='rookie'&&!rankAI?1.4:1.45)),-1,1);
     p.aiBoost=false;
 
     // Actual guns use their own firing axis, not the tail-position waypoint.
