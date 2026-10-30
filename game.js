@@ -906,13 +906,13 @@ function plane(type,id,x,y,angle){
     if(threatened&&p.aiPlan!=='escape'&&p.aiThreatGrace<=0){
       p.aiPlan='escape';p.aiCommit=2.6+(p.type==='he111'?.15:0);
       p.aiThreatGrace=3.5;
-      p.aiEscapeSign=p.y>H*.45?-1:p.y<H*.32?1:((p.id%2)?1:-1);
+      p.aiEscapeSign=p.y>H*.43?-1:p.y<H*.34?1:((p.id%2)?1:-1);
     }else if(p.aiCommit<=0){
       // Select the next leg only after the last bank has completed.
       if(dy>31&&range<182){p.aiPlan='bomb-approach';p.aiCommit=2.35;}
       else{p.aiPlan='reposition';p.aiCommit=2.8;}
     }
-    const danger=p.y>H*.62||(p.y>H*.51&&p.vy>24);
+    const danger=p.y>H*.55||(p.y>H*.39&&p.vy>13);
     const ceiling=p.y<54&&p.vy< -13;
     let turnDirection=forward;
     let goalY=clamp(target.y-53,70,H-116);
@@ -920,14 +920,15 @@ function plane(type,id,x,y,angle){
       goalY=clamp(p.y+(p.aiEscapeSign||-1)*68,67,H-104);
     }else if(p.aiPlan==='reposition'){
       goalY=clamp(target.y-57,76,H-114);
-      if(Math.abs(dx)>86)turnDirection=dx>0?1:-1;
+      // Hold the travel direction in the compact arena: a 180-degree turn
+      // costs more altitude than the bomber can safely afford here.
     }else if(p.aiPlan==='bomb-approach'){
       goalY=clamp(target.y-52,72,H-116);
-      if(Math.abs(dx)>105)turnDirection=dx>0?1:-1;
+      // Commit to the same flight leg until a safe reorientation is possible.
     }
     if(danger)goalY=H*.29;
     else if(ceiling)goalY=H*.49;
-    const pitch=clamp((goalY-p.y)*.88,-53,53);
+    const pitch=clamp((goalY-p.y)*.77,-43,43);
     const heading=Math.atan2(pitch,turnDirection*95);
     const err=angleDiff(heading,p.angle);
     p.aiMode=danger||ceiling?'recover':
