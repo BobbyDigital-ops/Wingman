@@ -16,11 +16,13 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer']}
  edit('  function emit(x,y,count,color,power,kind=\'\'){',
  '  function emit(x,y,count,color,power,kind=\'\'){if(state.qa)return;');
  edit('  function endRound(winner){','  function endRound(winner){if(state.qa){state.qaWinner=winner;state.phase="result";return;}');
+ edit("  function hit(p,amount,x,y,zoneOverride,cause='GUN',owner=null){",
+ "  function hit(p,amount,x,y,zoneOverride,cause='GUN',owner=null){if(state.qa&&p.alive&&p.spawnSafe<=0){state.qaDamage[p.id]+=amount;state.qaHits[p.id]++;}");
  edit('  // All scenery is painted once;',`  window.aiQA={
  setup(a,b,d,scenario,wind){
   state.qa=false;state.mode='duel';state.participants=2;state.teams=false;state.selected=a;state.enemyType=b;state.difficulty=d;
   newRound();state.wind=wind?{active:true,base:10,current:10,elapsed:0}:{active:false,base:0,current:0,elapsed:0};
-  state.qa=true;state.qaScenario=scenario;state.qaWinner=null;
+  state.qa=true;state.qaScenario=scenario;state.qaWinner=null;state.qaDamage=[0,0];state.qaHits=[0,0];
   if(scenario==='pursuer'){
    const p=state.fliers[0],q=state.fliers[1];
    p.x=220;p.y=125;p.angle=0;p.vx=p.speed;p.vy=0;
@@ -47,7 +49,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer']}
    }
   }
   return {frames,ground,tail,closing,opportunities,modes,planChanges,ceiling,
-   bombs:state.fliers.map(p=>p.bombRunId||0),shots:state.fliers.map(p=>p.tracerCount||0)};
+   bombs:state.fliers.map(p=>p.bombRunId||0),shots:state.fliers.map(p=>p.tracerCount||0),damage:state.qaDamage.slice(),hits:state.qaHits.slice(),winner:state.qaWinner};
  },probeCamera(){
    const hero=state.fliers[0],original=hero.y,initial=state.cameraY;
    hero.y=45;updateCamera(1);const top=state.cameraY;
@@ -66,7 +68,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer']}
  for(const script of [sources.physics,sources.aircraft,sources.scenery])new Function('window','document','Math',script)(window,document,math);
  new Function('window','document','requestAnimationFrame','localStorage','URLSearchParams','Math',source)(window,document,noop,{getItem:()=>null,setItem:noop},Params,math);
  const types=['fighter','bf109','heavy','bf110','bomber','he111'];
- const summary={games:0,groundCrashes:0,byType:{},bombSalvos:0,gunShots:0,tailSeconds:0,pursuitSeconds:0,firingOpportunitySeconds:0,ceilingContact:0,modeChanges:0,modes:{},scenarios:{},samples:[]};
+ const summary={games:0,groundCrashes:0,byType:{},bombSalvos:0,gunShots:0,tailSeconds:0,pursuitSeconds:0,firingOpportunitySeconds:0,damageTaken:[0,0],hitsTaken:[0,0],enemyVictories:0,ceilingContact:0,modeChanges:0,modes:{},scenarios:{},samples:[]};
  for(const t of types)summary.byType[t]={games:0,groundCrashes:0,bombSalvos:0,tailSeconds:0,ceilingContact:0};
  for(const scenario of scenarios){
   summary.scenarios[scenario]={games:0,groundCrashes:0,tailSeconds:0,evadeSeconds:0,pursuitSeconds:0};
@@ -74,12 +76,12 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer']}
    for(const order of [0,1]){
     const a=order?types[j]:types[i],b=order?types[i]:types[j];seed=10001+rep*17029+i*1873+j*3899+order*1193;
     window.aiQA.setup(a,b,'ace',scenario,rep%2===1);const x=window.aiQA.tick(Math.round(seconds*60));
-    summary.games++;summary.scenarios[scenario].games++;
+    summary.games++;summary.scenarios[scenario].games++;if(x.winner===1)summary.enemyVictories++;
     for(let side=0;side<2;side++){
      const type=side===0?a:b,t=summary.byType[type],sc=summary.scenarios[scenario];
      t.games++;t.groundCrashes+=+x.ground[side];t.bombSalvos+=x.bombs[side];t.tailSeconds+=x.tail[side];t.ceilingContact+=x.ceiling[side];
      summary.groundCrashes+=+x.ground[side];sc.groundCrashes+=+x.ground[side];
-     summary.bombSalvos+=x.bombs[side];summary.gunShots+=x.shots[side];summary.tailSeconds+=x.tail[side];sc.tailSeconds+=x.tail[side];
+     summary.damageTaken[side]+=x.damage[side];summary.hitsTaken[side]+=x.hits[side];summary.bombSalvos+=x.bombs[side];summary.gunShots+=x.shots[side];summary.tailSeconds+=x.tail[side];sc.tailSeconds+=x.tail[side];
      summary.pursuitSeconds+=x.closing[side];sc.pursuitSeconds+=x.closing[side];
      summary.firingOpportunitySeconds+=x.opportunities[side];summary.ceilingContact+=x.ceiling[side];summary.modeChanges+=x.planChanges[side];
      sc.evadeSeconds+=(x.modes[side].evade||0)/60;
