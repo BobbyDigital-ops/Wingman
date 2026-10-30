@@ -981,14 +981,14 @@ function plane(type,id,x,y,angle){
       Math.max(0,(p.aiRecoveryTime||0)-STEP);
     if(p.vy< -10&&p.y<H-38)p.aiRecoveryTime=0;
     if(p.aiRecoveryTime>0){
-      p.aiMode='recover';p.aiBoost=false;
+      p.aiMode='recover';p.aiBoost=false;p.aiBreakTime=0;
       const heading=Math.atan2(-.55,p.vx>=0?1:-1);
       return clamp(angleDiff(heading,p.angle)*2,-1,1);
     }
     // The ceiling is not a second ground. Ease out of climbing only when
     // actually approaching it; otherwise keep chasing across the full sky.
     if(p.y<56&&p.vy< -12){
-      p.aiMode='intercept';p.aiBoost=false;
+      p.aiMode='intercept';p.aiBoost=false;p.aiBreakTime=0;
       const heading=Math.atan2(.38,p.vx>=0?1:-1);
       return clamp(angleDiff(heading,p.angle)*2,-1,1);
     }
@@ -1000,7 +1000,7 @@ function plane(type,id,x,y,angle){
     p.aiBreakTime=Math.max(0,(p.aiBreakTime||0)-STEP);
     if(behindNose&&range<100&&p.aiEvadeTime<=0&&
        p.aiBreakCooldown<=0&&p.aiBreakTime<=0){
-      p.aiBreakTime=1.04+(p.role==='heavy'?.30:.08);
+      p.aiBreakTime=.4+(p.role==='heavy'?.1:0);
       p.aiBreakCooldown=3.1;
       const forward=Math.cos(p.angle)>=0?1:-1;
       p.aiBreakSign=(p.y>H*.48?-1:1)*forward;
