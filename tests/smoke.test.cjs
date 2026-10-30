@@ -390,8 +390,56 @@ test('G3A.3 fighter pursues close target even when pointing away instead of orbi
  player.x=198;player.y=100;player.vx=0;player.vy=0;player.spawnSafe=0;
  const turn=game.internals.aiInput(fighter,player);
  assert.ok(turn<0,'turn toward the nearby target, not away on a forward lap');
- assert.equal(fighter.aiMode,'attack','fighter stays in combat after close crossing');
+ assert.equal(fighter.aiMode,'break','fighter immediately reverses to re-engage after crossing');
 });
+
+test('G3B gun cooldown does not cause pointless horizontal laps',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const [target,p]=game.internals.state.fliers;
+ p.type='bf109';p.role='fighter';p.d=game.internals.PLANES.bf109;
+ p.x=140;p.y=120;p.angle=.4;p.vx=80;p.vy=0;p.gunCooldown=1.4;
+ target.x=211;target.y=120;target.angle=0;target.spawnSafe=0;
+ const stick=game.internals.aiInput(p,target);
+ assert.equal(p.aiMode,'attack','cooldown must not trigger extend or patrol');
+ assert.ok(stick<0,'aircraft is actively adjusting nose toward target');
+});
+test('G3B AI banks around after an overshoot rather than flying away',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const [target,p]=game.internals.state.fliers;
+ p.type='bf109';p.role='fighter';p.d=game.internals.PLANES.bf109;
+ p.x=171;p.y=113;p.angle=0;p.vx=80;p.vy=0;
+ target.x=109;target.y=114;target.angle=Math.PI;target.spawnSafe=0;
+ const stick=game.internals.aiInput(p,target);
+ assert.equal(p.aiMode,'break');
+ assert.ok(Math.abs(stick)>.85,'must command a deliberate reversal');
+});
+test('G3B defensive evasions respond to a gun threat, not random passing',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const [target,p]=game.internals.state.fliers;
+ p.type='bf109';p.role='fighter';p.d=game.internals.PLANES.bf109;
+ p.x=165;p.y=115;p.angle=0;p.vx=80;p.vy=0;
+ target.x=105;target.y=115;target.angle=0;target.spawnSafe=0;target.burstLeft=5;
+ game.internals.aiInput(p,target);
+ assert.equal(p.aiMode,'evade');
+ assert.ok(p.aiEvadeTime>.2);
+ p.aiEvadeTime=0;p.aiEvadeCooldown=0;
+ target.angle=Math.PI;
+ game.internals.aiInput(p,target);
+ assert.notEqual(p.aiMode,'evade','opponent facing away cannot force evasive orbit');
+});
+test('G3B medium altitude does not trigger premature ground escape',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const [target,p]=game.internals.state.fliers;
+ p.type='bf109';p.role='fighter';p.d=game.internals.PLANES.bf109;
+ p.y=93;p.vy=56;p.angle=.4;p.aiRecoveryTime=0;
+ target.x=p.x+67;target.y=145;
+ game.internals.aiInput(p,target);
+ assert.notEqual(p.aiMode,'recover','chase must persist while ground is distant');
+ p.y=175;p.vy=92;
+ game.internals.aiInput(p,target);
+ assert.equal(p.aiMode,'recover','genuine floor approach must override pursuit');
+});
+
 test('G3A.2 near-ceiling fighter keeps chasing instead of bobbing in ground-recovery mode',()=>{
  const game=launch();game.listeners.get('start:click')();
  const [player,fighter]=game.internals.state.fliers;
