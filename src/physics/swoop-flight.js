@@ -1,12 +1,13 @@
 /* Wingman G1 — arcade swoop physics.
+ * v0.5 calibrated swoop — responsive roll and gently reduced dive load.
  * All six aircraft use the same angular-momentum model (including AI).
  * No simulation framework or new hitboxes; backward compatible with classic.
  */
 (()=>{'use strict';
   const profiles={
-    fighter:{yaw:.66,rollResponse:7.0,flightTurn:2.35,velocityResponse:3.1},
-    heavy:{yaw:.60,rollResponse:4.5,flightTurn:1.40,velocityResponse:2.3},
-    bomber:{yaw:.48,rollResponse:2.7,flightTurn:.83,velocityResponse:1.9}
+    fighter:{yaw:.66,rollResponse:7.9,flightTurn:2.35,velocityResponse:3.35},
+    heavy:{yaw:.60,rollResponse:5.0,flightTurn:1.40,velocityResponse:2.45},
+    bomber:{yaw:.64,rollResponse:3.5,flightTurn:1.12,velocityResponse:2.15}
   };
   const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
   const shortest=(target,current)=>Math.atan2(Math.sin(target-current),Math.cos(target-current));
