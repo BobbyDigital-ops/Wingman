@@ -454,11 +454,12 @@ test('G3B medium altitude does not trigger premature ground escape',()=>{
  const game=launch();game.listeners.get('start:click')();
  const [target,p]=game.internals.state.fliers;
  p.type='bf109';p.role='fighter';p.d=game.internals.PLANES.bf109;
- p.y=93;p.vy=56;p.angle=.4;p.aiRecoveryTime=0;
+ p.y=93;p.vy=15;p.angle=.4;p.aiRecoveryTime=0;
  target.x=p.x+67;target.y=145;
  game.internals.aiInput(p,target);
- assert.notEqual(p.aiMode,'recover','chase must persist while ground is distant');
- p.y=175;p.vy=92;
+ assert.notEqual(p.aiMode,'recover','gentle flight above the ground must not trigger escape');
+ // A hard dive at the same altitude needs an early bank, not a last-second crash.
+ p.y=93;p.vy=56;
  game.internals.aiInput(p,target);
  assert.equal(p.aiMode,'recover','genuine floor approach must override pursuit');
 });
