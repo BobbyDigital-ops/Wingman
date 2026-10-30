@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, SKY_EXTRA=150, WORLD_H=H+SKY_EXTRA, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.6.3',GAME_PHASE='F2.3 DUEL SELECTION'; // stable release identifier
+  const GAME_VERSION='v0.6.4',GAME_PHASE='F2.4 DISPLAY & LAUNCH'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -2047,6 +2047,26 @@ function plane(type,id,x,y,angle){
       g.beginPath();g.ellipse(cx+13,cy+2,16+(k%2)*9,1.2,0,0,TAU);g.fill();
     }
     g.drawImage(draw.skyCache.fade,0,skyGap,W,H);
+    // Restore the original painted ground layer. The approved static theatre
+    // image can be sky-only; the cached local panorama contains the mountain,
+    // coast and desert silhouettes that mark the collision floor. Composite
+    // ONLY its lower 90 logical pixels in world space, feathering the top.
+    if(scene!==background&&skyGap<H){
+      if(!draw.groundCache||draw.groundCache.source!==background){
+        const terrain=document.createElement('canvas');
+        terrain.width=background.width;terrain.height=background.height;
+        const ctx=terrain.getContext('2d');
+        ctx.drawImage(background,0,0);
+        ctx.globalCompositeOperation='destination-in';
+        const fade=ctx.createLinearGradient(0,terrain.height*.60,0,terrain.height*.78);
+        fade.addColorStop(0,'rgba(0,0,0,0)');
+        fade.addColorStop(1,'rgba(0,0,0,1)');
+        ctx.fillStyle=fade;ctx.fillRect(0,0,terrain.width,terrain.height*.78);
+        ctx.globalCompositeOperation='source-over';
+        draw.groundCache={source:background,terrain};
+      }
+      g.drawImage(draw.groundCache.terrain,0,skyGap,W,H);
+    }
     drawWind();
     g.save();g.translate(0,-state.cameraY);
     for(const t of state.trails){
