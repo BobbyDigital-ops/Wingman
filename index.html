@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#172939">
+  <style id="wingman-initial-cover">
+    /* Mask the obsolete menu while the new illustrated UI iframe loads. */
+    body:not(.wingman-illustrated-ready)::before{
+      content:"";position:fixed;inset:0;background:#061824;
+      z-index:9999;pointer-events:auto;
+    }
+  </style>
   <meta name="description" content="Wingman — WWII fighter dogfighting, four dramatic battlefields, and tactical aerial combat.">
   <title>Wingman · Pixel Dogfights</title>
   <link rel="stylesheet" href="./styles.css?v=20261028phase8c">
@@ -115,16 +122,16 @@
   <script src="./src/art/scenery-panorama.js?v=20261030D1D2sharp1" defer></script>
   <script src="./src/art/static-battlefields.js?v=20261030staticassets1" defer></script>
   <script src="./src/art/f1-sprite-preview.js?v=20261030F4side" defer></script>
-  <script src="./src/physics/swoop-flight.js?v=20261030G1swoop2" defer></script>
+  <script src="./src/physics/swoop-flight.js?v=20261030G1fix4" defer></script>
   <script src="./src/audio/soundscape.js?v=20261029phase45release1" defer></script>
   <script src="./src/ui/aircraft-grid-art.js?v=20261029grid1" defer></script>
   <script src="./src/ui/aircraft-grid.js?v=20261030batchC22" defer></script>
-  <script src="./game.js?v=20261030G1swoop2" defer></script>
+  <script src="./game.js?v=20261030G1fix4" defer></script>
   <script src="./src/data/pilot-roster.js?v=20261029rosterfaces2" defer></script>
   <script src="./src/data/pilot-ai.js?v=20261029phase3a" defer></script>
   <script src="./src/data/arcade-records.js?v=20261029phase6release1" defer></script>
   <script src="./career.js?v=20261029restart7" defer></script>
   <script src="./src/ui/flow.js?v=20261029realaircraft1" defer></script>
-  <script src="./src/ui/wingman-bridge.js?v=20261030title23" defer></script>
+  <script src="./src/ui/wingman-bridge.js?v=20261030bootfix" defer></script>
 </body>
 </html>

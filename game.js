@@ -630,23 +630,21 @@ function plane(type,id,x,y,angle){
     return true;
   }
   function crossTopEdge(p){
-    // Fly fully out above the playfield, then return on the opposite heading.
-    // Reflect horizontal direction and descend into the playable area.
-    if(p.y>=-p.d.radius)return false;
-    // Re-enter from the same offscreen coordinate: never teleport to HUD.
-    p.y=39+p.d.radius;
-    p.angle=Math.atan2(Math.sin(Math.PI-p.angle),Math.cos(Math.PI-p.angle));
-    const incoming=Math.max(p.speed,Math.hypot(p.vx,p.vy),p.d.speed*.65);
-    p.vx=Math.cos(p.angle)*incoming;
-    p.vy=Math.abs(Math.sin(p.angle)*incoming);
-    // Avoid a near-horizontal re-entry that could retrigger ceiling contact.
-    if(p.vy<incoming*.3){
-      p.vy=incoming*.3;
-      p.angle=Math.atan2(p.vy,p.vx);
+    // The playfield is clipped below the HUD at y=31. Bounce as soon as the
+    // aircraft has left the visible sky; never wait until it leaves the canvas.
+    if(p.y>=31-p.d.radius)return false;
+    const speed=Math.max(p.speed,Math.hypot(p.vx,p.vy),p.d.speed*.65);
+    // Reverse the entire heading and the velocity, not just horizontal yaw.
+    // A climb to the upper left therefore returns descending to the right.
+    let turned=Math.atan2(-Math.sin(p.angle),-Math.cos(p.angle));
+    if(Math.sin(turned)<.35){
+      const dir=Math.cos(turned)>=0?1:-1;
+      turned=Math.atan2(.35,dir*Math.sqrt(1-.35*.35));
     }
-    p.turnVelocity=0;
-    // Hold a descending course long enough to emerge visibly beneath the HUD.
-    p.topRecovery=.65;
+    p.angle=turned;p.y=31+p.d.radius+2;
+    p.vx=Math.cos(turned)*speed;p.vy=Math.sin(turned)*speed;
+    p.turnVelocity=0;p.topRecovery=.43;
+    p.swoop=null;p.swoopTime=0;
     p.climbLoad=0;p.flightRisk=0;p.stallTime=0;
     return true;
   }
@@ -703,7 +701,7 @@ function plane(type,id,x,y,angle){
     // A simple energy model: a sustained climb exchanges forward airspeed
     // for altitude; a dive converts height into kinetic energy. The engine
     // still slowly restores cruise speed when level. No separate boost key.
-    p.energy=clamp(p.energy+dt*(24*dive-15*climb+4*(1-climb)),0,100);
+    p.energy=clamp(p.energy+dt*(24*dive-15*climb+4*(1-climb))-(swoopPhysics&&p.invertedNow?dt*12:0),0,100);
     // Stall risk is based on altitude GAINED RAPIDLY, not the current
     // height or an arbitrary low energy threshold. A rolling climb reserve
     // naturally recovers when levelling out or diving.
@@ -721,7 +719,7 @@ function plane(type,id,x,y,angle){
     const desired=p.climbAssist>0
       ?clamp(angleDiff(Math.atan2(-43,Math.cos(p.angle)<0?-20:20),p.angle)*2,-p.d.turn,p.d.turn)
       :steer*p.d.turn*skill.turn*authority*(p.corkscrewRecovery>0?.72:1)*(1-p.flightRisk*.34)*(p.type==='bf109'?(p.speed>p.d.speed*1.15?.91:p.speed<p.d.speed*.73?.86:1):1)+noseDrop+magneticTurn;
-    const controlledTurn=swoopPhysics?swoopPhysics.desiredTurn(p,desired):desired;
+    const controlledTurn=swoopPhysics?swoopPhysics.desiredTurn(p,desired)*(p.invertedNow?.86:1):desired;
     const turnBlend=swoopPhysics?swoopPhysics.turnBlend(p,dt):Math.min(1,dt*(p.role==='bomber'?6:7.5));
     p.turnVelocity+=(controlledTurn-p.turnVelocity)*turnBlend;
     p.angle+=p.turnVelocity*dt;
@@ -758,6 +756,7 @@ function plane(type,id,x,y,angle){
     // Airspeed exchange works with existing climb-load/stall handling.
     // The velocity vector still turns smoothly (no sudden arcade snap).
     if(p.flightRisk>0)p.vy+=dt*(5+15*p.flightRisk);
+    if(swoopPhysics&&p.invertedNow)p.vy+=dt*9;
     const oldY=p.y;
     p.x+=(p.vx+state.wind.current)*dt;p.y+=p.vy*dt;
     // Fast, sustained ascents increase load. A dive drains it quickly.
@@ -980,6 +979,13 @@ function plane(type,id,x,y,angle){
     if(p.type==='fighter'&&wasBoosting&&p.overdriveTime===0)p.corkscrewRecovery=.45;
     p.corkscrewTime=Math.max(0,(p.corkscrewTime||0)-dt);
     p.corkscrewRecovery=Math.max(0,(p.corkscrewRecovery||0)-dt);
+    // Inversion only occurs during a real axial roll/corkscrew.
+    // Pointing the aircraft left is normal upright flight.
+    const corkscrewing=p.corkscrewTime>0;
+    const rolling=corkscrewing||p.rollTime>0;
+    const phase=corkscrewing?1-p.corkscrewTime/(p.corkscrewDuration||CORKSCREW_SPIN_TIME)
+      :p.rollTime>0?1-p.rollTime/(p.rollDuration||.5):0;
+    p.invertedNow=rolling&&Math.cos(phase*TAU*(corkscrewing?2:1))<0;
     if(p.bombQueue>0){p.bombInterval-=dt;if(p.bombInterval<=0){releaseBomb(p);p.bombQueue--;p.bombInterval=.40;if(p.bombQueue===0)p.bombRunId++;}}
     p.climbAssist=Math.max(0,p.climbAssist-dt);
     p.bombCooldown=Math.max(0,p.bombCooldown-dt);
@@ -1390,7 +1396,11 @@ function plane(type,id,x,y,angle){
   // Aircraft are drawn at native display resolution independently of scenery.
   function aircraft(p){
     const c=modelCtx;
-    c.save();c.translate(p.x,p.y);c.rotate(p.angle);
+    c.save();c.translate(p.x,p.y);
+    // A left-pointing aircraft is NOT inverted. Mirror the side-on artwork
+    // horizontally, then apply the correct physical pitch angle.
+    if(Math.cos(p.angle)<0){c.scale(-1,1);c.rotate(Math.PI-p.angle);}
+    else c.rotate(p.angle);
     if(swoopPhysics&&p.corkscrewTime<=0&&p.rollTime<=0){
       // Restrained wing-bank hint; this affects artwork only, not hitboxes.
       const bank=clamp(p.turnVelocity/Math.max(1,p.d.turn),-1,1);
@@ -1410,7 +1420,7 @@ function plane(type,id,x,y,angle){
     }
     // Slightly smaller miniatures. Physics, hitbox and projectile origins unchanged.
     // G1: approximately 15% smaller than F4, preserving native proportions.
-    const miniatureScale=p.role==='bomber'?.52:p.role==='heavy'?.48:.46;
+    const miniatureScale=p.role==='bomber'?.390:p.role==='heavy'?.360:.345; // 25% smaller than G1
     c.scale(miniatureScale,miniatureScale);
     const artState=p.health<p.d.hull*.38?'damaged':p.health<p.d.hull*.70?'worn':'level';
     const paintPlane=()=>{

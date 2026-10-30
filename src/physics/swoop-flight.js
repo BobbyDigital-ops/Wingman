@@ -4,9 +4,9 @@
  */
 (()=>{'use strict';
   const profiles={
-    fighter:{yaw:.61,rollResponse:6.0,flightTurn:2.22,velocityResponse:2.7},
-    heavy:{yaw:.73,rollResponse:4.7,flightTurn:1.64,velocityResponse:2.3},
-    bomber:{yaw:.83,rollResponse:3.4,flightTurn:1.15,velocityResponse:2.0}
+    fighter:{yaw:.66,rollResponse:7.0,flightTurn:2.35,velocityResponse:3.1},
+    heavy:{yaw:.60,rollResponse:4.5,flightTurn:1.40,velocityResponse:2.3},
+    bomber:{yaw:.48,rollResponse:2.7,flightTurn:.83,velocityResponse:1.9}
   };
   const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
   const shortest=(target,current)=>Math.atan2(Math.sin(target-current),Math.cos(target-current));
@@ -15,7 +15,10 @@
     const cfg=profile(p),baseline=Math.max(1,p.d?.speed||1);
     const overspeed=Math.max(0,(p.speed||baseline)/baseline-1);
     // Faster aircraft carve a wider arc rather than instantly pivoting.
-    return input*cfg.yaw*Math.max(.72,1-.28*overspeed);
+    const airframe=p.type==='fighter'?1.07:p.type==='bf109'?.92:
+      p.type==='heavy'?1.03:p.type==='bf110'?.98:
+      p.type==='bomber'?.95:1;
+    return input*cfg.yaw*airframe*Math.max(.68,1-.30*overspeed);
   }
   function turnBlend(p,dt){return clamp(dt*profile(p).rollResponse,0,1);}
   function advanceVelocity(p,dt,scripted=false){

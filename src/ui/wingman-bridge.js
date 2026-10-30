@@ -99,7 +99,10 @@ function mount(){
   const el=by(id);if(el)new MutationObserver(sync).observe(el,{attributes:true,attributeFilter:['class','hidden']});
  }
  // Career changes occur behind the new presentation; stay on the same-origin iframe.
- iframe.addEventListener('load',sync);
+ iframe.addEventListener('load',()=>{
+    document.body.classList.add('wingman-illustrated-ready');
+    sync();
+  });
  sync();
 }
 window.WingmanUIBridge={show,hide,choosePilot,beginCareer,startCareer,startArcade,continueCareer,
