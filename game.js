@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, SKY_EXTRA=150, WORLD_H=H+SKY_EXTRA, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.6.8',GAME_PHASE='F2.8 ORIGINAL ART COVER'; // stable release identifier
+  const GAME_VERSION='v0.7.0',GAME_PHASE='KOTS 7A/7B'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -248,9 +248,12 @@ function plane(type,id,x,y,angle){
     const bonus=state.mode==='campaign'?state.campaignEncounter?.playerAptitude:null;
     if(bonus){
       const hero=state.fliers[0],base=hero.d;
-      hero.d={...base,hull:Math.round(base.hull*bonus.hull),
-        armour:Math.round(base.armour*bonus.armour),
-        damage:Math.round(base.damage*bonus.damage*100)/100};
+      hero.d={...base,
+        hull:Math.round(base.hull*clamp(Number(bonus.hull)||1,.72,1.3)),
+        armour:Math.round(base.armour*clamp(Number(bonus.armour)||1,.65,1.3)),
+        damage:Math.round(base.damage*clamp(Number(bonus.damage)||1,.75,1.3)*100)/100,
+        speed:Math.round(base.speed*clamp(Number(bonus.speed)||1,.8,1.2)*10)/10,
+        turn:Math.round(base.turn*clamp(Number(bonus.turn)||1,.8,1.2)*1000)/1000};
       hero.health=hero.d.hull;hero.armour=hero.d.armour;
     }
     if(state.recordMode==='survival'&&state.survivalCarry){
@@ -261,6 +264,12 @@ function plane(type,id,x,y,angle){
     if(state.mode==='campaign'&&state.campaignEncounter){
       const enc=state.campaignEncounter;
       for(const [i,foe] of state.fliers.slice(1).entries())assignCampaignAI(foe,enc,i);
+      if(enc.objective==='escort'){
+        const ally=plane(enc.escortType||'bomber',90,W*.35,H*.35,-.07);
+        ally.team=0;ally.escortProtected=true;
+        ally.aiName='PROTECTED BOMBER';ally.aiSkillLevel=.28;ally.spawnSafe=1.7;
+        state.fliers.push(ally);
+      }
     }
     // Preserve launch framing while giving every aircraft a larger world above it.
     for(const p of state.fliers)p.y+=SKY_EXTRA;
@@ -270,7 +279,9 @@ function plane(type,id,x,y,angle){
     state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
     if(state.mode==='challenge'&&state.challenge==='crosswind')
       state.wind={active:true,base:state.round%2===0?-16:16,current:state.round%2===0?-16:16,elapsed:0};
-    state.time=state.mode==='survival'?70:state.mode==='challenge'?CHALLENGES[state.challenge].time:state.mode==='campaign'?(state.campaignEncounter?.finalBoss?165:120):90;state.impactLock=0;state.phase='playing';state.paused=false;
+    state.time=state.mode==='survival'?70:state.mode==='challenge'?CHALLENGES[state.challenge].time:
+      state.mode==='campaign'?(state.campaignEncounter?.timeLimit||(state.campaignEncounter?.finalBoss?165:120)):90;
+    state.impactLock=0;state.phase='playing';state.paused=false;
     if(menuReturn)menuReturn.hidden=false;
     if(fullscreenButton)fullscreenButton.hidden=false;
     const callsign=state.campaignEncounter?.label?.match(/"([^"]+)"/)?.[1]||
@@ -322,7 +333,7 @@ function plane(type,id,x,y,angle){
     state.campaignEncounter=encounter;
     state.scores=[0,0];state.round=1;state.kills=0;
     state.mode='campaign';state.recordMode='campaign';state.participants=encounter.types.length+1;
-    state.teams=encounter.types.length>1;
+    state.teams=encounter.types.length>1||encounter.objective==='escort';
     state.difficulty=encounter.difficulty||'standard';
     state.arena=encounter.arena||0;
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
@@ -396,7 +407,10 @@ function plane(type,id,x,y,angle){
       ui.resultTitle.textContent=won?'SORTIE WON':'SHOT DOWN';
       ui.resultDetail.textContent=won?'Enemy pilots defeated.':'Your aircraft was lost.';
       ui.result.classList.remove('hidden');
-      window.WingmanCareer?.finishEncounter?.(won,state.campaignEncounter);
+      const hero=state.fliers[0];
+      const integrity=hero?.d?clamp((Math.max(0,hero.health)+Math.max(0,hero.armour))/
+        Math.max(1,hero.d.hull+hero.d.armour),0,1):0;
+      window.WingmanCareer?.finishEncounter?.(won,state.campaignEncounter,{integrity});
       return;
     }
     const won=winner===0;
@@ -434,7 +448,7 @@ function plane(type,id,x,y,angle){
   function battleOutcomeAfterDeath(p){
     if(state.phase!=='playing')return;
     if(state.mode==='campaign'){
-      if(p.id===0)endRound(1);
+      if(p.id===0||p.escortProtected)endRound(1);
       else if(!bossWaiting()&&opponents(state.fliers[0]).every(q=>!q.alive))endRound(0);
       return;
     }
@@ -906,7 +920,7 @@ function plane(type,id,x,y,angle){
   // decisions and effective attributes without changing weapons or hull.
   const AI_STYLES=['hunter','duellist','guardian','trickster','sniper','interceptor','survivor','brawler'];
   function assignCampaignAI(p,encounter,offset=0){
-    const rank=clamp(Number(encounter.rank)||1,1,8);
+    const rank=clamp(Number(encounter.aiRank||encounter.rank)||1,1,8);
     const wing=encounter.opponents?.[offset]||(offset>0?encounter.wingman:null);
     const raw=wing||{id:encounter.id,name:encounter.label,plane:encounter.types?.[0]||p.type,
       attributes:encounter.attributes,signature:encounter.signature,
@@ -1494,15 +1508,18 @@ function plane(type,id,x,y,angle){
       const enemies=state.fliers.slice(1);
       if(state.participants>2){
         if(state.teams){
-          if(!state.fliers.some(q=>q.alive&&q.team===0))endRound(1);
+          const escort=state.mode==='campaign'&&state.campaignEncounter?.objective==='escort';
+          const protectedAlly=escort?state.fliers.find(p=>p.escortProtected):null;
+          if(!user.alive||(escort&&!protectedAlly?.alive))endRound(1);
           else if(!state.fliers.some(q=>q.alive&&q.team===1))endRound(0);
-          else if(state.time<=0)endRound(1);
+          else if(state.time<=0)endRound(escort?0:1);
         }else{
           if(!user.alive)endRound(1);
           else if(enemies.every(p=>!p.alive))endRound(0);
           else if(state.time<=0)endRound(1);
         }
       }else if(state.time<=0){
+        if(state.mode==='campaign'){endRound(1);return;}
         const enemy=enemies[0];
         const condition=p=>(p.health+p.armour)/(p.d.hull+p.d.armour);
         const a=condition(user),b=condition(enemy);
@@ -1953,6 +1970,8 @@ function plane(type,id,x,y,angle){
       state.recordMode==='challenge'?CHALLENGES[state.challenge].name:
       state.recordMode==='teams'?'SQUADRON '+state.fliers.filter(q=>q.alive&&q.team===0).length+' v '+state.fliers.filter(q=>q.alive&&q.team===1).length:
       state.recordMode==='triple'?'FREE FOR ALL':
+      state.mode==='campaign'&&state.campaignEncounter?.objective==='escort'?'ESCORT · PROTECT THE BOMBER':
+      state.mode==='campaign'&&state.campaignEncounter?.objective==='intercept'?'BOMBER INTERCEPTION':
       state.mode==='campaign'&&state.participants===3?'1 v 2':
       state.participants>2?(state.teams?'2 v 2':state.participants+' ACES'):
       state.scores[0]+' : '+state.scores[1];
