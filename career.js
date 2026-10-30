@@ -410,20 +410,23 @@ function finishEncounter(won,encounter,summary={}){
  if(!active||!data?.run)return;
  const run=data.run,rival=active;
  const atRank=run.rank;
+ const kills=Math.max(0,Math.min(rival.types?.length||0,
+   Math.floor(Number(summary.kills??rival.types?.length??0)||0)));
+ const grade=campaign?.sortieGrade?.(won,rival,summary)||(won?'B':'F');
  const previousTitle=rankTitle(atRank);
  const record=data.records[rival.id]||(data.records[rival.id]={wins:0,losses:0});
  const earned=[];
  const award=id=>{if(medal(id))earned.push(MEDALS.find(m=>m.id===id));};
  data.streak??=0;data.bestStreak??=0;
  if(won){
-  data.wins++;data.kills+=rival.types.length;record.wins++;
+  data.wins++;data.kills+=kills;record.wins++;
   data.streak++;data.bestStreak=Math.max(data.bestStreak,data.streak);
   run.rank++;
   data.best=Math.max(data.best,Math.min(MAX_RANK,run.rank));
   if(data.wins===1)award('first-blood');
   if(data.streak>=3)award('triple-ace');
   if(run.rank>=5)award('veteran');
-  if(rival.types.length>=2)award('double-trouble');
+  if(kills>=2)award('double-trouble');
   if(run.lives<3)award('iron-will');
   if(atRank===MAX_RANK&&rival.finalBoss)award('wingman-legend');
   if(run.rank>MAX_RANK){
@@ -442,9 +445,13 @@ function finishEncounter(won,encounter,summary={}){
  data.lastOutcome={won,rank:atRank,risk:rival.risk||'LOW',objective:rival.objective||'duel',
    mission:rival.mission||'DOGFIGHT',label:rival.label,
    aircraft:run.aircraft,integrity:Number(summary.integrity??1),
+   kills,grade,threat:rival.threat??null,
+   secondsRemaining:Math.max(0,Number(summary.remainingSeconds??0)||0),
    suppliesEarned:won?rival.suppliesAward||1:0};
  archiveService({won,rank:atRank,rival:rival.label,
   mission:rival.mission||'DOGFIGHT',enemies:rival.types.length,
+  kills,grade,threat:rival.threat??null,risk:rival.risk||'LOW',
+  remainingSeconds:Math.max(0,Number(summary.remainingSeconds??0)||0),
   result:won?'VICTORY':'SHOT DOWN'});
  if(data.run){run.visits++;run.choices=makeChoices(run);}
  save();active=null;
@@ -468,11 +475,12 @@ function renderOutcome(won,encounter,earned=[],promotion=null){
  panel(resultTitle,'<p class="career-outcome-opponent">'+escape(encounter?.label||'Rival')+' · '+
   escape((encounter?.types||[]).map(t=>aircraft[t]||t).join(' + '))+'</p>'+tribute+lossNotice+
   '<div class="career-stats"><span>'+(data?.run?'RANK '+data.run.rank:'RUN FINISHED')+'</span>'+
-  '<span>'+(data?.run?'♥ '+data.run.lives+' LIVES':'SERVICE RECORDED')+'</span></div>'+
+  '<span>'+(data?.run?'♥ '+data.run.lives+' LIVES':'SERVICE RECORDED')+'</span>'+
+  '<span>PERFORMANCE '+escape(data.lastOutcome?.grade||'—')+'</span></div>'+
   promotionMarkup+medalCards+(finished?medalMarkup():'' )+
   (finished?serviceMarkup(8):'')+
   (data?.run?.pendingReward?'<div class="wg-v7-reward"><strong>CHOOSE YOUR SORTIE REWARD</strong>'+
-    data.run.pendingReward.offers.map(id=>{const perk=campaign?.UPGRADES.find(x=>x.id===id);return perk?
+    data.run.pendingReward.offers.map(id=>{const perk=[...(campaign?.UPGRADES||[]),...(campaign?.ELITE_UPGRADES||[])].find(x=>x.id===id);return perk?
     '<button data-reward="'+escape(id)+'"><b>'+escape(perk.name)+'</b><small>'+escape(perk.detail)+'</small></button>':'';}).join('')+'</div>':'')+
   (!data?.run?.pendingReward?'<button class="career-primary" data-action="ladder">'+
     (data?.run?'CONTINUE LADDER':'VIEW PILOT LICENCE')+'</button>':'<p class="career-muted">Select a reward before your next sortie.</p>'));
