@@ -548,6 +548,7 @@ function plane(type,id,x,y,angle){
     // and keeping the target inside a modest acquisition cone. No auto-fire.
     if(p.id!==0||p.role==='bomber'||!p.alive)return;
     let target=null;
+    let cue=0;
     if(state.phase==='playing'){
       for(const other of opponents(p)){
         if(other.spawnSafe>0||other.rollDodgeTime>0||other.evasiveTime>0)continue;
@@ -558,13 +559,21 @@ function plane(type,id,x,y,angle){
         const cross=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
         const behind=dx*Math.cos(other.angle)+dy*Math.sin(other.angle);
         const direction=Math.abs(angleDiff(other.angle,p.angle));
-        if(forward<12||behind<10||direction>.53||cross>13+distance*.19)continue;
+        if(forward<12||behind<10||direction>.53)continue;
         const sol=interceptPoint(p,other);
         const leadAngle=Math.atan2(sol.y-p.y,wrappedDelta(p.x,sol.x));
-        if(Math.abs(angleDiff(leadAngle,p.angle))>.39)continue;
+        const error=Math.abs(angleDiff(leadAngle,p.angle));
+        const lateralLimit=13+distance*.19;
+        if(cross<lateralLimit*1.65&&error<.58){
+          cue=Math.max(cue,clamp(1-error/.58,0,1));
+        }
+        if(cross>lateralLimit||error>.39)continue;
         if(!target||distance<combatDistance(p,target))target=other;
       }
     }
+    // The sight immediately responds as the nose approaches a valid pursuit
+    // solution; full lock still needs sustained tracking.
+    p.tailCue=cue;
     if(target){
       if(p.tailLockTarget!==target.id)p.tailLock=0;
       p.tailLockTarget=target.id;
@@ -809,7 +818,15 @@ function plane(type,id,x,y,angle){
     // finite acceleration; never teleport the aircraft or silently reset it.
     if(p.id!==0&&p.aiRecoveryTime>0&&p.y>H-111&&p.vy>0){
       const proximity=clamp((p.y-(H-111))/96,0,1);
-      const correction=dt*(45+205*proximity);
+      const integrity=clamp(p.health/Math.max(1,p.d.hull),0,1);
+      // Badly damaged controls/engines cannot pull out as effectively.
+      // An undamaged opponent still receives the full safety acceleration.
+      const damaged=clamp((.55-integrity)/.55,0,1);
+      const pursuer=nearestEnemy(p);
+      const pressured=!!(pursuer&&pursuer.alive&&
+        combatDistance(p,pursuer)<75&&pursuer.burstLeft>0);
+      const authority=(1-.48*damaged)*(pressured?.86:1);
+      const correction=dt*(45+205*proximity)*authority;
       p.vy=Math.max(-p.d.speed*.6,p.vy-correction);
     }
     const oldY=p.y;
@@ -891,11 +908,14 @@ function plane(type,id,x,y,angle){
     const braking=p.role==='bomber'?2.65:p.role==='heavy'?2.40:2.15;
     const projectedY=p.y+descent*braking+
       Math.max(0,Math.sin(p.angle))*33;
-    const floorDanger=p.y>H-151&&projectedY>H-70 ||
-      p.y>H-100&&descent>12;
-    if(floorDanger)p.aiRecoveryTime=Math.max(p.aiRecoveryTime||0,1.55);
+    // Earlier, more conservative escape decisions for intact AI aircraft.
+    // Damage compromises their ability to recover, but does not deliberately
+    // cause a crash or grant the player a random instant win.
+    const floorDanger=p.y>H-163&&projectedY>H-80 ||
+      p.y>H-108&&descent>10;
+    if(floorDanger)p.aiRecoveryTime=Math.max(p.aiRecoveryTime||0,1.8);
     else p.aiRecoveryTime=Math.max(0,(p.aiRecoveryTime||0)-STEP);
-    if(p.vy< -16&&p.y<H-89)p.aiRecoveryTime=0;
+    if(p.vy< -18&&p.y<H-91)p.aiRecoveryTime=0;
     if(p.aiRecoveryTime>0){
       p.aiMode='recover';p.aiThink=0;
       p.aiBoost=false;
@@ -1573,26 +1593,44 @@ function plane(type,id,x,y,angle){
     c.save();c.beginPath();c.rect(0,31,W,H-31);c.clip();
     for(const p of state.fliers)if(p.alive)aircraft(p);
     c.restore();
-    // A restrained WWII gunsight: bracket the aircraft and fill a small
-    // acquisition arc. Full lock is earned, not automatic.
-    const hero=state.fliers[0],strength=hero?.tailLock||0;
-    const target=strength>.08?state.fliers.find(q=>q.id===hero.tailLockTarget&&q.alive):null;
-    if(target&&state.phase==='playing'){
-      c.save();c.lineWidth=.75;c.lineCap='round';
-      c.strokeStyle=strength>=.95?'#f8d38c':'#d4e4d3';
-      c.globalAlpha=.50+.45*strength;
-      const tx=target.x,ty=target.y,r=9;
-      for(const sx of [-1,1])for(const sy of [-1,1]){
+    // RAF-inspired reflector gunsight projects a few metres ahead of the
+    // PLAYER aircraft, rather than painting brackets onto enemy aircraft.
+    // Silver = idle; ivory = lining up; brass/amber = tracking; gold = lock.
+    const hero=state.fliers[0];
+    if(hero?.alive&&hero.role!=='bomber'&&state.phase==='playing'){
+      const strength=clamp(hero.tailLock||0,0,1);
+      const cue=clamp(hero.tailCue||0,0,1);
+      const locked=strength>=.95;
+      const sightX=hero.x+Math.cos(hero.angle)*(hero.d.radius+21);
+      const sightY=hero.y+Math.sin(hero.angle)*(hero.d.radius+21);
+      c.save();c.translate(sightX,sightY);c.rotate(hero.angle);
+      c.lineCap='round';c.lineJoin='round';
+      c.globalAlpha=locked?.96:cue>.2?.70+.22*cue:.43;
+      c.strokeStyle=locked?'#f5cc7a':cue>.2?'#e5d4a9':'#cad5d1';
+      c.lineWidth=locked?.95:.7;
+      const r=4.5;
+      // Open circular graticule with four fine reference ticks.
+      for(let k=0;k<4;k++){
+        const a=k*Math.PI/2;
         c.beginPath();
-        c.moveTo(tx+sx*r,ty+sy*(r-3));
-        c.lineTo(tx+sx*r,ty+sy*r);
-        c.lineTo(tx+sx*(r-3),ty+sy*r);
+        c.arc(0,0,r,a+.18,a+Math.PI/2-.18);
+        c.stroke();
+        c.beginPath();
+        c.moveTo(Math.cos(a)*(r+1.6),Math.sin(a)*(r+1.6));
+        c.lineTo(Math.cos(a)*(r+4),Math.sin(a)*(r+4));
         c.stroke();
       }
-      c.beginPath();c.arc(tx,ty,r+3,-Math.PI/2,-Math.PI/2+TAU*strength);c.stroke();
-      if(strength>=.95){
-        c.fillStyle='#fbe1aa';c.font='bold 5.2px monospace';c.textAlign='center';
-        c.fillText('TAIL LOCK',tx,ty-16);
+      c.beginPath();c.arc(0,0,.58,0,TAU);c.fillStyle=c.strokeStyle;c.fill();
+      // A brass sweep fills as target pursuit is sustained.
+      if(strength>.02){
+        c.strokeStyle=locked?'#ffdc89':'#d8b879';
+        c.lineWidth=1.4;
+        c.beginPath();c.arc(0,0,7.8,-Math.PI/2,-Math.PI/2+TAU*strength);c.stroke();
+      }
+      if(locked){
+        // A subtle second confirmation notch, no large arcade text or rings.
+        c.fillStyle='#f5cc7a';c.fillRect(11,-1,2,2);
+        c.fillRect(-13,-1,2,2);
       }
       c.restore();
     }
