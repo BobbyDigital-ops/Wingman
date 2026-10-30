@@ -48,7 +48,7 @@ let data=load(),active=null,showing=false,view='ladder';
 const campaign=window.WingmanCampaign;
 if(data?.run&&campaign){
  campaign.normalizeRun(data.run);
- if(data.run.choices?.some(c=>!c.objective))data.run.choices=makeChoices(data.run);
+ if(!Array.isArray(data.run.choices)||data.run.choices.length!==3||data.run.choices.some(c=>!c?.objective))data.run.choices=makeChoices(data.run);
  if(data.run.pendingReward)view='outcome';
  save();
 }
