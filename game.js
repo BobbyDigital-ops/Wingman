@@ -974,11 +974,13 @@ function plane(type,id,x,y,angle){
     // and repeatedly hijacked pursuit with an artificial upward orbit.
     const descent=Math.max(0,p.vy);
     const integrity=clamp(p.health/Math.max(1,p.d.hull),0,1);
-    const projected=p.y+descent*(p.role==='heavy'?3.10:2.20)+
-      Math.max(0,Math.sin(p.angle))*13;
-    const floorBuffer=(p.role==='heavy'?95:78)+(1-integrity)*8;
-    const floorDanger=p.y>(p.role==='heavy'?WORLD_H-200:WORLD_H-177)&&projected>WORLD_H-floorBuffer;
-    p.aiRecoveryTime=floorDanger?Math.max(p.aiRecoveryTime||0,p.role==='heavy'?1.32:.72):
+    // Turn-radius based anticipation: heavy fighters require several seconds
+    // of airspace to pull out at speed. Do not wait for screen-edge contact.
+    const projected=p.y+descent*(p.role==='heavy'?4.7:3.35)+
+      Math.max(0,Math.sin(p.angle))*(p.role==='heavy'?22:16);
+    const floorBuffer=(p.role==='heavy'?118:101)+(1-integrity)*8;
+    const floorDanger=p.y>(p.role==='heavy'?WORLD_H-255:WORLD_H-235)&&projected>WORLD_H-floorBuffer;
+    p.aiRecoveryTime=floorDanger?Math.max(p.aiRecoveryTime||0,p.role==='heavy'?1.70:1.05):
       Math.max(0,(p.aiRecoveryTime||0)-STEP);
     if(p.vy< -10&&p.y<WORLD_H-38)p.aiRecoveryTime=0;
     if(p.aiRecoveryTime>0){
