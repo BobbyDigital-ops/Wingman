@@ -378,3 +378,24 @@ button.route-map-node:hover{transform:translateX(-50%) scale(1.12);box-shadow:0 
  .campaign-map-canvas{height:720px;min-height:720px}
  .campaign-map-canvas .route-map-nodes{inset:26px 0 0}
 }
+
+/* Luftwaffe Hangar aircraft framing — match RAF visual scale without changing source art.
+   Limit only the displayed image width, preserving contain sizing and its complete image. */
+.wm-live-aircraft .grid-plane-card[data-plane="3"]>img,
+.wm-live-aircraft .grid-plane-card[data-plane="4"]>img,
+.wm-live-aircraft .grid-plane-card[data-plane="5"]>img{
+  width:min(72%,310px)!important;
+  max-width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  display:block!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  padding:0!important;
+  background:transparent!important;
+}
+@media(max-width:700px){
+ .wm-live-aircraft .grid-plane-card[data-plane="3"]>img,
+ .wm-live-aircraft .grid-plane-card[data-plane="4"]>img,
+ .wm-live-aircraft .grid-plane-card[data-plane="5"]>img{width:78%!important}
+}
