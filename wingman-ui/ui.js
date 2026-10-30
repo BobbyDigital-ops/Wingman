@@ -225,7 +225,8 @@ function career(){
   const rival=rivalFor(c),stat=saved.records?.[c.id]||{},fought=(stat.wins||0)+(stat.losses||0);
   return '<button type="button" class="compact-rival '+(i===S.choice?'selected':'')+'" data-choice="'+i+'" aria-pressed="'+(i===S.choice)+'"><span class="compact-rival-photo">'+atlas(rival)+'</span><span class="compact-rival-info"><strong>'+esc(rival?.name||c.label)+'</strong><small>'+esc(c.mission||'DOGFIGHT')+' · '+esc(c.risk||'LOW')+' RISK · '+esc(c.timeLimit||120)+'s</small><span class="compact-rival-description">'+esc(c.briefing||rival?.bio||'Defeat your rival and survive the encounter.')+'</span><em>'+(fought?('W '+(stat.wins||0)+' / L '+(stat.losses||0)):'FIRST ENCOUNTER')+' · THREAT '+(c.threat??'—')+'/100 · +'+(c.suppliesAward||1)+' SUPPLIES'+(c.rewardTier===2?' · ELITE UPGRADE':'')+'</em></span></button>';
  }).join('');
- return `<section class="frame career-screen campaign-rework">${header('KING OF THE SKIES','RANK '+currentRank+' / 8 · '+run.lives+' LIVES')}
+ return `<section class="frame career-screen campaign-rework wm-v13-campaign ${S.campaignPanel==='sortie'?'wm-v13-sortie':'wm-v13-ladder'}">${header('KING OF THE SKIES','RANK '+currentRank+' / 8 · '+run.lives+' LIVES')}
+ <div class="wm-v13-campaign-status"><span>RANK <b>${currentRank} / 8</b></span><span>${run.lives} LIVES REMAINING</span><span>AIRCRAFT ${Math.round(run.condition??100)}%</span><span>${run.supplies||0} REPAIR SUPPLIES</span></div>
  <div class="campaign-rework-content"><div class="campaign-main">
  <div class="campaign-ladder-head"><strong>ROAD TO ACE</strong><span>BRANCHING ROUTES · CLIMB TO THE FINAL ACE</span></div>
  <div class="campaign-map-legend"><span>✈ INTERCEPT</span><span>◈ RECON</span><span>♠ ACE HUNT</span><span>✦ ESCORT</span><span>⚔ OUTNUMBERED</span><span>★ FINALE</span></div><div class="campaign-ladder-scroll" data-rank="${currentRank}" aria-label="Branching eight-rank campaign map">${connectedLadder}</div>
@@ -245,7 +246,13 @@ function career(){
   ${confirmButton('FIELD REPAIR · 2 SUPPLIES','repair-airframe','navy')}</div>
  <div class="service-brief"><small>YOUR CHOSEN MISSION · ${esc(selected?.risk||'LOW')} RISK · EST. THREAT ${selected?.threat??'—'}/100</small><b>${esc(selected?.mission||'DOGFIGHT')}</b><span>${esc(selected?.briefing||'CHOOSE A MISSION')}</span><em>RIVAL ${esc(selected?.label||'UNKNOWN')} · +${selected?.suppliesAward||1} SUPPLIES${selected?.rewardTier===2?' · PREMIUM REWARD AVAILABLE':''}</em></div>
  <div class="service-actions">${confirmButton('SELECT AIRCRAFT →','career-aircraft','red')}${confirmButton('← BACK','back','outline')}</div>
- </div></aside></div></section>`;
+ </div></aside></div>
+ <div class="wm-v13-campaign-bottom">
+ <button type="button" class="wm-v13-tab ${S.campaignPanel==='ladder'?'active':''}" data-action="campaign-map">⌖ VIEW FULL LADDER</button>
+ ${S.campaignPanel==='ladder'?
+ '<button type="button" class="wm-v13-tab wm-v13-tab-gold" data-action="campaign-sortie">CHOOSE NEXT SORTIE ›</button>':
+ '<button type="button" class="wm-v13-tab wm-v13-tab-gold" data-action="career-aircraft">SELECT AIRCRAFT ›</button>'}
+ </div></section>`;
 }
 function records(){
  const saved=playerSave(),p=player(),arc=arcadeSave()||{},flights=Array.isArray(arc.records)?arc.records:[],
