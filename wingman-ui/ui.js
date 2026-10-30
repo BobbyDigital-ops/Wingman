@@ -16,7 +16,13 @@ const PLANES=[
 const liveSpecs=P.WingmanGame?.aircraftSpecs?.();
 if(liveSpecs)for(let i=0;i<TYPES.length;i++){const p=liveSpecs[TYPES[i]];if(!p)continue;PLANES[i][4]=p.speed;PLANES[i][5]=p.turn;PLANES[i][6]=p.armour;PLANES[i][7]=p.damage;}
 const OPS=[['1 VS 1','Classic dogfight','Head-to-head fighter combat.','duel'],['SURVIVAL','How long can you last?','Increasing waves of enemies.','survival'],['FREE FOR ALL','Every pilot for themselves','Multiple aircraft. One winner.','triple'],['2 VS 2','Team up','Fight with an AI wingman.','teams'],['CHALLENGES','Special operations','Time-limited combat objectives.','challenge']];
-const S={screen:'title',back:[],op:0,plane:0,opponent:'random',faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:0,difficulty:'standard',theatre:'0',sound:true,lastResult:null};
+let profileReturn=null;
+try{profileReturn=P.sessionStorage?.getItem('wingman-profile-slot-v1-after-select')||null;
+    if(profileReturn)P.sessionStorage.removeItem('wingman-profile-slot-v1-after-select');}catch(_){}
+const S={screen:profileReturn==='home'?'home':profileReturn==='pilots'?'pilots':'title',
+ back:[],op:0,plane:0,opponent:'random',faction:'Allies',pilotIndex:0,page:0,
+ pilotFilter:'Allies',career:false,choice:0,difficulty:'standard',theatre:'0',sound:true,
+ lastResult:null,ladderExpanded:true};
 const stage=document.querySelector('#stage'),nav=document.querySelector('.nav');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const aircraftPreviews={};
@@ -46,40 +52,42 @@ function home(){
  const saved=playerSave(),p=player(),rank=saved?.run?.rank||1;
  const careerDetail=saved?.run?'CONTINUE · RANK '+rank+' / 8':'EIGHT RANKS · ONE LEGEND';
  return '<section class="frame wm-v12-home">'+
-   '<div class="wm-v12-home-content">'+
+  '<div class="wm-v12-home-content">'+
    '<div class="wm-v12-home-intro"><span class="wm-v12-kicker">RAF FIGHTER COMMAND · OPERATIONS ROOM · 1940</span>'+
    '<h1>WINGMAN</h1><div class="wm-v12-home-title">CHOOSE YOUR ADVENTURE</div>'+
    '<p>ONE WAR. TWO WAYS TO MAKE YOUR NAME.</p>'+
-   (p?'<button type="button" class="wm-v12-identity" data-action="licence"><span class="wm-v12-identity-photo">'+atlas(p)+'</span><span><small>YOUR SERVICE RECORD</small><strong>'+esc(p.name)+'</strong><em>VIEW PILOT LICENCE ›</em></span></button>':
-       '<button type="button" class="wm-v12-identity" data-action="pilots"><span>PERSONNEL OFFICE · SELECT YOUR PILOT ›</span></button>')+
-   '</div><div class="wm-v12-home-choices">'+
+   '<button type="button" class="wm-v12-identity" data-action="profiles"><span class="wm-v12-identity-photo">'+atlas(p)+'</span>'+
+   '<span><small>ACTIVE SERVICE RECORD</small><strong>'+esc(p?.name||saved?.profile?.name||'SELECT A PILOT')+'</strong>'+
+   '<em>SWITCH PROFILE ›</em></span></button></div>'+
+   '<div class="wm-v12-home-choices">'+
    '<button class="wm-v12-adventure wm-v12-adventure-arcade" type="button" data-action="operations"><span class="wm-v12-adventure-no">01 / FREE FLIGHT</span>'+
-   '<strong>SKIRMISH</strong><span>YOUR AIRCRAFT. YOUR RULES.</span><p>Classic dogfights, squadron battles, survival and challenges.</p>'+
+   '<strong>SKIRMISH</strong><span>YOUR AIRCRAFT. YOUR RULES.</span><p>Dogfights, squadron battles, survival and special challenges.</p>'+
    '<em>CONFIGURE A SORTIE <b>›</b></em></button>'+
    '<button class="wm-v12-adventure wm-v12-adventure-campaign" type="button" data-action="career"><span class="wm-v12-adventure-no">02 / FIGHTER COMMAND</span>'+
-   '<strong>KING OF<br>THE SKIES</strong><span>'+esc(careerDetail)+'</span><p>Choose your route, win upgrades and take on the Luftwaffe’s best.</p>'+
+   '<strong>KING OF<br>THE SKIES</strong><span>'+esc(careerDetail)+'</span><p>Choose your route, win upgrades and become the ace of aces.</p>'+
    '<em>OPEN OPERATIONS DESK <b>›</b></em></button>'+
-   '<div class="wm-v12-quick-actions"><button data-action="aircraft">HANGAR ›</button><button data-action="pilots">PILOTS ›</button><button data-action="options">OPTIONS ›</button></div>'+
+   '<button class="wm-v13-home-options" type="button" data-action="options">⚙ OPTIONS</button>'+
    '</div></div><span class="wm-v12-footer-stamp">NO. 11 GROUP · FIGHTER COMMAND · CLASSIFIED</span></section>';
 }
 function operations(){
- const mode=OPS[S.op];
- const choices=OPS.map((op,i)=>
-   '<button type="button" class="wm-v12-mode '+(i===S.op?'is-selected':'')+'" data-op="'+i+'" aria-pressed="'+(i===S.op)+'">'+
-   '<span class="wm-v12-mode-no">'+String(i+1).padStart(2,'0')+'</span><span class="wm-v12-mode-main"><strong>'+esc(op[0])+'</strong><small>'+esc(op[1]).toUpperCase()+'</small></span><span class="wm-v12-mode-arrow">›</span></button>').join('');
- return '<section class="frame wm-v12-ops"><div class="wm-v12-ops-scroll">'+
-  '<header class="wm-v12-ops-title"><span class="wm-v12-kicker">RAF FIGHTER COMMAND · FORM 01</span><h1>SKIRMISH</h1><p>Configure your operation. The aircraft and pilot portraits remain your own.</p></header>'+
-  '<div class="wm-v12-ops-layout"><section class="wm-v12-ops-missions"><h2>01 · MISSION TYPE</h2>'+
-  '<div class="wm-v12-mode-list">'+choices+'</div></section>'+
-  '<section class="wm-v12-ops-config"><span class="wm-v12-kicker">OPERATIONAL ORDERS</span><h2>'+esc(mode[0])+'</h2>'+
-  '<p class="wm-v12-ops-description">'+esc(mode[2])+'</p>'+
-  '<div class="wm-v12-ops-field"><label>DIFFICULTY<select data-setting="difficulty"><option value="rookie">ROOKIE · BASIC TRAINING</option><option value="standard">REGULAR · EXPERIENCED</option><option value="ace">ACE · DEADLY OPPONENTS</option></select></label>'+
-  '<label>THEATRE<select data-setting="theatre"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">STORM FRONT</option></select></label>'+
-  (mode[3]==='duel'?'<label class="wm-v12-span-all">ENEMY AIRCRAFT<select data-setting="opponent"><option value="random">RANDOM OPPONENT</option>'+TYPES.map((type,i)=>'<option value="'+type+'">'+esc(PLANES[i][0])+'</option>').join('')+'</select></label>':'')+
-  '</div><div class="wm-v12-ops-order"><span>FLIGHT ORDERS</span><strong>'+esc(mode[1]).toUpperCase()+'</strong><p>'+esc(mode[2])+'</p></div>'+
-  '</section></div></div>'+
-  '<div class="wm-v12-actionbar"><button type="button" class="wm-v12-secondary" data-action="back">← BACK TO COMMAND</button>'+
-  '<button type="button" class="wm-v12-primary" data-action="operations-next">SELECT AIRCRAFT ›</button></div></section>';
+ const mode=OPS[Number(S.op)]||OPS[0];
+ return '<section class="frame wm-v12-ops wm-v13-ops"><div class="wm-v12-ops-scroll">'+
+   '<header class="wm-v12-ops-title"><span class="wm-v12-kicker">RAF FIGHTER COMMAND · FORM 01</span>'+
+   '<h1>SKIRMISH</h1><p>Choose the mission, conditions and opponent before takeoff.</p></header>'+
+   '<section class="wm-v13-orders"><div class="wm-v13-orders-left"><span class="wm-v12-kicker">01 · OPERATIONAL ORDERS</span>'+
+   '<h2>'+esc(mode[0])+'</h2><p>'+esc(mode[2])+'</p>'+
+   '<div class="wm-v13-orders-stamp">✦ FLIGHT ORDERS · '+esc(mode[1]).toUpperCase()+'</div></div>'+
+   '<div class="wm-v13-orders-fields"><label class="wm-v13-mission-select">MISSION TYPE'+
+   '<select data-setting="op" aria-label="Mission type">'+OPS.map((op,i)=>
+      '<option value="'+i+'">'+esc(op[0]+' · '+op[1]).toUpperCase()+'</option>').join('')+'</select></label>'+
+   '<label>FACTION<select data-setting="faction"><option value="Allies">ALLIES · RAF</option><option value="Axis">AXIS · LUFTWAFFE</option></select></label>'+
+   '<label>ENEMY SKILL<select data-setting="difficulty"><option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></label>'+
+   '<label>BATTLEFIELD<select data-setting="theatre"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">STORM FRONT</option></select></label>'+
+   (mode[3]==='duel'?'<label class="wm-v12-span-all">ENEMY AIRCRAFT<select data-setting="opponent"><option value="random">RANDOM OPPONENT</option>'+
+       TYPES.map((type,i)=>'<option value="'+type+'">'+esc(PLANES[i][0])+'</option>').join('')+'</select></label>':'')+
+   '</div></section></div>'+
+   '<div class="wm-v12-actionbar"><button type="button" class="wm-v12-secondary" data-action="back">← BACK TO COMMAND</button>'+
+   '<button type="button" class="wm-v12-primary" data-action="operations-next">SELECT AIRCRAFT ›</button></div></section>';
 }
 function statBar(name,value,max){return '<div class="grid-plane-stat"><span>'+name+'</span><i class="grid-plane-track"><i style="width:'+(Math.min(100,Math.round(value/max*100)))+'%"></i></i><em>'+value+'</em></div>'}
 function aircraft(){
@@ -323,15 +331,17 @@ function missionReview(){
   </div>
  </section>`;
 }
-function show(){const views={title,home,operations,aircraft,pilots,career,records,options,outcome,review:missionReview};const oldMap=stage.querySelector('.campaign-ladder-scroll');const mapMemory=oldMap?{rank:oldMap.dataset.rank,top:oldMap.scrollTop}:null;
+function show(){const views={title,profiles,home,operations,aircraft,pilots,career,records,options,outcome,review:missionReview};const oldMap=stage.querySelector('.campaign-ladder-scroll');const mapMemory=oldMap?{rank:oldMap.dataset.rank,top:oldMap.scrollTop}:null;
 stage.innerHTML=(views[S.screen]||home)();
 const newMap=stage.querySelector('.campaign-ladder-scroll');
-if(newMap){if(mapMemory&&mapMemory.rank===newMap.dataset.rank)newMap.scrollTop=mapMemory.top;else{const current=newMap.querySelector('.route-map-row.is-current');if(current){const top=current.getBoundingClientRect().top-newMap.getBoundingClientRect().top+newMap.scrollTop;newMap.scrollTop=Math.max(0,Math.min(newMap.scrollHeight-newMap.clientHeight,top-newMap.clientHeight*.65));}}}document.querySelector('.utility-home').hidden=S.screen==='home'||S.screen==='title';document.querySelector('.utility-settings').hidden=S.screen!=='career';document.querySelector('.career-settings-popup').hidden=true;nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===S.screen?'page':'false'));document.querySelector('#squadron strong').textContent=playerSave()?.profile?.name||'Guest Pilot';stage.querySelectorAll('select[data-setting]').forEach(sel=>sel.value=S[sel.dataset.setting]);stage.scrollTop=0;}
+if(newMap){if(mapMemory&&mapMemory.rank===newMap.dataset.rank)newMap.scrollTop=mapMemory.top;else{const current=newMap.querySelector('.route-map-row.is-current');if(current){const top=current.getBoundingClientRect().top-newMap.getBoundingClientRect().top+newMap.scrollTop;newMap.scrollTop=Math.max(0,Math.min(newMap.scrollHeight-newMap.clientHeight,top-newMap.clientHeight*.65));}}}document.querySelector('.utility-home').hidden=['home','title','profiles'].includes(S.screen);document.querySelector('.utility-settings').hidden=S.screen!=='career';document.querySelector('.career-settings-popup').hidden=true;nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===S.screen?'page':'false'));document.querySelector('#squadron strong').textContent=playerSave()?.profile?.name||'Guest Pilot';stage.querySelectorAll('select[data-setting]').forEach(sel=>sel.value=S[sel.dataset.setting]);stage.scrollTop=0;}
 function go(screen){if(S.screen!==screen){S.back.push(S.screen);S.screen=screen;show()}}
 function back(){S.screen=S.back.pop()||'home';if(S.screen!=='aircraft')S.career=false;show()}
 function beginCareer(){const a=api();if(!a?.beginCareer?.())return;S.choice=0;S.career=false;S.screen='career';show()}
 function action(v){
- if(v==='opening-start'){S.screen=playerSave()?.profile?'home':'pilots';S.back=[];return show();}
+ if(v==='opening-start'){S.screen='profiles';S.back=[];return show();}
+ if(v==='back-to-splash'){S.screen='title';S.back=[];return show();}
+ if(v==='profiles'){S.screen='profiles';S.back=['home'];return show();}
  if(v==='campaign-settings'){const panel=document.querySelector('.career-settings-popup');panel.hidden=!panel.hidden;return;}
  if(v==='restart-run'){if(!confirm('Restart King of the Skies? Select a pilot again and return to rank 1. Lifetime service statistics and medals are kept.'))return;const ok=api()?.restartCampaign?.();if(!ok)return;S.choice=0;S.career=false;S.page=0;S.pilotFilter=playerSave()?.profile?.faction||'Allies';const current=roster.findIndex(p=>p.id===playerSave()?.profile?.rosterId);S.pilotIndex=Math.max(0,current);S.screen='pilots';S.back=['career'];show();return;}
  if(v==='fullscreen'){const d=P.document;(d.fullscreenElement?d.exitFullscreen():d.documentElement.requestFullscreen()).catch(()=>{});return;}
@@ -366,6 +376,15 @@ document.addEventListener('click',e=>{
    return;
  }
  if(el.dataset.action)return action(el.dataset.action);
+ if(el.dataset.profile!=null){
+  const slot=Number(el.dataset.profile),result=P.WingmanProfiles?.select?.(slot);
+  if(result?.reloading)return;
+  if(result?.ok===false)return;
+  S.screen=playerSave()?.profile?'home':'pilots';
+  S.back=S.screen==='pilots'?['profiles']:[];
+  if(S.screen==='pilots'){S.pilotFilter='Allies';S.pilotIndex=0;}
+  return show();
+ }
  if(el.dataset.op!=null){S.op=Number(el.dataset.op);return show()}
  if(el.dataset.plane!=null){S.plane=Number(el.dataset.plane);return show()}
  if(el.dataset.faction){S.faction=el.dataset.faction;S.plane=S.faction==='Axis'?3:0;return show()}
@@ -374,7 +393,15 @@ document.addEventListener('click',e=>{
  if(el.dataset.pilot){S.pilotIndex=roster.findIndex(p=>p.id===el.dataset.pilot);return show()}
  if(el.dataset.choice!=null){S.choice=Number(el.dataset.choice);return show()}
 });
-document.addEventListener('change',e=>{if(e.target.matches('select[data-setting]'))S[e.target.dataset.setting]=e.target.value});
+document.addEventListener('change',e=>{
+ if(!e.target.matches('select[data-setting]'))return;
+ const field=e.target.dataset.setting, value=e.target.value;
+ if(field==='op'){S.op=Number(value);return show();}
+ if(field==='faction'){
+  S.faction=value;S.plane=value==='Axis'?3:0;return show();
+ }
+ S[field]=value;
+});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.screen!=='title')back();else if((e.key==='Enter'||e.key===' ')&&S.screen==='title'){e.preventDefault();action('opening-start')}});
 window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.data?.wmUI==='career'){S.career=false;S.screen='career';S.back=[];S.lastResult=null;show()}if(e.data?.wmUI==='home'){S.career=false;S.screen='home';S.back=[];show()}if(e.data?.wmUI==='result'){S.lastResult=e.data.result;S.lastCareer=!!e.data.career;S.screen='outcome';S.back=[];show()}});
 window.WingmanLiveUI={state:S,go,show};show();
