@@ -231,3 +231,19 @@
  .wm-v13-campaign.wm-v13-sortie .campaign-main{min-height:420px!important}
  .wm-v13-campaign.wm-v13-sortie .campaign-service-side{min-height:430px}
 }
+
+/* The operations screen owns setup changes; no redundant selectors inside
+   the hangar. This compact flight-order summary saves one entire UI row. */
+.wm-v13-flight-summary{border:1px solid #b69f79b0;background:linear-gradient(145deg,#16384ae8,#081b28f0);
+ padding:clamp(8px,1.2vw,16px);display:flex;flex-direction:column;justify-content:center;gap:5px;min-width:0}
+.wm-v13-flight-summary>span{font:900 11px 'Barlow Condensed',Impact,sans-serif;letter-spacing:.11em;color:#dcb980}
+.wm-v13-flight-summary>strong{font:900 clamp(19px,2.1vw,32px) 'Barlow Condensed',Impact,sans-serif;color:#f8e5be}
+.wm-v13-flight-summary>small{font:700 clamp(10px,1vw,14px)/1.25 'Barlow Condensed',Impact,sans-serif;color:#c8d9d8}
+.wm-v13-flight-summary>em{font:800 10px 'Barlow Condensed',Impact,sans-serif;color:#cfb582;font-style:normal}
+@media(max-height:520px) and (orientation:landscape){
+ .wm-v12-hangar .wm-v13-flight-summary{padding:4px 6px;gap:2px}
+ .wm-v12-hangar .wm-v13-flight-summary>span{font-size:9px}
+ .wm-v12-hangar .wm-v13-flight-summary>strong{font-size:15px}
+ .wm-v12-hangar .wm-v13-flight-summary>small{font-size:10px;line-height:1.1}
+ .wm-v12-hangar .wm-v13-flight-summary>em{display:none}
+}
