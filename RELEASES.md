@@ -18,6 +18,7 @@ branches. Never commit ongoing work to a snapshot branch.
 | v0.3.1 | G3A.1 | `releases/g3a1-bomber-evasion` | This checkpoint's branch head | Defensive bomber S-turns, physically bounded climbs/dips, threat-response behaviour; 390-fight A/B benchmark and evasion regression gate |
 | v0.3.2 | G3A.2 | `releases/g3a2-fighter-pursuit` | This checkpoint's branch head | Fighter near-ceiling AI no longer enters false ground-recovery mode; verified AI pursuit against 390-match benchmark |
 | v0.3.3 | G3A.3 | `releases/g3a3-pursuit-correction` | This checkpoint's branch head | Removed incorrect close-range fighter steering that forced flight away from the target; added regression for target-directed re-engagement |
+| v0.3.4 (preview) | G3B | `releases/g3b-ai-preview` | This checkpoint's branch head | Tactical interceptor, short banked fighter reversals, under-fire evasions, role-specific safe recovery and moving-target simulation checks; awaiting live playtest before production |
 
 ## Rollback procedure
 
