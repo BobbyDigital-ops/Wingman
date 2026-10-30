@@ -13,7 +13,7 @@ const PLANES=[
  ['HEINKEL HE 111','LUFTWAFFE · MEDIUM BOMBER','DEFENSIVE GUNNERS','A sturdy bomber protected by defensive gunners.',69,1.35,116,10,'Axis']
 ];
 const OPS=[['1 VS 1','Classic dogfight','Head-to-head fighter combat.','duel'],['SURVIVAL','How long can you last?','Increasing waves of enemies.','survival'],['FREE FOR ALL','Every pilot for themselves','Multiple aircraft. One winner.','triple'],['2 VS 2','Team up','Fight with an AI wingman.','teams'],['CHALLENGES','Special operations','Time-limited combat objectives.','challenge']];
-const S={screen:(!localStorage.getItem('wingman-road-to-ace-v1')?'pilots':'home'),back:[],op:0,plane:0,faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:0,difficulty:'standard',theatre:'0',sound:true,lastResult:null};
+const S={screen:(!localStorage.getItem('wingman-road-to-ace-v1')?'title':'home'),back:[],op:0,plane:0,faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:0,difficulty:'standard',theatre:'0',sound:true,lastResult:null};
 const stage=document.querySelector('#stage'),nav=document.querySelector('.nav');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const aircraftPreviews={};
@@ -36,6 +36,7 @@ function atlas(p){
  return '<span class="atlas-portrait" role="img" aria-label="'+esc(p.name)+' portrait" style="display:block;width:100%;height:100%;background-image:url('+src+');background-size:'+(cols*100)+'% '+(rows*100)+'%;background-position:'+x+'% '+y+'%"></span>';
 }
 function header(title,subtitle){return '<div class="section-header"><h1>'+title+'</h1><p>'+subtitle+'</p></div>'}
+function title(){return `<section class="frame poster-home v4-home opening-screen"><div class="opening-content"><div class="home-roundel"><i class="roundel"></i><span>RAF FIGHTER COMMAND · 1940</span></div><h1>WINGMAN</h1><p>THE SKIES ARE CALLING</p><button class="btn red opening-start" data-action="opening-start">PRESS TO START →</button><small>CHOOSE YOUR PILOT · EARN YOUR WINGS</small></div></section>`}
 function home(){const saved=playerSave(),p=player();return `<section class="frame poster-home v4-home"><div class="home-left"><div class="home-identity"><div class="home-roundel"><i class="roundel"></i><span>RAF FIGHTER COMMAND · 1940</span></div><h1 class="home-wordmark">WINGMAN</h1></div><div class="home-buttons">
 ${confirmButton('BEGIN OPERATIONS <span class="chevron">›</span>','operations')}
 ${confirmButton('KING OF THE SKIES <span class="chevron">›</span>','career','navy')}
@@ -131,11 +132,12 @@ function records(){
 }
 function options(){return `<section class="frame options-screen">${header('OPTIONS','TACTICS · CONTROLS · THEATRE')}<div class="inner option-rows"><div class="option-card"><h2>FLIGHT CONDITIONS</h2><label>DIFFICULTY <select data-setting="difficulty"><option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></label><label>THEATRE <select data-setting="theatre"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">STORM</option></select></label></div><div class="option-card"><h2>CONTROLS & SOUND</h2><p>A/D — STEER · SPACE — FIRE · E — AIRCRAFT ABILITY · Q — PILOT SKILL</p>${confirmButton('SOUND '+(S.sound?'ON':'OFF'),'sound','navy')}${confirmButton('SERVICE RECORD','records','navy')}</div></div><div class="inner">${confirmButton('← BACK','back','outline')}</div></section>`;}
 function outcome(){const saved=playerSave(),result=S.lastResult||'SORTIE COMPLETE',isCareer=!!S.lastCareer;return `<section class="frame career-screen v4-career">${header('AFTER ACTION REPORT','FIGHTER COMMAND · COMBAT DEBRIEF')}<div class="inner career-intro-layout"><div class="career-hangar-art"><span class="art-stamp">AIRCRAFT RETURNING · 1940</span></div><div class="career-block"><span class="notice">SORTIE LOG</span><h2>${esc(result)}</h2><p>${isCareer?(esc(saved?.profile?.name||'Pilot')+' · '+(saved?.wins||0)+' VICTORIES · '+(saved?.losses||0)+' LOSSES'):'THE BATTLE IS FINISHED. READY FOR YOUR NEXT SORTIE?'}</p>${isCareer?confirmButton('CONTINUE KING OF THE SKIES →','career-continue'):confirmButton('FLY AGAIN →','fly-again')}${isCareer?'':confirmButton('CHANGE AIRCRAFT','change-aircraft','navy')}${confirmButton('RETURN TO MENU','return-home','outline')}</div></div></section>`;}
-function show(){const views={home,operations,aircraft,pilots,career,records,options,outcome};stage.innerHTML=(views[S.screen]||home)();document.querySelector('.utility-home').hidden=S.screen==='home';document.querySelector('.utility-settings').hidden=S.screen!=='career';document.querySelector('.career-settings-popup').hidden=true;nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===S.screen?'page':'false'));document.querySelector('#squadron strong').textContent=playerSave()?.profile?.name||'Guest Pilot';stage.querySelectorAll('select[data-setting]').forEach(sel=>sel.value=S[sel.dataset.setting]);stage.scrollTop=0;}
+function show(){const views={title,home,operations,aircraft,pilots,career,records,options,outcome};stage.innerHTML=(views[S.screen]||home)();document.querySelector('.utility-home').hidden=S.screen==='home';document.querySelector('.utility-settings').hidden=S.screen!=='career';document.querySelector('.career-settings-popup').hidden=true;nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===S.screen?'page':'false'));document.querySelector('#squadron strong').textContent=playerSave()?.profile?.name||'Guest Pilot';stage.querySelectorAll('select[data-setting]').forEach(sel=>sel.value=S[sel.dataset.setting]);stage.scrollTop=0;}
 function go(screen){if(S.screen!==screen){S.back.push(S.screen);S.screen=screen;show()}}
 function back(){S.screen=S.back.pop()||'home';if(S.screen!=='aircraft')S.career=false;show()}
 function beginCareer(){const a=api();if(!a?.beginCareer?.())return;S.choice=0;S.career=false;S.screen='career';show()}
 function action(v){
+ if(v==='opening-start'){S.screen=playerSave()?.profile?'home':'pilots';S.back=[];return show();}
  if(v==='campaign-settings'){const panel=document.querySelector('.career-settings-popup');panel.hidden=!panel.hidden;return;}
  if(v==='restart-run'){if(!confirm('Restart King of the Skies? Select a pilot again and return to rank 1. Lifetime service statistics and medals are kept.'))return;const ok=api()?.restartCampaign?.();if(!ok)return;S.choice=0;S.career=false;S.page=0;S.pilotFilter=playerSave()?.profile?.faction||'Allies';const current=roster.findIndex(p=>p.id===playerSave()?.profile?.rosterId);S.pilotIndex=Math.max(0,current);S.screen='pilots';S.back=['career'];show();return;}
  if(v==='fullscreen'){const d=P.document;(d.fullscreenElement?d.exitFullscreen():d.documentElement.requestFullscreen()).catch(()=>{});return;}
@@ -171,7 +173,7 @@ document.addEventListener('click',e=>{
  if(el.dataset.choice!=null){S.choice=Number(el.dataset.choice);return show()}
 });
 document.addEventListener('change',e=>{if(e.target.matches('select[data-setting]'))S[e.target.dataset.setting]=e.target.value});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')back()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.screen!=='title')back();else if((e.key==='Enter'||e.key===' ')&&S.screen==='title'){e.preventDefault();action('opening-start')}});
 window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.data?.wmUI==='career'){S.career=false;S.screen='career';S.back=[];S.lastResult=null;show()}if(e.data?.wmUI==='home'){S.career=false;S.screen='home';S.back=[];show()}if(e.data?.wmUI==='result'){S.lastResult=e.data.result;S.lastCareer=!!e.data.career;S.screen='outcome';S.back=[];show()}});
 window.WingmanLiveUI={state:S,go,show};show();
 })();

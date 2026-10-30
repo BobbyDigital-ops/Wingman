@@ -327,3 +327,12 @@ html,body,.app{height:100%;width:100%;margin:0;overflow:hidden}
 .utilities .career-settings-popup{position:absolute;top:40px;right:210px;z-index:101;min-width:250px;padding:6px;background:#102e3b;border:2px solid #bf9b5c;box-shadow:0 7px 19px #000a}
 .career-settings-popup button{display:block;width:100%;padding:10px;color:#ffe9c7;background:#822d23;border:1px solid #d3a26d;font:900 14px 'Barlow Condensed',sans-serif;text-align:center;cursor:pointer}
 @media(max-width:950px){.utilities .utility-settings{max-width:87px}.utilities .career-settings-popup{right:90px;min-width:205px}.campaign-rework .section-header{padding-right:280px!important}}
+
+/* First-visit splash precedes the pilot dossier, while returning aviators open the menu. */
+.opening-screen{display:flex;align-items:center;justify-content:flex-start!important}
+.opening-content{padding:clamp(20px,5vw,75px);display:flex;flex-direction:column;align-items:flex-start;gap:clamp(8px,2vh,24px);z-index:2;color:#f8e5c1;text-shadow:2px 3px 7px #000c;background:linear-gradient(90deg,#061b2abc,transparent);max-width:70%}
+.opening-content h1{font:900 clamp(66px,11vw,156px)/.86 'Barlow Condensed',Impact,sans-serif;margin:0}
+.opening-content p{font:900 clamp(16px,2vw,29px) 'Barlow Condensed',sans-serif;letter-spacing:.2em;margin:0}
+.opening-content small{font:700 12px 'Barlow Condensed',sans-serif;letter-spacing:.15em}
+.opening-start{min-height:52px!important;font-size:24px!important;padding:12px 35px!important}
+@media(max-height:520px){.opening-content{gap:8px}.opening-content h1{font-size:clamp(56px,10vw,100px)}.opening-start{min-height:37px!important;font-size:19px!important}}
