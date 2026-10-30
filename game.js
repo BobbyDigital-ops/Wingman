@@ -1088,7 +1088,8 @@ function plane(type,id,x,y,angle){
     // A held directional turn is visibly stronger than the previous
     // stop-start binary steering near the sight line.
     const turn=p.aiMode==='break'?p.aiBreakSign:
-      Math.abs(error)<.045?0:clamp(error*2.2,-1,1);
+      Math.abs(error)<.045?0:
+        clamp(error*(2.0+talent*1.4),-1,1);
     p.aiBoost=false;
 
     // Actual guns use their own firing axis, not the tail-position waypoint.
