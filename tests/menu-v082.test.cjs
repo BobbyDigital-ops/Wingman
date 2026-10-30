@@ -1,0 +1,60 @@
+/* Wingman v0.8.2 specification flow and independent pilot saves.
+ * Run: node --test tests/menu-v082.test.cjs */
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const slots=read('src/profile/profile-slots.js');
+test('legacy save becomes slot one; other slots start empty, without losing data',()=>{
+ const legacy={profile:{name:'Bertie',rosterId:'ace-01',faction:'Allies'},wins:7,run:{rank:5}};
+ const store={'wingman-road-to-ace-v1':JSON.stringify(legacy),'wingman-arcade-v1':JSON.stringify({wins:3})};
+ const localStorage={getItem:k=>store[k]??null,setItem:(k,v)=>store[k]=String(v),removeItem:k=>delete store[k]};
+ const session={};
+ const sessionStorage={getItem:k=>session[k]??null,setItem:(k,v)=>session[k]=v,removeItem:k=>delete session[k]};
+ let reloads=0,playing=false;
+ const window={WingmanGame:{isPlaying:()=>playing},location:{reload:()=>reloads++}};
+ new Function('window','localStorage','sessionStorage',slots)(window,localStorage,sessionStorage);
+ const profiles=window.WingmanProfiles;
+ assert.equal(profiles.list()[0].wins,7);
+ assert.equal(profiles.list()[0].arcadeWins,3);
+ assert.equal(profiles.list()[1].hasProfile,false);
+ assert.equal(profiles.list()[2].hasProfile,false);
+ assert.equal(JSON.parse(store['wingman-profile-slot-v1-0-wingman-road-to-ace-v1']).run.rank,5);
+ playing=true;assert.equal(profiles.select(1).ok,false);assert.equal(reloads,0);
+ playing=false;assert.equal(profiles.select(1).reloading,true);
+ assert.equal(localStorage.getItem('wingman-road-to-ace-v1'),null);
+ assert.equal(session['wingman-profile-slot-v1-after-select'],'pilots');
+ store['wingman-road-to-ace-v1']=JSON.stringify({profile:{name:'Otto',rosterId:'ace-22',faction:'Axis'},wins:2,run:{rank:2}});
+ store['wingman-arcade-v1']=JSON.stringify({wins:4});
+ profiles.select(0);
+ assert.equal(JSON.parse(store['wingman-road-to-ace-v1']).wins,7);
+ assert.equal(JSON.parse(store['wingman-arcade-v1']).wins,3);
+ assert.equal(profiles.list()[1].name,'Otto');
+ profiles.select(1);
+ assert.equal(JSON.parse(store['wingman-road-to-ace-v1']).run.rank,2);
+ assert.equal(session['wingman-profile-slot-v1-after-select'],'home');
+ assert.equal(profiles.list().length,3);
+ assert.equal(reloads,3);
+});
+test('opening hierarchy and mobile layouts are preserved in live UI code',()=>{
+ const ui=read('wingman-ui/ui.js'),css=read('wingman-ui/menu-v13-spec.css');
+ assert.match(ui,/if\(v==='opening-start'\)\{S\.screen='profiles'/);
+ assert.match(ui,/function profiles\(\)/);
+ assert.match(ui,/const views=\{title,profiles,home,operations/);
+ assert.match(ui,/select data-setting="op"/);
+ assert.match(ui,/is-map-expanded/);
+ assert.match(ui,/data-action="ladder-toggle"/);
+ assert.doesNotMatch(ui,/wm-v12-quick-actions/);
+ assert.match(css,/max-height:530px/);
+ assert.match(css,/\.wm-v12-hangar \.wm-v12-hangar-scroll\{[^}]*overflow:hidden!important/s);
+ assert.match(css,/\.wm-v12-hangar \.wm-v12-actionbar\{/);
+ assert.match(css,/\.campaign-rework\.is-map-expanded \.campaign-ladder-scroll/);
+});
+test('profile module loads before game, career, arcade and bridge',()=>{
+ const html=read('index.html');
+ const at=x=>html.indexOf(x);
+ assert.ok(at('./src/profile/profile-slots.js')<at('./game.js?'));
+ assert.ok(at('./src/profile/profile-slots.js')<at('./src/data/arcade-records.js'));
+ assert.ok(at('./src/profile/profile-slots.js')<at('./career.js?'));
+ assert.ok(at('./src/profile/profile-slots.js')<at('./src/ui/wingman-bridge.js'));
+});
