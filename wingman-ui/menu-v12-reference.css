@@ -91,10 +91,8 @@
 .wm-v12-ops-order span{color:#edc88a;font:900 11px 'Barlow Condensed',Impact,sans-serif;letter-spacing:.12em}
 .wm-v12-ops-order strong{font:900 24px 'Barlow Condensed',Impact,sans-serif}
 .wm-v12-ops-order p{color:#c1d0cb;font:500 12px/1.4 Barlow,sans-serif;margin:0}
-.wm-v12-hangar{background:#081b27!important}
-.wm-v12-hangar:before{content:"";position:absolute;inset:0;pointer-events:none;z-index:-2;
- background:linear-gradient(90deg,#061722e8,#0e2834ab 50%,#071721ef),
- var(--art-raf-hangar-scene,linear-gradient(#273f4b,#071724)) center/cover no-repeat!important;filter:saturate(.9)}
+.wm-v12-hangar{background:linear-gradient(90deg,#061722e8,#0e2834ab 50%,#071721ef),
+ var(--art-raf-hangar-scene,linear-gradient(#273f4b,#071724)) center/cover no-repeat!important}
 .wm-v12-hangar-scroll{width:100%;max-width:1570px;margin:auto;padding:clamp(53px,7vh,78px) clamp(14px,3vw,41px) 12px;
  display:flex;flex-direction:column;gap:9px}
 .wm-v12-hangar-title{display:flex;flex-direction:column;flex:none}
