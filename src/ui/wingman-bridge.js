@@ -56,10 +56,17 @@ function startCareer(index,type){
 }
 function startArcade(options){
   if(!window.WingmanGame?.launchArcade)return false;
-  // There is only one authoritative launch. Do not expose or navigate through
-  // Wingman's old hidden aircraft-selection view.
+  // Selecting a pilot can leave the old Road-to-Ace screen mounted even
+  // though the illustrated interface is on top. Tear down that state FIRST
+  // so it cannot cover the actual match when the iframe disappears.
+  window.WingmanCareer?.suspendLegacyScreen?.();
+  const legacy=by('career-screen');
+  if(legacy)legacy.hidden=true;
   const started=window.WingmanGame.launchArcade(options);
-  if(started){hide();resultSeen=false;}
+  if(started){
+    if(legacy)legacy.hidden=true;
+    hide();resultSeen=false;
+  }
   return !!started;
 }
 function continueCareer(){openCareer('ladder');show()}
