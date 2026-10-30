@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.3.4',GAME_PHASE='G3B'; // stable release identifier
+  const GAME_VERSION='v0.3.5',GAME_PHASE='G3B.1'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -902,23 +902,26 @@ function plane(type,id,x,y,angle){
     p.aiDefensiveTimer=threatened?3:Math.max(0,(p.aiDefensiveTimer||0)-STEP);
     const evading=p.aiDefensiveTimer>0;
     p.aiDefenceBlend=clamp((p.aiDefenceBlend||0)+STEP*(evading?2.9:-1.35),0,1);
+    // The old 1.1s alternating legs reversed faster than a heavy bomber
+    // could physically bank, cancelling every move into a straight line.
     p.aiLegTime=(p.aiLegTime||0)-STEP;
     if(evading&&p.aiLegTime<=0){
-      p.aiLegTime=p.type==='he111'?1.10:1.15;
+      p.aiLegTime=evading?(p.type==='he111'?2.65:2.55):3.45;
       p.aiLegDirection=p.aiLegDirection===-1?1:-1;
     }
     let leg=p.aiLegDirection||-1;
     // Respect the boundaries. There must be room to complete a slow bomber turn.
-    if(p.y>H*.49)leg=-1;
-    else if(p.y<H*.23)leg=1;
+    if(p.y>H*.45)leg=-1;
+    else if(p.y<H*.27)leg=1;
     const cruiseAltitude=clamp(Math.min(target.y-43,H*.37),66,100);
-    const danger=p.y>H*.54||(p.y>H*.44&&p.vy>10);
-    const calm=clamp((cruiseAltitude-p.y)*.65,-40,34);
+    const danger=p.y>H*.53||(p.y>H*.43&&p.vy>14);
+    const calm=clamp((cruiseAltitude-p.y)*.82,-42,39);
     // Actual desired pitch is at most ~33deg, and the bomber's own slow turn
     // response makes this a smooth banked climb or descent, never a fighter roll.
     const pitch=p.type==='he111'?.66:.68;
-    const climb=danger?clamp((H*.25-p.y)*1.3,-70,-25):
-      calm*(1-p.aiDefenceBlend)+pitch*97*leg*p.aiDefenceBlend;
+    const weave=evading?.45:.12;
+    const climb=danger?clamp((H*.25-p.y)*1.4,-74,-29):
+      calm*(1-weave)+pitch*97*leg*weave;
     const heading=Math.atan2(climb,direction*97);
     const error=angleDiff(heading,p.angle);
     p.aiMode=danger?'recover':evading?'evade':'bomb-run';
