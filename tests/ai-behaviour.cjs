@@ -4,7 +4,7 @@
    Run: node tests/ai-behaviour.cjs [--seconds=60] [--reps=2]
 */
 'use strict';
-function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],difficulty='ace'}={}){
+function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],difficulty='ace',campaignCheck=false}={}){
  let source=sources.game;
  const edit=(from,to)=>{if(source.split(from).length!==2)throw Error('QA anchor missing: '+from.slice(0,75));source=source.replace(from,to);};
  edit('      if(user.alive)updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);',
@@ -18,7 +18,21 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
  edit('  function endRound(winner){','  function endRound(winner){if(state.qa){state.qaWinner=winner;state.phase="result";return;}');
  edit("  function hit(p,amount,x,y,zoneOverride,cause='GUN',owner=null){",
  "  function hit(p,amount,x,y,zoneOverride,cause='GUN',owner=null){if(state.qa&&p.alive&&p.spawnSafe<=0){state.qaDamage[p.id]+=amount;state.qaHits[p.id]++;}");
- edit('  // All scenery is painted once;',`  window.aiQA={
+ edit('  // All scenery is painted once;',`  window.aiQA={state,
+ mission(enc){
+  state.qa=false;state.mode='campaign';state.recordMode='campaign';
+  state.selected='fighter';state.enemyType=enc.types[0];state.campaignEncounter=enc;state.campaignAirframe=null;
+  state.participants=enc.types.length+1;
+  state.teams=enc.types.length>1||enc.objective==='escort';
+  state.difficulty=enc.difficulty||'ace';state.arena=0;state.round=1;
+  newRound();state.wind={active:false,base:0,current:0,elapsed:0};
+  state.qa=true;state.qaScenario='duel';state.qaWinner=null;
+  state.qaDamage=Array(130).fill(0);state.qaHits=Array(130).fill(0);
+ },
+ advance(frames){
+  for(let i=0;i<frames&&state.phase==='playing';i++)update(STEP);
+  return {phase:state.phase,winner:state.qaWinner,flights:state.fliers.map(p=>({id:p.id,team:p.team,escort:!!p.escortProtected,alive:p.alive}))};
+ },
  setup(a,b,d,scenario,wind){
   state.qa=false;state.mode='duel';state.participants=2;state.teams=false;state.selected=a;state.enemyType=b;state.difficulty=d;
   newRound();state.wind=wind?{active:true,base:10,current:10,elapsed:0}:{active:false,base:0,current:0,elapsed:0};
@@ -135,6 +149,25 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
  for(const [k,v] of Object.entries(summary.modes))summary.modes[k]=round(v);
  for(const k of Object.keys(summary.maxTailByType))summary.maxTailByType[k]=round(summary.maxTailByType[k]);
  summary.bomberAboveSeconds=round(summary.bomberAboveSeconds);summary.bomberClimbingSeconds=round(summary.bomberClimbingSeconds);
+ if(campaignCheck){
+  const escort={objective:'escort',rank:4,aiRank:5,types:['bf109','bf110'],
+   opponents:[{id:'bf109',name:'Rival One',plane:'bf109'},{id:'bf110',name:'Rival Two',plane:'bf110'}],
+   label:'Escort Attack',timeLimit:65,escortType:'bomber',difficulty:'ace'};
+  window.aiQA.mission(escort);
+  const escortPresent=window.aiQA.state.fliers.some(p=>p.escortProtected&&p.team===0&&p.role==='bomber');
+  window.aiQA.state.time=.005;const escortSurvived=window.aiQA.advance(2).winner===0;
+  window.aiQA.mission(escort);
+  window.aiQA.state.fliers.find(p=>p.escortProtected).alive=false;
+  const escortLost=window.aiQA.advance(2).winner===1;
+  const bomber={objective:'intercept',rank:3,aiRank:4,types:['he111'],
+   opponents:[{id:'he111',plane:'he111',name:'Bomber'}],
+   label:'Bomber Raid',difficulty:'ace',timeLimit:54};
+  window.aiQA.mission(bomber);window.aiQA.state.time=.005;
+  const interceptionDeadline=window.aiQA.advance(2).winner===1;
+  summary.campaignChecks={escortPresent,escortSurvived,escortLost,interceptionDeadline};
+  if(Object.values(summary.campaignChecks).some(value=>!value))
+    throw Error('Campaign mission objective regression: '+JSON.stringify(summary.campaignChecks));
+ }
  return summary;
 }
 if(typeof module!=='undefined')module.exports={runAI};
