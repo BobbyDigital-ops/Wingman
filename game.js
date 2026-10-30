@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, SKY_EXTRA=150, WORLD_H=H+SKY_EXTRA, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.7.0',GAME_PHASE='KOTS 7A/7B'; // stable release identifier
+  const GAME_VERSION='v0.8.0',GAME_PHASE='KOTS 8A VARIETY & BALANCE'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -405,12 +405,19 @@ function plane(type,id,x,y,angle){
       const won=winner===0;
       sound(won?'victory':'defeat');
       ui.resultTitle.textContent=won?'SORTIE WON':'SHOT DOWN';
-      ui.resultDetail.textContent=won?'Enemy pilots defeated.':'Your aircraft was lost.';
+      ui.resultDetail.textContent=won?
+        state.campaignEncounter?.objective==='recon'&&state.time<=0?
+          'Reconnaissance complete. Your photographs reached Fighter Command.':
+          'Enemy pilots defeated. Return to base.':
+        'The mission has failed. Your aircraft was lost.';
       ui.result.classList.remove('hidden');
       const hero=state.fliers[0];
       const integrity=hero?.d?clamp((Math.max(0,hero.health)+Math.max(0,hero.armour))/
         Math.max(1,hero.d.hull+hero.d.armour),0,1):0;
-      window.WingmanCareer?.finishEncounter?.(won,state.campaignEncounter,{integrity});
+      window.WingmanCareer?.finishEncounter?.(won,state.campaignEncounter,{
+        integrity,remainingSeconds:Math.max(0,state.time),
+        elapsedSeconds:Math.max(0,(state.campaignEncounter?.timeLimit||120)-state.time)
+      });
       return;
     }
     const won=winner===0;
@@ -1519,7 +1526,13 @@ function plane(type,id,x,y,angle){
           else if(state.time<=0)endRound(1);
         }
       }else if(state.time<=0){
-        if(state.mode==='campaign'){endRound(1);return;}
+        if(state.mode==='campaign'){
+          // Reconnaissance is an actual survival mission, not another
+          // kill-only dogfight. Holding out until the camera run completes
+          // counts as victory; shooting down the pursuer wins early.
+          endRound(state.campaignEncounter?.objective==='recon'&&user.alive?0:1);
+          return;
+        }
         const enemy=enemies[0];
         const condition=p=>(p.health+p.armour)/(p.d.hull+p.d.armour);
         const a=condition(user),b=condition(enemy);
@@ -1972,6 +1985,8 @@ function plane(type,id,x,y,angle){
       state.recordMode==='triple'?'FREE FOR ALL':
       state.mode==='campaign'&&state.campaignEncounter?.objective==='escort'?'ESCORT · PROTECT THE BOMBER':
       state.mode==='campaign'&&state.campaignEncounter?.objective==='intercept'?'BOMBER INTERCEPTION':
+       state.mode==='campaign'&&state.campaignEncounter?.objective==='recon'?'RECON · SURVIVE':
+       state.mode==='campaign'&&state.campaignEncounter?.objective==='ace-hunt'?'ACE HUNT · INTERCEPT':
       state.mode==='campaign'&&state.participants===3?'1 v 2':
       state.participants>2?(state.teams?'2 v 2':state.participants+' ACES'):
       state.scores[0]+' : '+state.scores[1];
