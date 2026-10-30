@@ -51,6 +51,7 @@
    shots:Math.round(number(result.shots,0,999999)),
    hits:Math.round(number(result.hits,0,999999)),
    damageTaken:Math.round(number(result.damageTaken,0,99999)),
+   pilotId:(()=>{try{return JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')||'null')?.profile?.rosterId||null}catch{return null}})(),
    timestamp:Date.now()
   };
   if(r.mode==='campaign')return {record:r,awards:[]};

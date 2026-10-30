@@ -192,3 +192,27 @@ html,body,.app{height:100%;width:100%;margin:0;overflow:hidden}
 .licence-body{grid-template-columns:95px minmax(0,1fr)}
 .licence-stats{grid-template-columns:repeat(3,1fr)}
 }
+
+
+/* Global pilot identity and authentic compact licence */
+.home-licence-thumb{position:absolute;right:clamp(25px,4vw,65px);bottom:clamp(20px,4vh,50px);width:clamp(230px,22vw,320px);z-index:5;padding:10px;background:#eadcbb;color:#182e3b;border:3px double #a78c53;box-shadow:0 8px 24px #0009;transform:rotate(1.5deg);text-align:left;cursor:pointer}
+.home-licence-thumb:hover{transform:rotate(0deg) translateY(-3px)}
+.mini-licence-top{display:block;font:900 13px 'Barlow Condensed',sans-serif;letter-spacing:.16em;border-bottom:2px solid #243d4a;padding-bottom:4px;margin-bottom:7px}
+.mini-licence-body{display:grid;grid-template-columns:58px minmax(0,1fr);gap:9px;align-items:center}
+.mini-licence-photo{height:69px;overflow:hidden;border:2px solid #fdf3da}
+.mini-licence-body strong{display:block;font:900 18px/1 'Barlow Condensed',sans-serif}
+.mini-licence-body small,.mini-licence-body em{display:block;margin-top:6px;font:700 11px 'Barlow Condensed',sans-serif}
+.mini-licence-body em{color:#9b3028}
+.licence-card{background:linear-gradient(135deg,#e8dec2,#efe3c4 45%,#d3c6a5);border:6px double #8e7951;box-shadow:inset 0 0 0 4px #f6e9ca,0 11px 40px #0009;position:relative}
+.licence-card:before{content:"AIR MINISTRY · 1940";position:absolute;bottom:20%;left:32%;font:900 clamp(32px,5vw,70px) 'Barlow Condensed',sans-serif;color:#2743520b;transform:rotate(-17deg);pointer-events:none}
+.licence-card:after{content:"✦";position:absolute;right:22px;top:57px;border:3px double #ac9776;border-radius:50%;width:64px;height:64px;display:grid;place-items:center;color:#a88d5f80;font-size:40px;transform:rotate(12deg);pointer-events:none}
+.licence-title{font-weight:900}
+.licence-photo{border:5px solid #fcf5e2;box-shadow:0 3px 8px #0005;filter:sepia(.18)}
+.licence-rule{display:flex;justify-content:space-between;gap:12px;border-top:1px solid #9d947b;border-bottom:1px solid #9d947b;padding:6px 0;margin:7px 0;color:#485c61;font:700 11px 'Barlow Condensed',sans-serif;letter-spacing:.12em}
+.licence-stats>div{border-right:1px solid #aa9e7d;padding-right:7px}
+.licence-stats small{letter-spacing:.02em}
+.licence-pilot-tally{grid-column:1/-1;border-top:1px solid #b5a680;padding-top:7px;font:900 12px 'Barlow Condensed',sans-serif;letter-spacing:.06em}
+.licence-pilot-tally small{display:block;color:#5a6466;font-weight:500;margin-top:3px}
+.licence-seal{align-items:center}
+.licence-stamp{color:#8a3a2d;border:2px solid #9d4c3e;padding:5px;transform:rotate(-8deg);font-weight:900;letter-spacing:.09em}
+@media(max-height:560px) and (orientation:landscape){.home-licence-thumb{width:205px;right:18px;bottom:15px;padding:6px}.mini-licence-top{font-size:10px}.mini-licence-body{grid-template-columns:46px 1fr}.mini-licence-photo{height:53px}.mini-licence-body strong{font-size:14px}.mini-licence-body small,.mini-licence-body em{font-size:9px;margin-top:2px}.licence-rule{padding:2px 0;margin:3px 0;font-size:9px}.licence-pilot-tally{font-size:10px;padding-top:3px}.licence-pilot-tally small{display:none}.licence-stats>div{padding-right:3px}.licence-card:after{display:none}}
