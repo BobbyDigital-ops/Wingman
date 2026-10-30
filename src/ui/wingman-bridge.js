@@ -43,7 +43,7 @@ function beginCareer(){
  return click('[data-action="begin-run"]',by('career-screen'))&&!!career()?.run;
 }
 function startCareer(index,type){
- const saved=career();if(!saved?.run||!Number.isInteger(index)||!saved.run.choices?.[index])return false;
+ const saved=career();if(!saved?.run||saved.run.pendingReward||!Number.isInteger(index)||!saved.run.choices?.[index])return false;
  const faction=saved.profile.faction;
  if(!(faction==='Axis'?['bf109','bf110','he111']:['fighter','heavy','bomber']).includes(type))return false;
  openCareer('ladder');
@@ -110,6 +110,12 @@ function mount(){
  sync();
 }
 window.WingmanUIBridge={show,hide,choosePilot,beginCareer,startCareer,startArcade,continueCareer,
+ claimCampaignReward(id){
+  return !!window.WingmanCareer?.claimReward?.(id);
+ },
+ repairCampaignAircraft(){
+  return !!window.WingmanCareer?.repairAirframe?.();
+ },
   restartCampaign(){const ok=window.WingmanCareer?.restartCampaign?.();if(ok)show();return !!ok;},
  openLicence(){openCareer('licence');broadcast({wmUI:'career'})},
  toggleSound(){const el=by('wm-audio-toggle');if(el)el.click()},
