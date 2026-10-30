@@ -45,6 +45,13 @@ function load(){try{
  return o;
  }catch{return null;}}
 let data=load(),active=null,showing=false,view='ladder';
+const campaign=window.WingmanCampaign;
+if(data?.run&&campaign){
+ campaign.normalizeRun(data.run);
+ if(data.run.choices?.some(c=>!c.objective))data.run.choices=makeChoices(data.run);
+ if(data.run.pendingReward)view='outcome';
+ save();
+}
 function save(){try{localStorage.setItem(STORE,JSON.stringify(data));}catch{}}
  const MEDALS=[
   {id:'first-blood',title:'FIRST VICTORY',desc:'Win your first aerial encounter',glyph:'✦'},
@@ -296,13 +303,14 @@ function makeChoices(run){
   const escorts=final?chooseEscorts(p,i).map(profile):[];
   const opponents=final?[...escorts,lead]:w?[lead,w]:[lead];
   const mission=final?'FINAL SHOWDOWN':duo?'DOUBLE ACE':i===0?'INTERCEPTION':i===1?'HIGH-ALTITUDE DUEL':'HUNTER PATROL';
-  return {id:p.id,rank:run.rank,types:opponents.map(q=>q.plane),
+  const encounter={id:p.id,rank:run.rank,types:opponents.map(q=>q.plane),
    difficulty:run.rank<2?'rookie':run.rank<5?'standard':'ace',
    arena:(run.rank+i)%4,attributes:lead.attributes,signature:lead.signature,
    archetype:lead.archetype,personality:lead.personality,
    wingman:w,wingmen:escorts,
    opponents,finalBoss:final,bossId:final?p.id:null,mission,
    label:p.name};
+  return campaign?.decorateEncounter(encounter,run,i,{pool:shuffled,profile})||encounter;
  });
 }
 function show(which='ladder'){
@@ -311,6 +319,7 @@ function show(which='ladder'){
  if(!data)which='select';
  else if(!data.profile.characterConfirmed)which='character';
  if((!data||which==='select')&&!candidates.length)candidates=generateCandidates();
+ if(data?.run?.pendingReward)which='outcome';
  if(data?.run?.rank===MAX_RANK&&!data.run.choices?.every(c=>c.finalBoss)){
    data.run.choices=makeChoices(data.run);save();
  }
@@ -376,26 +385,28 @@ function startRun(aircraftId){
  if(!allowed.includes(aircraftId))return;
  data.run={faction:data.profile.faction,aircraft:aircraftId,airframe:null,rank:1,
   lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null};
+ campaign?.normalizeRun(data.run);
  data.run.choices=makeChoices(data.run);save();view='ladder';render();
 }
 let pendingChoice=null;
 let pendingAircraft=null;
 function fight(index){
- if(!data?.run||active||!data.run.choices?.[index])return;
+ if(!data?.run||active||data.run.pendingReward||!data.run.choices?.[index])return;
  pendingChoice=index;pendingAircraft=data.profile.plane;view='sortie';render();
 }
 function launchSortie(type){
- const run=data?.run;if(!run||pendingChoice===null||active)return;
+ const run=data?.run;if(!run||run.pendingReward||pendingChoice===null||active)return;
  if(!(run.faction==='Allies'?ALLIES:AXIS).includes(type))return;
  const choice=run.choices[pendingChoice];if(!choice)return;
  const lead=byId[choice.id],scaled=lead?window.WingmanPilotAI?.level(lead,run.rank):null;
  if(scaled){choice.attributes=scaled.attributes;choice.signature=scaled.signature;choice.archetype=scaled.archetype;choice.personality=scaled.tactic;}
- choice.playerAptitude=type===data.profile.plane?{hull:1.1,armour:1.1,damage:1.1}:null;
+ choice.playerAptitude=campaign?.sortieBonuses(run,type,type===data.profile.plane)||
+   (type===data.profile.plane?{hull:1.1,armour:1.1,damage:1.1}:null);
  choice.playerAircraft=type;run.aircraft=type;run.airframe=null;
  pendingChoice=null;pendingAircraft=null;save();active=choice;showing=false;screen.hidden=true;
  window.WingmanGame.startCampaignFight(choice,type,null);
 }
-function finishEncounter(won,encounter){
+function finishEncounter(won,encounter,summary={}){
  if(!active||!data?.run)return;
  const run=data.run,rival=active;
  const atRank=run.rank;
@@ -427,6 +438,11 @@ function finishEncounter(won,encounter){
   run.lives--;run.rank=Math.max(1,run.rank-1);
   if(run.lives<=0)data.run=null;
  }
+ if(data.run)campaign?.settle(run,rival,won,Number(summary.integrity??1));
+ data.lastOutcome={won,rank:atRank,risk:rival.risk||'LOW',objective:rival.objective||'duel',
+   mission:rival.mission||'DOGFIGHT',label:rival.label,
+   aircraft:run.aircraft,integrity:Number(summary.integrity??1),
+   suppliesEarned:won?rival.suppliesAward||1:0};
  archiveService({won,rank:atRank,rival:rival.label,
   mission:rival.mission||'DOGFIGHT',enemies:rival.types.length,
   result:won?'VICTORY':'SHOT DOWN'});
@@ -455,7 +471,11 @@ function renderOutcome(won,encounter,earned=[],promotion=null){
   '<span>'+(data?.run?'♥ '+data.run.lives+' LIVES':'SERVICE RECORDED')+'</span></div>'+
   promotionMarkup+medalCards+(finished?medalMarkup():'' )+
   (finished?serviceMarkup(8):'')+
-  '<button class="career-primary" data-action="ladder">'+(data?.run?'CONTINUE LADDER':'VIEW PILOT LICENCE')+'</button>');
+  (data?.run?.pendingReward?'<div class="wg-v7-reward"><strong>CHOOSE YOUR SORTIE REWARD</strong>'+
+    data.run.pendingReward.offers.map(id=>{const perk=campaign?.UPGRADES.find(x=>x.id===id);return perk?
+    '<button data-reward="'+escape(id)+'"><b>'+escape(perk.name)+'</b><small>'+escape(perk.detail)+'</small></button>':'';}).join('')+'</div>':'')+
+  (!data?.run?.pendingReward?'<button class="career-primary" data-action="ladder">'+
+    (data?.run?'CONTINUE LADDER':'VIEW PILOT LICENCE')+'</button>':'<p class="career-muted">Select a reward before your next sortie.</p>'));
 }
 function appearanceControls(){
  const options={face:['Oval','Narrow','Broad','Angular','Round'],skin:['Fair','Warm','Tan','Deep','Pale'],
@@ -504,6 +524,10 @@ function characterPicker(){
  }).join('')+'</div><button type="button" data-action="licence">BACK TO LICENCE</button>';
 }
 function render(){
+ if(data?.run?.pendingReward&&view!=='character'&&view!=='licence'){
+  const outcome=data.lastOutcome||{};
+  renderOutcome(true,{label:outcome.label||'LAST RIVAL',types:[]});return;
+ }
  if(data&&view==='character'){panel('CHOOSE YOUR PILOT',characterPicker());return;}
  if(!data||view==='select'){
   if(!candidates.length)candidates=generateCandidates();
@@ -611,6 +635,8 @@ screen.addEventListener('click',e=>{
   save();view='licence';render();
  }
  if(el.dataset.aircraft)startRun(el.dataset.aircraft);
+ if(el.dataset.reward){claimReward(el.dataset.reward);return;}
+ if(action==='repair-airframe'){repairAirframe();return;}
  if(el.dataset.choice!==undefined)fight(Number(el.dataset.choice));
  if(el.dataset.sortiePlane&&view==='sortie'){
   pendingAircraft=el.dataset.sortiePlane;
@@ -634,6 +660,16 @@ screen.addEventListener('change',e=>{
 });
 nav.addEventListener('click',()=>show(data?'ladder':'select'));licenceBtn.addEventListener('click',()=>show('licence'));
 document.getElementById('career-open-mobile')?.addEventListener('click',()=>show(data?'ladder':'select'));
+function claimReward(id){
+ if(!data?.run||!campaign?.claim(data.run,id))return false;
+ save();
+ if(showing){view='ladder';render();}
+ return true;
+}
+function repairAirframe(){
+ if(!data?.run||!campaign?.repair(data.run))return false;
+ save();if(showing)render();return true;
+}
 function restartCampaign(){
   if(!data)return false;
   active=null;pendingChoice=null;pendingAircraft=null;airframeOffers=[];
@@ -641,5 +677,5 @@ function restartCampaign(){
   selectFaction=data.profile?.faction||'Allies';candidates=generateCandidates();
   save();view='select';render();return true;
  }
- window.WingmanCareer={suspendLegacyScreen:()=>{pendingChoice=null;pendingAircraft=null;showing=false;screen.hidden=true;},restartCampaign,restartRun:()=>{active=null;pendingChoice=null;pendingAircraft=null;startRun(data?.profile?.plane);},finishEncounter,open:show,cancelEncounter:()=>{active=null;}};
+ window.WingmanCareer={claimReward,repairAirframe,suspendLegacyScreen:()=>{pendingChoice=null;pendingAircraft=null;showing=false;screen.hidden=true;},restartCampaign,restartRun:()=>{active=null;pendingChoice=null;pendingAircraft=null;startRun(data?.profile?.plane);},finishEncounter,open:show,cancelEncounter:()=>{active=null;}};
 })();
