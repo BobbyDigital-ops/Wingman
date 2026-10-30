@@ -916,54 +916,88 @@ function plane(type,id,x,y,angle){
   }
   // Light-strike AI: committed manoeuvres, never a 1.1-second sine wobble.
   // A bomber must make space, regain a bomb line, and survive an intercept.
+  // Tactical strike bomber. Three real, committed flight legs:
+  // climb above the opponent, turn into a crossing/bomb line, then break
+  // and reposition. Every input passes through normal flight inertia.
   function bomberFlightPlan(p,target){
     p.aiBoost=false;
     const dx=wrappedDelta(p.x,target.x),dy=target.y-p.y;
-    const range=Math.hypot(dx,dy),forward=p.vx>=0?1:-1;
-    const towardBomber=angleDiff(Math.atan2(-dy,wrappedDelta(target.x,p.x)),target.angle);
-    const onTail=range<152&&Math.abs(towardBomber)<.72&&
-      (dx*Math.cos(p.angle)+dy*Math.sin(p.angle))<16;
-    const threatened=target.role!=='bomber'&&
-      (onTail||(range<98&&target.burstLeft>0));
+    const range=Math.hypot(dx,dy),horiz=Math.cos(p.angle)>=0?1:-1;
+    const playerNoseToBomber=Math.abs(angleDiff(
+      Math.atan2(-dy,wrappedDelta(target.x,p.x)),target.angle));
+    const attackerBehind=range<154&&playerNoseToBomber<.75&&
+      dx*Math.cos(p.angle)+dy*Math.sin(p.angle)<10;
+    const incoming=range<113&&target.burstLeft>0&&playerNoseToBomber<.82;
+    const alarm=attackerBehind||incoming;
     p.aiCommit=Math.max(0,(p.aiCommit||0)-STEP);
     p.aiThreatGrace=Math.max(0,(p.aiThreatGrace||0)-STEP);
-    if(threatened&&p.aiPlan!=='escape'&&p.aiThreatGrace<=0){
-      p.aiPlan='escape';p.aiCommit=2.6+(p.type==='he111'?.15:0);
-      p.aiThreatGrace=3.5;
-      p.aiEscapeSign=p.y>WORLD_H-155?-1:p.y<105?1:((p.id%2)?1:-1);
-    }else if(p.aiCommit<=0){
-      // Select the next leg only after the last bank has completed.
-      if(dy>31&&range<182){p.aiPlan='bomb-approach';p.aiCommit=2.35;}
-      else{p.aiPlan='reposition';p.aiCommit=2.8;}
+    // A bomber must not cruise below its target waiting to be shot down.
+    // Establish a distinct altitude advantage before attempting to bomb.
+    const desiredHeight=clamp(target.y-85,68,WORLD_H-166);
+    const altitudeAdvantage=target.y-p.y;
+    const safeBottom=p.y>WORLD_H-135||(p.y>WORLD_H-185&&p.vy>16);
+    const nearCeiling=p.y<89&&p.vy< -13;
+    if((alarm||safeBottom)&&p.aiPlan!=='escape'&&p.aiThreatGrace<=0){
+      p.aiPlan='escape';p.aiCommit=2.6;p.aiThreatGrace=3.2;
+      p.aiEscapeSign=p.y>WORLD_H*.58?-1:p.y<124?1:(target.y>p.y?-1:1);
+      p.aiBankHeading=p.angle+(p.aiEscapeSign||-1)*1.35;
+    }else if(p.aiCommit<=0||!p.aiPlan){
+      if(altitudeAdvantage<55){
+        p.aiPlan='gain-height';p.aiCommit=3.6;
+      }else if(Math.abs(dx)>65||Math.abs(target.vx-p.vx)>42){
+        p.aiPlan='intercept';p.aiCommit=2.7;
+      }else{
+        p.aiPlan='bomb-run';p.aiCommit=2.5;
+      }
+      p.aiLegDirection=horiz;
     }
-    const danger=p.y>WORLD_H-112||(p.y>WORLD_H-165&&p.vy>13);
-    const ceiling=p.y<100&&p.vy< -9;
-    let turnDirection=forward;
-    let goalY=clamp(target.y-53,74,WORLD_H-116);
-    if(p.aiPlan==='escape'){
-      goalY=clamp(p.y+(p.aiEscapeSign||-1)*68,76,WORLD_H-119);
-    }else if(p.aiPlan==='reposition'){
-      goalY=clamp(target.y-57,76,WORLD_H-114);
-      // Hold the travel direction in the compact arena: a 180-degree turn
-      // costs more altitude than the bomber can safely afford here.
-    }else if(p.aiPlan==='bomb-approach'){
-      goalY=clamp(target.y-52,72,WORLD_H-116);
-      // Commit to the same flight leg until a safe reorientation is possible.
+    let heading,plan=p.aiPlan;
+    if(safeBottom){
+      // Pull away from the actual ground well before the bomber's wide
+      // turning arc reaches it, even during a committed bombing leg.
+      plan='recover';
+      heading=Math.atan2(-.75,horiz);
+      p.aiCommit=Math.max(p.aiCommit,.8);
+    }else if(nearCeiling){
+      plan='recover';
+      heading=Math.atan2(.35,horiz);
+    }else if(plan==='escape'){
+      // Held 75-degree bank: visibly different from a shallow S-curve.
+      heading=p.aiBankHeading;
+    }else if(plan==='gain-height'){
+      // Real climbing run, not an invisible climb impulse. Break off before
+      // reaching the ceiling and use a shallower heading if already near it.
+      const delta=clamp(desiredHeight-p.y,-105,35);
+      const pitch=clamp(delta/90,-.80,.27);
+      heading=Math.atan2(Math.tan(pitch),horiz);
+      if(p.y<110)heading=Math.atan2(.24,horiz);
+    }else{
+      // The bomber must turn to meet the player instead of staying forever
+      // on whichever horizontal heading it spawned with.
+      const lead=.45;
+      const goalX=target.x+target.vx*lead;
+      const goalY=clamp(target.y-67,79,WORLD_H-140);
+      const seekX=wrappedDelta(p.x,goalX);
+      // No pointless 180-turn for an already aligned drop window.
+      heading=Math.atan2(goalY-p.y,Math.abs(seekX)<18?horiz*32:seekX);
     }
-    if(danger)goalY=WORLD_H-220;
-    else if(ceiling)goalY=165;
-    const pitch=clamp((goalY-p.y)*.77,-43,43);
-    const heading=Math.atan2(pitch,turnDirection*95);
-    const err=angleDiff(heading,p.angle);
-    p.aiMode=danger||ceiling?'recover':
-      p.aiPlan==='escape'?'evade':p.aiPlan==='bomb-approach'?'bomb-run':'reposition';
-    const steer=Math.abs(err)<.045?0:clamp(err*2.4,-1,1);
-    if(!danger&&!ceiling&&p.aiBombDelay<=0&&p.specialCooldown<=0&&target.spawnSafe<=0&&dy>=27&&dy<=120){
-      const time=clamp(Math.sqrt(Math.max(0,2*(dy-7)/94)),.25,1.15);
+    const error=angleDiff(heading,p.angle);
+    p.aiMode=plan==='escape'?'evade':plan==='gain-height'?'climb':
+      plan==='bomb-run'?'bomb-run':plan==='recover'?'recover':'intercept';
+    // Aggressive but physical stick input; inertia and actual bomber turn
+    // limits prevent fighter-like snapshots.
+    const steer=Math.abs(error)<.055?0:clamp(error*3.0,-1,1);
+    if(!safeBottom&&!nearCeiling&&p.aiBombDelay<=0&&p.specialCooldown<=0&&
+      target.spawnSafe<=0&&altitudeAdvantage>=28&&altitudeAdvantage<=135){
+      const fall=clamp(Math.sqrt(Math.max(0,2*(altitudeAdvantage-7)/94)),.25,1.17);
       const from=p.x+p.vx*.035;
-      const predicted=target.x+(target.vx-p.vx*.58)*time;
-      // Real overhead release window; never homing bombs.
-      if(Math.abs(wrappedDelta(from,predicted))<34&&range<183)triggerSpecial(p);
+      const to=target.x+(target.vx-p.vx*.58)*fall;
+      if(Math.abs(wrappedDelta(from,to))<39&&range<185){
+        triggerSpecial(p);
+        p.aiPlan='escape';p.aiCommit=2.3;p.aiThreatGrace=1.3;
+        p.aiEscapeSign=p.y>WORLD_H*.53?-1:1;
+        p.aiBankHeading=p.angle+p.aiEscapeSign*1.10;
+      }
     }
     return steer;
   }
