@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, SKY_EXTRA=150, WORLD_H=H+SKY_EXTRA, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.6.2',GAME_PHASE='F2.2 BOMBER & UI'; // stable release identifier
+  const GAME_VERSION='v0.6.3',GAME_PHASE='F2.3 DUEL SELECTION'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -286,7 +286,13 @@ function plane(type,id,x,y,angle){
   function startMatch(){
     audioUnlock();
     const others=Object.keys(PLANES).filter(t=>t!==state.selected);
-    state.enemyType=others[Math.floor(Math.random()*others.length)];
+    // Fixed opponents apply to 1v1 only. All other game modes preserve
+    // their existing randomly assigned or mission-defined opponents.
+    const duelMode=document.getElementById('mode-select')?.value==='duel'&&
+      Number(document.getElementById('pilots-select')?.value||2)===2;
+    const chosen=duelMode&&Object.prototype.hasOwnProperty.call(PLANES,state.duelOpponent)
+      ?state.duelOpponent:null;
+    state.enemyType=chosen||others[Math.floor(Math.random()*others.length)];
     state.scores=[0,0];state.round=1;state.kills=0;state.survivalCarry=null;state.session=newSession();
     state.mode=document.getElementById('mode-select')?.value||'duel';
     state.participants=Number(document.getElementById('pilots-select')?.value||2);
@@ -325,10 +331,12 @@ function plane(type,id,x,y,angle){
   }
   // Direct launch avoids the obsolete hidden setup screen / synthetic clicks.
   // startMatch remains authoritative for round setup and campaign preservation.
-  function launchArcade({mode='duel',aircraft='fighter',difficulty='standard',arena=0}={}){
+  function launchArcade({mode='duel',aircraft='fighter',difficulty='standard',arena=0,opponent='random'}={}){
     if(state.phase==='playing'||!Object.prototype.hasOwnProperty.call(PLANES,aircraft))return false;
     if(!['duel','survival','triple','teams','challenge'].includes(mode))return false;
     if(!['rookie','standard','ace'].includes(difficulty))return false;
+    if(mode==='duel'&&opponent!=='random'&&
+       !Object.prototype.hasOwnProperty.call(PLANES,opponent))return false;
     const theatre=Number(arena);
     if(!Number.isInteger(theatre)||theatre<0||theatre>3)return false;
     const set=(id,value)=>{
@@ -336,6 +344,7 @@ function plane(type,id,x,y,angle){
       if(field){field.value=String(value);field.dispatchEvent(new Event('change',{bubbles:true}));}
     };
     state.selected=aircraft;
+    state.duelOpponent=mode==='duel'&&opponent!=='random'?opponent:null;
     state.campaignEncounter=null;state.campaignAirframe=null;
     set('mode-select',mode==='teams'?'duel':mode==='triple'?'duel':mode);
     set('pilots-select',mode==='teams'?4:mode==='triple'?3:2);
