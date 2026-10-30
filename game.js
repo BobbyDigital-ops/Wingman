@@ -931,11 +931,11 @@ function plane(type,id,x,y,angle){
     // ordnance release. Do not withhold bomb attacks purely for evading.
     const height=target.y-p.y;
     if(!danger&&p.aiBombDelay<=0&&p.specialCooldown<=0&&target.spawnSafe<=0&&
-      height>=32&&height<=112){
+      height>=26&&height<=120){
       const time=clamp(Math.sqrt(Math.max(0,2*(height-7)/94)),.25,1.1);
       const from=p.x+p.vx*.035;
       const to=target.x+(target.vx-p.vx*.58)*time;
-      if(Math.abs(wrappedDelta(from,to))<24&&range<158)triggerSpecial(p);
+      if(Math.abs(wrappedDelta(from,to))<39&&range<183)triggerSpecial(p);
     }
     return steer;
   }
