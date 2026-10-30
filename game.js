@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, SKY_EXTRA=150, WORLD_H=H+SKY_EXTRA, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.6.7',GAME_PHASE='F2.7 SKY SEAM POLISH'; // stable release identifier
+  const GAME_VERSION='v0.6.8',GAME_PHASE='F2.8 ORIGINAL ART COVER'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -2038,58 +2038,13 @@ function plane(type,id,x,y,angle){
     // Until its file is present (or while loading), the existing painted scene remains visible.
     const theatre=window.WingmanStaticBackgrounds?.images?.[state.arena];
     const scene=theatre?.complete&&theatre.naturalWidth?theatre:background;
-    const skyGap=SKY_EXTRA-state.cameraY;
-    // Extend the ACTUAL upper edge of the approved panorama. Sampling one
-    // central sky pixel made a hard horizontal join wherever the real
-    // image's cloud/sky colours varied across the screen.
-    if(skyGap>.1){
-      if(!draw.skyBlend||draw.skyBlend.source!==scene||draw.skyBlend.width!==W){
-        const extension=document.createElement('canvas');
-        extension.width=W;extension.height=SKY_EXTRA;
-        const ec=extension.getContext('2d');
-        let blended=false;
-        try{
-          // Render the original topmost source row at the same horizontal
-          // scale as the game. Bottom row of the extension matches that
-          // image edge pixel-for-pixel, including cloud colour variation.
-          const rowCanvas=document.createElement('canvas');
-          rowCanvas.width=W;rowCanvas.height=1;
-          const rc=rowCanvas.getContext('2d');
-          rc.drawImage(scene,0,0,scene.width,1,0,0,W,1);
-          const edge=rc.getImageData(0,0,W,1).data;
-          const pixels=ec.createImageData(W,SKY_EXTRA);
-          let avg=[0,0,0];
-          for(let x=0;x<W;x++)for(let c=0;c<3;c++)avg[c]+=edge[x*4+c];
-          avg=avg.map(v=>v/W);
-          for(let y=0;y<SKY_EXTRA;y++){
-            const t=y/(SKY_EXTRA-1);
-            // Lower 12% closely follows the image edge. Higher up, cloud
-            // details dissolve into a coherent upper atmosphere without
-            // stretching a row of artwork into visible stripes.
-            const details=Math.pow(t,2.25);
-            const shade=.88+.12*t;
-            for(let x=0;x<W;x++){
-              const i=(y*W+x)*4,source=x*4;
-              for(let c=0;c<3;c++){
-                const base=avg[c]*(1-details)+edge[source+c]*details;
-                pixels.data[i+c]=Math.round(base*shade);
-              }
-              pixels.data[i+3]=255;
-            }
-          }
-          ec.putImageData(pixels,0,0);
-          blended=true;
-        }catch(_){
-          // Headless/non-readable canvases retain a valid, simple fallback.
-          ec.fillStyle='#457baa';ec.fillRect(0,0,W,SKY_EXTRA);
-        }
-        draw.skyBlend={source:scene,width:W,image:extension,blended};
-      }
-      // The only scaled image is the sky extension, NEVER the landscape.
-      // Ground and clouds in the approved panorama are rendered in full.
-      g.drawImage(draw.skyBlend.image,0,0,W,SKY_EXTRA,0,0,W,skyGap);
-    }
-    g.drawImage(scene,0,skyGap,W,H);
+    // Draw ONE original panorama at proportional scale across the whole
+    // vertical world. No sampled-row extension, masks or additional sky.
+    // Scaling uniformly preserves cloud/mountain shapes; crop side edges
+    // rather than stretch the image vertically.
+    const bgZoom=WORLD_H/H;
+    const bgWidth=W*bgZoom;
+    g.drawImage(scene,(W-bgWidth)*.5,-state.cameraY,bgWidth,WORLD_H);
     drawWind();
     g.save();g.translate(0,-state.cameraY);
     for(const t of state.trails){
