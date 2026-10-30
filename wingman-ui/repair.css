@@ -321,3 +321,9 @@ html,body,.app{height:100%;width:100%;margin:0;overflow:hidden}
 .service-actions .btn{min-height:28px;font-size:13px}
 }
 @media(max-width:700px) and (orientation:portrait){.campaign-rework-content{grid-template-columns:1fr;overflow:auto}.campaign-main{min-height:550px}.campaign-service-side{min-height:460px}.campaign-rivals{grid-template-columns:1fr}}
+
+/* Campaign options live with the top-right utility controls */
+.utilities .utility-settings[hidden],.utilities .career-settings-popup[hidden]{display:none!important}
+.utilities .career-settings-popup{position:absolute;top:40px;right:210px;z-index:101;min-width:250px;padding:6px;background:#102e3b;border:2px solid #bf9b5c;box-shadow:0 7px 19px #000a}
+.career-settings-popup button{display:block;width:100%;padding:10px;color:#ffe9c7;background:#822d23;border:1px solid #d3a26d;font:900 14px 'Barlow Condensed',sans-serif;text-align:center;cursor:pointer}
+@media(max-width:950px){.utilities .utility-settings{max-width:87px}.utilities .career-settings-popup{right:90px;min-width:205px}.campaign-rework .section-header{padding-right:280px!important}}
