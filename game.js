@@ -1034,7 +1034,11 @@ function plane(type,id,x,y,angle){
     return steer;
   }
   function aiInput(p,target){
-    if(p.role==='bomber')return bomberFlightPlan(p,target);
+    // Bombers share the same tactical turning, pursuit, defensive break
+    // and re-engagement controller as fighters. Their slower physical yaw,
+    // inertia, guns and bombardment remain aircraft-specific. Keeping a
+    // separate horizontal cruise planner made them passive targets.
+    const strikeBomber=p.role==='bomber';
     const rankAI=state.mode==='campaign'&&p.id>0;
     const talent=rankAI?clamp(p.aiSkillLevel||0,0,1):
       state.recordMode==='survival'?
@@ -1101,10 +1105,10 @@ function plane(type,id,x,y,angle){
     // calculation every frame. Prefer the half of the sky with room to turn.
     p.aiBreakCooldown=Math.max(0,(p.aiBreakCooldown||0)-STEP);
     p.aiBreakTime=Math.max(0,(p.aiBreakTime||0)-STEP);
-    if(behindNose&&range<100&&p.aiEvadeTime<=0&&
+    if(behindNose&&range<(strikeBomber?145:100)&&p.aiEvadeTime<=0&&
        p.aiBreakCooldown<=0&&p.aiBreakTime<=0){
-      p.aiBreakTime=.4+(p.role==='heavy'?.1:0);
-      p.aiBreakCooldown=3.1;
+      p.aiBreakTime=strikeBomber?.9:.4+(p.role==='heavy'?.1:0);
+      p.aiBreakCooldown=strikeBomber?2.4:3.1;
       const forward=Math.cos(p.angle)>=0?1:-1;
       p.aiBreakSign=(p.y>WORLD_H*.54?-1:1)*forward;
     }
@@ -1189,6 +1193,16 @@ function plane(type,id,x,y,angle){
        ahead>12&&aimError<gunCone&&target.spawnSafe<=0&&
        target.rollDodgeTime<=0&&p.gunCooldown<=0&&p.burstLeft===0){
       triggerBurst(p);
+    }
+    if(strikeBomber&&p.aiBombDelay<=0&&p.specialCooldown<=0&&
+       target.spawnSafe<=0&&target.alive){
+      const fallHeight=target.y-p.y;
+      if(fallHeight>=27&&fallHeight<=140&&range<180){
+        const travel=clamp(Math.sqrt(Math.max(0,2*(fallHeight-7)/94)),.25,1.2);
+        const x=p.x+p.vx*.035;
+        const predicted=target.x+(target.vx-p.vx*.58)*travel;
+        if(Math.abs(wrappedDelta(x,predicted))<38)triggerSpecial(p);
+      }
     }
     if(p.specialCooldown<=0){
       if(p.role==='heavy'&&range<100&&
