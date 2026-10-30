@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.3.5',GAME_PHASE='G3B.1'; // stable release identifier
+  const GAME_VERSION='v0.3.6',GAME_PHASE='G3B.2'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -976,10 +976,10 @@ function plane(type,id,x,y,angle){
     // and repeatedly hijacked pursuit with an artificial upward orbit.
     const descent=Math.max(0,p.vy);
     const integrity=clamp(p.health/Math.max(1,p.d.hull),0,1);
-    const projected=p.y+descent*(p.role==='heavy'?3.10:1.70)+
+    const projected=p.y+descent*(p.role==='heavy'?3.10:2.20)+
       Math.max(0,Math.sin(p.angle))*13;
-    const floorBuffer=(p.role==='heavy'?95:68)+(1-integrity)*8;
-    const floorDanger=p.y>(p.role==='heavy'?H-200:H-150)&&projected>H-floorBuffer;
+    const floorBuffer=(p.role==='heavy'?95:78)+(1-integrity)*8;
+    const floorDanger=p.y>(p.role==='heavy'?H-200:H-177)&&projected>H-floorBuffer;
     p.aiRecoveryTime=floorDanger?Math.max(p.aiRecoveryTime||0,p.role==='heavy'?1.32:.72):
       Math.max(0,(p.aiRecoveryTime||0)-STEP);
     if(p.vy< -10&&p.y<H-38)p.aiRecoveryTime=0;
