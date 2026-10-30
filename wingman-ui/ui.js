@@ -16,7 +16,7 @@ const PLANES=[
 const liveSpecs=P.WingmanGame?.aircraftSpecs?.();
 if(liveSpecs)for(let i=0;i<TYPES.length;i++){const p=liveSpecs[TYPES[i]];if(!p)continue;PLANES[i][4]=p.speed;PLANES[i][5]=p.turn;PLANES[i][6]=p.armour;PLANES[i][7]=p.damage;}
 const OPS=[['1 VS 1','Classic dogfight','Head-to-head fighter combat.','duel'],['SURVIVAL','How long can you last?','Increasing waves of enemies.','survival'],['FREE FOR ALL','Every pilot for themselves','Multiple aircraft. One winner.','triple'],['2 VS 2','Team up','Fight with an AI wingman.','teams'],['CHALLENGES','Special operations','Time-limited combat objectives.','challenge']];
-const S={screen:'title',back:[],op:0,plane:0,faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:0,difficulty:'standard',theatre:'0',sound:true,lastResult:null};
+const S={screen:'title',back:[],op:0,plane:0,opponent:'random',faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:0,difficulty:'standard',theatre:'0',sound:true,lastResult:null};
 const stage=document.querySelector('#stage'),nav=document.querySelector('.nav');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const aircraftPreviews={};
@@ -60,7 +60,7 @@ function aircraft(){
   const p=PLANES[i],selected=i===S.plane,fav=career&&speciality===TYPES[i],bonus=fav?1.1:1;
   return '<button type="button" class="grid-plane-card '+(selected?'selected':'')+'" data-plane="'+i+'" aria-pressed="'+selected+'"><img src="'+photo('aircraft-art-'+i)+'" alt="'+p[0]+' painted reference aircraft"><div class="grid-plane-body"><div class="grid-plane-name"><strong>'+p[0]+'</strong><span class="selection-stamp">'+(selected?'✓ SELECTED':'SELECT')+'</span></div><span class="grid-plane-role">'+p[1]+'</span><div class="grid-plane-stats">'+statBar('SPEED',p[4],96)+statBar('TURN',p[5].toFixed(2),3.5)+statBar('ARMOUR',Math.round(p[6]*bonus),140)+statBar('GUN DMG',+(p[7]*bonus).toFixed(1),19)+'</div><span class="plane-ability">✦ ABILITY: '+p[2]+'<small>'+(['E · Spinning escape and powerful speed burst.','E · Temporarily reduces incoming damage.','Weak automatic rear defence. E · Arm assisted bombing; releases only when aligned.'][i%3])+'</small></span>'+(fav?'<span class="specialist">★ SPECIALIST +10% HULL / ARMOUR / GUN DMG</span>':'')+'</div></button>';
  }).join('')}</div>
- ${!career?`<div class="conditions"><label>AI DIFFICULTY <select data-setting="difficulty"><option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></label><label>THEATRE<select data-setting="theatre"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">STORM FRONT</option></select></label></div>`:`<div class="notice">YOUR PILOT: ${esc(save.profile.name)} · PREFERRED AIRCRAFT: ${esc(PLANES[TYPES.indexOf(speciality)]?.[0]||'FIGHTER')}</div>`}
+ ${!career?`<div class="conditions">${OPS[S.op][3]==='duel'?`<label class="wm-duel-choice">OPPONENT AIRCRAFT<select data-setting="opponent"><option value="random">RANDOM OPPONENT</option>${TYPES.map((type,i)=>`<option value="${type}">${esc(PLANES[i][0])}</option>`).join('')}</select></label>`:''}<label>AI DIFFICULTY <select data-setting="difficulty"><option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></label><label>THEATRE<select data-setting="theatre"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">STORM FRONT</option></select></label></div>`:`<div class="notice">YOUR PILOT: ${esc(save.profile.name)} · PREFERRED AIRCRAFT: ${esc(PLANES[TYPES.indexOf(speciality)]?.[0]||'FIGHTER')}</div>`}
  <div class="screen-actions">${confirmButton('← BACK','back','outline')}${confirmButton('READY FOR SORTIE →','mission-review',career?'red':'gold')}</div></div></section>`;
 }
 function pilots(){
@@ -187,6 +187,7 @@ function missionReview(){
       <div><small>MISSION</small><strong>${esc(detail)}</strong></div>
       <div><small>THEATRE</small><strong>${career?'CAMPAIGN ASSIGNMENT':esc(sites[Number(S.theatre)]||sites[0])}</strong></div>
       <div><small>DIFFICULTY</small><strong>${career?'MISSION-DEFINED':esc(S.difficulty.toUpperCase())}</strong></div>
+      ${!career&&OPS[S.op][3]==='duel'?'<div><small>OPPONENT AIRCRAFT</small><strong>'+esc(S.opponent==='random'?'RANDOM OPPONENT':PLANES[TYPES.indexOf(S.opponent)]?.[0]||'RANDOM OPPONENT')+'</strong></div>':''}
      </div>
     </div>
     <div class="wm-v11-mission-orders">
@@ -226,7 +227,7 @@ function action(v){
  if(v==='confirm-pilot'){const p=roster[S.pilotIndex];if(!p)return;const status=api()?.choosePilot?.(p.id);if(status===false)return;S.faction=p.faction;S.plane=Math.max(0,TYPES.indexOf(p.plane));S.career=false;S.screen='home';S.back=[];return show()}
  if(v==='begin-career')return beginCareer();
  if(v==='career-aircraft'){if(!playerSave()?.run)return;S.career=true;S.faction=playerSave().profile.faction;S.plane=TYPES.indexOf(playerSave().profile.plane);return go('aircraft')}
- if(v==='launch-arcade'){const ok=api()?.startArcade?.({mode:OPS[S.op][3],aircraft:TYPES[S.plane],difficulty:S.difficulty,arena:S.theatre});if(ok){S.launchError='';api()?.hide?.()}else{S.launchError='UNABLE TO LAUNCH · TRY AGAIN';show()}return}
+ if(v==='launch-arcade'){const ok=api()?.startArcade?.({mode:OPS[S.op][3],aircraft:TYPES[S.plane],opponent:S.opponent,difficulty:S.difficulty,arena:S.theatre});if(ok){S.launchError='';api()?.hide?.()}else{S.launchError='UNABLE TO LAUNCH · TRY AGAIN';show()}return}
  if(v==='launch-career'){const ok=api()?.startCareer?.(S.choice,TYPES[S.plane]);if(ok){S.career=false;api()?.hide?.()}return}
  if(v==='career-continue'){api()?.continueCareer?.();S.lastResult=null;S.screen='career';S.back=[];return show()}
  if(v==='fly-again'){api()?.rematch?.();return}
