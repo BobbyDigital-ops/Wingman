@@ -3,13 +3,10 @@
  * No simulation framework or new hitboxes; backward compatible with classic.
  */
 (()=>{'use strict';
-  // G3B recovery: slow yaw made even full stick inputs unable to turn away
-  // from the terrain in time; retain wide bomber turns and inertia while
-  // allowing fighters to complete a genuine banked interception.
   const profiles={
-    fighter:{yaw:1.50,rollResponse:7.0,flightTurn:2.35,velocityResponse:3.1},
-    heavy:{yaw:1.10,rollResponse:4.5,flightTurn:1.40,velocityResponse:2.3},
-    bomber:{yaw:.80,rollResponse:2.7,flightTurn:.83,velocityResponse:1.9}
+    fighter:{yaw:.66,rollResponse:7.0,flightTurn:2.35,velocityResponse:3.1},
+    heavy:{yaw:.60,rollResponse:4.5,flightTurn:1.40,velocityResponse:2.3},
+    bomber:{yaw:.48,rollResponse:2.7,flightTurn:.83,velocityResponse:1.9}
   };
   const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
   const shortest=(target,current)=>Math.atan2(Math.sin(target-current),Math.cos(target-current));
@@ -21,7 +18,7 @@
     const airframe=p.type==='fighter'?1.07:p.type==='bf109'?.92:
       p.type==='heavy'?1.03:p.type==='bf110'?.98:
       p.type==='bomber'?.95:1;
-    return input*cfg.yaw*airframe*Math.max(.68,1-.30*overspeed);
+    return input*cfg.yaw*(p.id>0?1.30:1)*airframe*Math.max(.68,1-.30*overspeed);
   }
   function turnBlend(p,dt){return clamp(dt*profile(p).rollResponse,0,1);}
   function advanceVelocity(p,dt,scripted=false){
