@@ -6,6 +6,10 @@
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
+  // Swoop is the default; ?physics=classic restores the previous steering and
+  // velocity handling for side-by-side feel testing (same assets and hitboxes).
+  const swoopPhysics=new URLSearchParams(window.location.search).get('physics')==='classic'
+    ? null : (window.WingmanFlightPhysics||null);
   // All six aircraft use the new 2.5D artwork; ?classic=1 preserves the old renderer for comparison.
   const useHdAircraft=new URLSearchParams(window.location.search).get('classic')!=='1';
   const modelCanvas=document.getElementById('aircraft-layer');
@@ -653,9 +657,13 @@ function plane(type,id,x,y,angle){
       const t=a.elapsed/a.duration, eased=t*t*(3-2*t);
       // A smooth half-circle turn with continuous position and finite speed.
       p.angle=a.startAngle+a.direction*Math.PI*eased;
-      const follow=Math.min(1,dt*9);
-      p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
-      p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
+      if(swoopPhysics){
+        swoopPhysics.advanceVelocity(p,dt,true);
+      }else{
+        const follow=Math.min(1,dt*9);
+        p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
+        p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
+      }
       const oldY=p.y;
       p.x+=(p.vx+state.wind.current)*dt;p.y+=p.vy*dt;
       if(p.x<-p.d.radius)p.x+=W+2*p.d.radius;
@@ -674,7 +682,11 @@ function plane(type,id,x,y,angle){
         p.swoop=null;p.turnVelocity=0;
         p.angle=Math.atan2(Math.sin(p.angle),Math.cos(p.angle));
         p.speed=Math.min(p.speed,p.d.speed*1.22);
-        p.vx=Math.cos(p.angle)*p.speed;p.vy=Math.sin(p.angle)*p.speed;
+        // The new model retains the velocity arc after the manoeuvre instead
+        // of abruptly snapping the movement vector to the nose on exit.
+        if(!swoopPhysics){
+          p.vx=Math.cos(p.angle)*p.speed;p.vy=Math.sin(p.angle)*p.speed;
+        }
       }
       return;
     }
@@ -709,7 +721,9 @@ function plane(type,id,x,y,angle){
     const desired=p.climbAssist>0
       ?clamp(angleDiff(Math.atan2(-43,Math.cos(p.angle)<0?-20:20),p.angle)*2,-p.d.turn,p.d.turn)
       :steer*p.d.turn*skill.turn*authority*(p.corkscrewRecovery>0?.72:1)*(1-p.flightRisk*.34)*(p.type==='bf109'?(p.speed>p.d.speed*1.15?.91:p.speed<p.d.speed*.73?.86:1):1)+noseDrop+magneticTurn;
-    p.turnVelocity+=(desired-p.turnVelocity)*Math.min(1,dt*(p.role==='bomber'?6:7.5));
+    const controlledTurn=swoopPhysics?swoopPhysics.desiredTurn(p,desired):desired;
+    const turnBlend=swoopPhysics?swoopPhysics.turnBlend(p,dt):Math.min(1,dt*(p.role==='bomber'?6:7.5));
+    p.turnVelocity+=(controlledTurn-p.turnVelocity)*turnBlend;
     p.angle+=p.turnVelocity*dt;
     if(p.angle>Math.PI)p.angle-=TAU;
     if(p.angle< -Math.PI)p.angle+=TAU;
@@ -724,15 +738,23 @@ function plane(type,id,x,y,angle){
     const diveCoast=p.speed>p.d.speed*engine*1.05 && p.engineCutTime<=0 && !p.boosting ? (p.type==='bf109'?.39:.55) : 1;
     p.speed+=(wanted-p.speed)*Math.min(1,dt*(p.speed>wanted?drag*diveCoast:accel)*skill.accel*recovery);
     const exchange=p.type==='bf109'?1.14:p.role==='fighter'?1:p.role==='heavy'?.86:.76;
-    p.speed+=dt*exchange*(DIVE_SPEED_GAIN*dive*dive-29*climb*climb);
+    // Swoop preserves a stronger dive/climb energy exchange without changing
+    // the arcade speed limits, stalls or engine boost controls.
+    const diveGain=swoopPhysics?DIVE_SPEED_GAIN*1.18:DIVE_SPEED_GAIN;
+    const climbCost=swoopPhysics?33:29;
+    p.speed+=dt*exchange*(diveGain*dive*dive-climbCost*climb*climb);
     if(p.diveTime>0){p.speed+=dt*11;p.vy+=dt*36;}
     // Higher but bounded dive ceiling; proportional Overdrive headroom.
     const speedLimit=p.boosting?(p.type==='fighter'?1.83:1.78):DIVE_OVERSPEED_LIMIT;
     p.speed=clamp(p.speed,p.d.speed*.43,p.d.speed*engine*speedLimit);
     // The velocity vector gently follows the fuselage, rather than snapping.
-    const follow=Math.min(1,dt*(p.role==='bomber'?3.2:p.role==='heavy'?4:5.1));
-    p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
-    p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
+    if(swoopPhysics){
+      swoopPhysics.advanceVelocity(p,dt);
+    }else{
+      const follow=Math.min(1,dt*(p.role==='bomber'?3.2:p.role==='heavy'?4:5.1));
+      p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*follow;
+      p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
+    }
     // Airspeed exchange works with existing climb-load/stall handling.
     // The velocity vector still turns smoothly (no sudden arcade snap).
     if(p.flightRisk>0)p.vy+=dt*(5+15*p.flightRisk);
@@ -1369,6 +1391,11 @@ function plane(type,id,x,y,angle){
   function aircraft(p){
     const c=modelCtx;
     c.save();c.translate(p.x,p.y);c.rotate(p.angle);
+    if(swoopPhysics&&p.corkscrewTime<=0&&p.rollTime<=0){
+      // Restrained wing-bank hint; this affects artwork only, not hitboxes.
+      const bank=clamp(p.turnVelocity/Math.max(1,p.d.turn),-1,1);
+      c.transform(1,bank*.035,bank*.022,1-Math.abs(bank)*.095,0,0);
+    }
     if(p.corkscrewTime>0){
       // Axial double spiral: heading unchanged, and no invulnerability.
       const progress=1-p.corkscrewTime/(p.corkscrewDuration||CORKSCREW_SPIN_TIME);
@@ -1382,7 +1409,8 @@ function plane(type,id,x,y,angle){
       c.beginPath();c.ellipse(0,0,p.d.radius+3,4,0,0,TAU);c.stroke();
     }
     // Slightly smaller miniatures. Physics, hitbox and projectile origins unchanged.
-    const miniatureScale=p.role==='bomber'?.61:p.role==='heavy'?.565:.54;
+    // G1: approximately 15% smaller than F4, preserving native proportions.
+    const miniatureScale=p.role==='bomber'?.52:p.role==='heavy'?.48:.46;
     c.scale(miniatureScale,miniatureScale);
     const artState=p.health<p.d.hull*.38?'damaged':p.health<p.d.hull*.70?'worn':'level';
     const paintPlane=()=>{
