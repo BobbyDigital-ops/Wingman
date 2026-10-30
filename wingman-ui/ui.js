@@ -168,19 +168,39 @@ function missionReview(){
  const sites=['ALPINE FRONT','ENGLISH CHANNEL','NORTH AFRICA','STORM FRONT'];
  const pilot=playerSave()?.profile?.name||'GUEST PILOT';
  const detail=career?'KING OF THE SKIES · ACTIVE SORTIE':op[0]+' · '+op[1].toUpperCase();
- return `<section class="frame wm-v11-review"><div class="wm-v11-review-panel">
-  <div class="wm-v11-eyebrow">RAF FIGHTER COMMAND · MISSION ORDERS</div>
-  <h1>FINAL BRIEFING</h1><p class="wm-v11-sub">REVIEW THE AIRCRAFT AND CONDITIONS BEFORE TAKEOFF.</p>
-  <div class="wm-v11-review-grid"><div class="wm-v11-review-photo"><img src="${photo('aircraft-art-'+S.plane)}" alt="${esc(p[0])} — existing Wingman aircraft artwork"></div>
-  <div class="wm-v11-manifest">
-   <div><small>AIRCRAFT</small><strong>${esc(p[0])}</strong></div>
-   <div><small>PILOT</small><strong>${esc(pilot)}</strong></div>
-   <div><small>MISSION</small><strong>${esc(detail)}</strong></div>
-   <div><small>THEATRE</small><strong>${career?'CAMPAIGN ASSIGNMENT':esc(sites[Number(S.theatre)]||sites[0])}</strong></div>
-   <div><small>DIFFICULTY</small><strong>${career?'MISSION-DEFINED':esc(S.difficulty.toUpperCase())}</strong></div>
-  </div></div>
-  <div class="screen-actions">${confirmButton('← BACK TO HANGAR','back','outline')}${confirmButton('SCRAMBLE ▶',career?'launch-career':'launch-arcade','red')}</div>
- </div></section>`;
+ const role=p[1].split('·').pop().trim();
+ const description=esc(p[3]);
+ return `<section class="frame wm-v11-review">
+  <div class="wm-v11-review-panel">
+   <div class="wm-v11-review-scroll">
+    <div class="wm-v11-eyebrow">RAF FIGHTER COMMAND · MISSION ORDERS</div>
+    <h1>FINAL BRIEFING</h1>
+    <p class="wm-v11-sub">YOUR ORDERS ARE CLEAR. CHECK YOUR AIRCRAFT, IDENTIFY YOUR OBJECTIVE, AND SCRAMBLE WHEN READY.</p>
+    <div class="wm-v11-review-grid">
+     <div class="wm-v11-review-photo">
+      <img src="${photo('aircraft-art-'+S.plane)}" alt="${esc(p[0])} original Wingman aircraft art">
+      <div class="wm-v11-photo-caption"><b>${esc(p[0])}</b><span>${esc(role)} · ${esc(p[2])}</span></div>
+     </div>
+     <div class="wm-v11-manifest">
+      <div><small>AIRCRAFT</small><strong>${esc(p[0])}</strong></div>
+      <div><small>PILOT</small><strong>${esc(pilot)}</strong></div>
+      <div><small>MISSION</small><strong>${esc(detail)}</strong></div>
+      <div><small>THEATRE</small><strong>${career?'CAMPAIGN ASSIGNMENT':esc(sites[Number(S.theatre)]||sites[0])}</strong></div>
+      <div><small>DIFFICULTY</small><strong>${career?'MISSION-DEFINED':esc(S.difficulty.toUpperCase())}</strong></div>
+     </div>
+    </div>
+    <div class="wm-v11-mission-orders">
+     <div><small>FLIGHT OBJECTIVE</small><strong>${career?'COMPLETE THE ASSIGNED ENCOUNTER':'ENGAGE AND DEFEAT THE ENEMY AIRCRAFT'}</strong>
+      <p>Maintain airspeed, protect your tail, and use altitude to control the engagement.</p></div>
+     <div><small>AIRCRAFT NOTES</small><strong>${esc(p[2])}</strong><p>${description}</p></div>
+    </div>
+   </div>
+   <div class="screen-actions wm-v11-sticky-actions">
+    ${confirmButton('← BACK','back','outline')}
+    ${confirmButton('SCRAMBLE ▶',career?'launch-career':'launch-arcade','red')}
+   </div>
+  </div>
+ </section>`;
 }
 function show(){const views={title,home,operations,aircraft,pilots,career,records,options,outcome,review:missionReview};const oldMap=stage.querySelector('.campaign-ladder-scroll');const mapMemory=oldMap?{rank:oldMap.dataset.rank,top:oldMap.scrollTop}:null;
 stage.innerHTML=(views[S.screen]||home)();
@@ -206,7 +226,7 @@ function action(v){
  if(v==='confirm-pilot'){const p=roster[S.pilotIndex];if(!p)return;const status=api()?.choosePilot?.(p.id);if(status===false)return;S.faction=p.faction;S.plane=Math.max(0,TYPES.indexOf(p.plane));S.career=false;S.screen='home';S.back=[];return show()}
  if(v==='begin-career')return beginCareer();
  if(v==='career-aircraft'){if(!playerSave()?.run)return;S.career=true;S.faction=playerSave().profile.faction;S.plane=TYPES.indexOf(playerSave().profile.plane);return go('aircraft')}
- if(v==='launch-arcade'){const ok=api()?.startArcade?.({mode:OPS[S.op][3],aircraft:TYPES[S.plane],difficulty:S.difficulty,arena:S.theatre});if(ok)api()?.hide?.();return}
+ if(v==='launch-arcade'){const ok=api()?.startArcade?.({mode:OPS[S.op][3],aircraft:TYPES[S.plane],difficulty:S.difficulty,arena:S.theatre});if(ok){S.launchError='';api()?.hide?.()}else{S.launchError='UNABLE TO LAUNCH · TRY AGAIN';show()}return}
  if(v==='launch-career'){const ok=api()?.startCareer?.(S.choice,TYPES[S.plane]);if(ok){S.career=false;api()?.hide?.()}return}
  if(v==='career-continue'){api()?.continueCareer?.();S.lastResult=null;S.screen='career';S.back=[];return show()}
  if(v==='fly-again'){api()?.rematch?.();return}
