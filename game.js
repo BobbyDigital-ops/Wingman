@@ -602,11 +602,13 @@ function plane(type,id,x,y,angle){
     }
     const shotDx=Math.cos(angle),shotDy=Math.sin(angle);
     if(p.deadeyeTime>0)skill.gun*=1.09;
+    p.tracerCount=(p.tracerCount||0)+1;
     if(p.id===0&&state.session)state.session.shots++;
     state.bullets.push({x:p.x+dx*(p.d.radius+2),y:p.y+dy*(p.d.radius+2),
       vx:shotDx*p.d.bulletSpeed*skill.gun+p.vx*.35,
       vy:shotDy*p.d.bulletSpeed*skill.gun+p.vy*.35,
       lockTarget:lockedTarget&&assist>.65?lockedTarget.id:null,
+      tracer:p.tracerCount%3===0,
       owner:p.id,damage:p.d.damage,life:p.d.gunLife,age:0});
     emit(p.x+dx*(p.d.radius+3),p.y+dy*(p.d.radius+3),2,'#fff0a3',7);
     p.muzzleFlash=.12;
@@ -1107,11 +1109,13 @@ function plane(type,id,x,y,angle){
               target.y-muzzleY+(target.vy-p.vy*.32)*lead,
               wrappedDelta(muzzleX,target.x)+(target.vx-p.vx*.32)*lead
             )+random(-.095,.095);
+            p.rearTracerCount=(p.rearTracerCount||0)+1;
             state.bullets.push({
               x:muzzleX,y:muzzleY,
               vx:Math.cos(aim)*speed+p.vx*.32,
               vy:Math.sin(aim)*speed+p.vy*.32,
-              owner:p.id,damage:4.5,life:1.0,age:0,rearGun:true
+              owner:p.id,damage:4.5,life:1.0,age:0,rearGun:true,
+              tracer:p.rearTracerCount%3===0
             });
             p.turretFlash=.12;
           }
@@ -1145,7 +1149,21 @@ function plane(type,id,x,y,angle){
     }
   }
   function explosion(x,y,r,owner,damage,cause='BOMB'){
-    emit(x,y,22,'#ffc47b',52);emit(x,y,9,'#6b707b',30);sound('boom');
+    // Small layered impact flash, smoke/dust and a short-lived shockwave.
+    // This is visual only: blast damage and collision radius are unchanged.
+    const ground=cause==='BOMB'&&y>=H-11;
+    if(state.blasts.length<12)state.blasts.push({
+      x,y,r:ground?11:8,life:.43,max:.43,large:false,ordnance:true,ground
+    });
+    emit(x,y,ground?13:11,'#e7b07b',ground?37:30,'impact');
+    emit(x,y,ground?8:6,'#787a74',ground?21:17,'impact');
+    for(let i=0;i<(ground?8:6)&&state.trails.length<104;i++){
+      const a=random(-1,1);
+      state.trails.push({x:x+a*(ground?7:4),y:y-random(0,4),
+        vx:a*(ground?13:8),vy:-random(ground?7:3,ground?23:14),
+        age:0,life:random(.65,1.25),heavy:true,ordnanceDust:ground});
+    }
+    sound('boom');
     for(const p of state.fliers){
       if(!p.alive||p.id===owner||((state.teams||state.mode==='campaign')&&state.fliers[owner]?.team===p.team))continue;
       const d=Math.hypot(x-p.x,y-p.y);
@@ -1591,6 +1609,7 @@ function plane(type,id,x,y,angle){
     c.setTransform(modelCanvas.width/W,0,0,modelCanvas.height/H,0,0);
     c.clearRect(0,0,W,H);
     c.save();c.beginPath();c.rect(0,31,W,H-31);c.clip();
+    window.WingmanOrdnance?.draw(c,state.bullets,state.bombs,state.fliers);
     for(const p of state.fliers)if(p.alive)aircraft(p);
     c.restore();
     // RAF-inspired reflector gunsight projects a few metres ahead of the
@@ -1601,9 +1620,11 @@ function plane(type,id,x,y,angle){
       const strength=clamp(hero.tailLock||0,0,1);
       const cue=clamp(hero.tailCue||0,0,1);
       const locked=strength>=.95;
-      const sightX=hero.x+Math.cos(hero.angle)*(hero.d.radius+21);
-      const sightY=hero.y+Math.sin(hero.angle)*(hero.d.radius+21);
+      const sightX=hero.x+Math.cos(hero.angle)*(hero.d.radius+19);
+      const sightY=hero.y+Math.sin(hero.angle)*(hero.d.radius+19);
       c.save();c.translate(sightX,sightY);c.rotate(hero.angle);
+      // User requested a *much* smaller graticule: 45% of G1.3 size.
+      c.scale(.45,.45);
       c.lineCap='round';c.lineJoin='round';
       c.globalAlpha=locked?.96:cue>.2?.70+.22*cue:.43;
       c.strokeStyle=locked?'#f5cc7a':cue>.2?'#e5d4a9':'#cad5d1';
@@ -1789,7 +1810,8 @@ function plane(type,id,x,y,angle){
     for(const t of state.trails){
       const fade=1-t.age/t.life;
       g.globalAlpha=fade*(t.contrail?.39:.26);
-      g.fillStyle=t.contrail?'#d8ece1':t.heavy?'#242e34':'#53616a';
+      g.fillStyle=t.ordnanceDust?'#a39b8b':t.contrail?'#d8ece1':t.heavy?'#242e34':'#53616a';
+      g.globalAlpha*=t.ordnanceDust?.75:1;
       g.beginPath();g.ellipse(t.x,t.y,t.contrail?.9+t.age*1.7:1.3+t.age*2.8,t.contrail?.45+t.age*.9:1+t.age*1.7,0,0,TAU);g.fill();
     }
     g.globalAlpha=1;
@@ -1799,30 +1821,30 @@ function plane(type,id,x,y,angle){
       g.fillStyle=m.arm>0?'#7e9195':'#cf6558';
       g.fillRect(x-3,y-3,7,7);g.fillStyle='#f4d1a3';g.fillRect(x-1,y-1,3,3);
     }
-    for(const b of state.bombs){
-      if(b.delay>0)continue;
-      g.fillStyle='#2b3743';g.fillRect(Math.round(b.x)-2,Math.round(b.y)-1,5,4);
-      g.fillStyle='#e8ba80';g.fillRect(Math.round(b.x)+1,Math.round(b.y),1,1);
-    }
-    for(const b of state.bullets){
-      const heavy=state.fliers[b.owner]?.role==='heavy';
-      g.strokeStyle=b.rearGun?'#ffc778':heavy?'#ffd093':'#fff1b0';g.lineWidth=b.rearGun?1.6:heavy?2:1;
-      g.beginPath();g.moveTo(b.x,b.y);
-      g.lineTo(b.x-b.vx*.042,b.y-b.vy*.042);g.stroke();
-      g.fillStyle=heavy?'#653e33':'#574c43';g.fillRect(Math.round(b.x)-1,Math.round(b.y)-1,heavy?5:3,heavy?3:2);
-      g.fillStyle=b.rearGun?'#ffbd65':heavy?'#ffd19b':'#fff1ac';g.fillRect(Math.round(b.x),Math.round(b.y),heavy?4:2,1);
-    }
+    // G2 ordnance is painted onto the same sharp high-DPI overlay as aircraft.
+    // Do not also paint fat low-resolution rectangles onto the scenery canvas.
     // Brief layered flashes and expanding shockwaves make confirmed hits
     // immediately legible, without shake that would destabilise touch input.
     for(const blast of state.blasts){
       const progress=1-blast.life/blast.max;
-      g.globalAlpha=(1-progress)*(blast.large?.82:.48);
-      g.fillStyle=blast.large?'#ffd18a':'#ffe5b8';
-      g.beginPath();g.arc(blast.x,blast.y,Math.max(1,blast.r*(.30+progress*.75)),0,TAU);g.fill();
-      g.globalAlpha=(1-progress)*(blast.large?.75:.65);
-      g.strokeStyle=blast.large?'#fff1c2':'#ffcd80';
-      g.lineWidth=blast.large?1.5:.8;
-      g.beginPath();g.arc(blast.x,blast.y,Math.max(1,blast.r*(.4+progress*1.8)),0,TAU);g.stroke();
+      if(blast.ordnance){
+        g.globalAlpha=(1-progress)*.67;
+        g.fillStyle=blast.ground?'#edac74':'#f0bf86';
+        g.beginPath();g.ellipse(blast.x,blast.y,blast.r*(.25+progress*.58),
+          blast.r*(blast.ground?.14:.4+progress*.15),0,0,TAU);g.fill();
+        g.globalAlpha=(1-progress)*.46;
+        g.strokeStyle=blast.ground?'#c2ae92':'#f3d4a0';g.lineWidth=.8;
+        g.beginPath();g.ellipse(blast.x,blast.y,blast.r*(.35+progress*1.13),
+          blast.r*(blast.ground?.18:.3+progress*.65),0,0,TAU);g.stroke();
+      }else{
+        g.globalAlpha=(1-progress)*(blast.large?.82:.48);
+        g.fillStyle=blast.large?'#ffd18a':'#ffe5b8';
+        g.beginPath();g.arc(blast.x,blast.y,Math.max(1,blast.r*(.30+progress*.75)),0,TAU);g.fill();
+        g.globalAlpha=(1-progress)*(blast.large?.75:.65);
+        g.strokeStyle=blast.large?'#fff1c2':'#ffcd80';
+        g.lineWidth=blast.large?1.5:.8;
+        g.beginPath();g.arc(blast.x,blast.y,Math.max(1,blast.r*(.4+progress*1.8)),0,TAU);g.stroke();
+      }
     }
     g.globalAlpha=1;
     drawModels();
