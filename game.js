@@ -543,13 +543,61 @@ function plane(type,id,x,y,angle){
     state.bombs.push({x:p.x+p.vx*.035,y:p.y+7,vx:p.vx*.58,vy:Math.max(8,p.vy*.16+10),
       owner:p.id,life:4,delay:0,run:p.bombRunId,age:0});
   }
+  function updateTailLock(p,dt){
+    // Pursuit reward: earn lock by remaining BEHIND a similarly headed enemy
+    // and keeping the target inside a modest acquisition cone. No auto-fire.
+    if(p.id!==0||p.role==='bomber'||!p.alive)return;
+    let target=null;
+    if(state.phase==='playing'){
+      for(const other of opponents(p)){
+        if(other.spawnSafe>0||other.rollDodgeTime>0||other.evasiveTime>0)continue;
+        const dx=wrappedDelta(p.x,other.x),dy=other.y-p.y;
+        const distance=Math.hypot(dx,dy);
+        if(distance<19||distance>146)continue;
+        const forward=dx*Math.cos(p.angle)+dy*Math.sin(p.angle);
+        const cross=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
+        const behind=dx*Math.cos(other.angle)+dy*Math.sin(other.angle);
+        const direction=Math.abs(angleDiff(other.angle,p.angle));
+        if(forward<12||behind<10||direction>.53||cross>13+distance*.19)continue;
+        const sol=interceptPoint(p,other);
+        const leadAngle=Math.atan2(sol.y-p.y,wrappedDelta(p.x,sol.x));
+        if(Math.abs(angleDiff(leadAngle,p.angle))>.39)continue;
+        if(!target||distance<combatDistance(p,target))target=other;
+      }
+    }
+    if(target){
+      if(p.tailLockTarget!==target.id)p.tailLock=0;
+      p.tailLockTarget=target.id;
+      p.tailLock=clamp((p.tailLock||0)+dt*1.9,0,1);
+    }else{
+      p.tailLock=Math.max(0,(p.tailLock||0)-dt*3.7);
+      if(p.tailLock===0)p.tailLockTarget=null;
+    }
+  }
   function shoot(p){
-    // Straight, readable cannon and machine-gun bursts; no component targeting.
+    // Mechanical tail-lock lead correction rewards steady pursuit; it cannot
+    // fire for the player or bend shots toward off-axis targets.
     const skill=pilotFactors(p),dx=Math.cos(p.angle),dy=Math.sin(p.angle);
+    let angle=p.angle,lockedTarget=null,assist=0;
+    if(p.id===0&&p.tailLock>.45){
+      lockedTarget=opponents(p).find(q=>q.id===p.tailLockTarget);
+      if(lockedTarget){
+        const lead=interceptPoint(p,lockedTarget);
+        const intended=Math.atan2(lead.y-p.y,wrappedDelta(p.x,lead.x));
+        const error=angleDiff(intended,p.angle);
+        if(Math.abs(error)<.31){
+          assist=clamp((p.tailLock-.45)/.55,0,1);
+          angle+=clamp(error,-.19,.19)*assist;
+        }else lockedTarget=null;
+      }
+    }
+    const shotDx=Math.cos(angle),shotDy=Math.sin(angle);
     if(p.deadeyeTime>0)skill.gun*=1.09;
     if(p.id===0&&state.session)state.session.shots++;
     state.bullets.push({x:p.x+dx*(p.d.radius+2),y:p.y+dy*(p.d.radius+2),
-      vx:dx*p.d.bulletSpeed*skill.gun+p.vx*.35,vy:dy*p.d.bulletSpeed*skill.gun+p.vy*.35,
+      vx:shotDx*p.d.bulletSpeed*skill.gun+p.vx*.35,
+      vy:shotDy*p.d.bulletSpeed*skill.gun+p.vy*.35,
+      lockTarget:lockedTarget&&assist>.65?lockedTarget.id:null,
       owner:p.id,damage:p.d.damage,life:p.d.gunLife,age:0});
     emit(p.x+dx*(p.d.radius+3),p.y+dy*(p.d.radius+3),2,'#fff0a3',7);
     p.muzzleFlash=.12;
@@ -757,6 +805,13 @@ function plane(type,id,x,y,angle){
     // The velocity vector still turns smoothly (no sudden arcade snap).
     if(p.flightRisk>0)p.vy+=dt*(5+15*p.flightRisk);
     if(swoopPhysics&&p.invertedNow)p.vy+=dt*9;
+    // Emergency lift represents AI pulling out of a dive early. Apply as a
+    // finite acceleration; never teleport the aircraft or silently reset it.
+    if(p.id!==0&&p.aiRecoveryTime>0&&p.y>H-111&&p.vy>0){
+      const proximity=clamp((p.y-(H-111))/96,0,1);
+      const correction=dt*(45+205*proximity);
+      p.vy=Math.max(-p.d.speed*.6,p.vy-correction);
+    }
     const oldY=p.y;
     p.x+=(p.vx+state.wind.current)*dt;p.y+=p.vy*dt;
     // Fast, sustained ascents increase load. A dive drains it quickly.
@@ -830,19 +885,23 @@ function plane(type,id,x,y,angle){
     const enemyBehind=Math.abs(angleDiff(Math.atan2(p.y-target.y,wrappedDelta(target.x,p.x)),target.angle))<.65;
     // Begin pulling out BEFORE the impact point is reached. Account for
     // downward velocity, pitch, and the inertia of heavy aircraft.
-    const diveSpeed=Math.max(0,p.vy);
-    const projectedY=p.y+diveSpeed*(p.role==='bomber'?1.55:1.25)+
-      Math.max(0,Math.sin(p.angle))*25;
-    const floorDanger=projectedY>H-72&&p.y>H-145;
-    if(floorDanger)p.aiRecoveryTime=1.1;
+    // Predict the ground over an entire turning arc, not simply the current
+    // dive. The new inertial model needs 2–3 seconds' advance warning.
+    const descent=Math.max(0,p.vy);
+    const braking=p.role==='bomber'?2.65:p.role==='heavy'?2.40:2.15;
+    const projectedY=p.y+descent*braking+
+      Math.max(0,Math.sin(p.angle))*33;
+    const floorDanger=p.y>H-151&&projectedY>H-70 ||
+      p.y>H-100&&descent>12;
+    if(floorDanger)p.aiRecoveryTime=Math.max(p.aiRecoveryTime||0,1.55);
     else p.aiRecoveryTime=Math.max(0,(p.aiRecoveryTime||0)-STEP);
-    if(p.vy< -8&&p.y<H-70)p.aiRecoveryTime=0;
+    if(p.vy< -16&&p.y<H-89)p.aiRecoveryTime=0;
     if(p.aiRecoveryTime>0){
       p.aiMode='recover';p.aiThink=0;
       p.aiBoost=false;
-      // Never follow a target into the ground. The climb-out heading
-      // is independent of the target's x-coordinate and screen wrap.
-      const climbHeading=-Math.PI/2;
+      // A shallow climbing arc is more achievable than a tight vertical pivot.
+      // Pick the nearest upward heading based on horizontal momentum.
+      const climbHeading=p.vx>=0?-.88:-Math.PI+.88;
       const diff=angleDiff(climbHeading,p.angle);
       return Math.abs(diff)<.07?0:Math.sign(diff);
     }
@@ -1049,6 +1108,7 @@ function plane(type,id,x,y,angle){
     p.skillFeedbackTime=Math.max(0,(p.skillFeedbackTime||0)-dt);
     p.rollRecovery=Math.max(0,p.rollRecovery-dt);
     steerPlane(p,steer,dt);
+    if(p.id===0)updateTailLock(p,dt);
     if(p.burstLeft>0){
       p.shotTimer-=dt;
       if(p.shotTimer<=0){
@@ -1078,6 +1138,23 @@ function plane(type,id,x,y,angle){
   function projectiles(dt){
     for(let i=state.bullets.length-1;i>=0;i--){
       const b=state.bullets[i],px=b.x,py=b.y;
+      // Once acquired, a short-lived and limited in-flight lead correction
+      // helps a burst land. No instant snaps, no homing outside the lock cone.
+      if(b.lockTarget!=null&&b.age<.34){
+        const target=state.fliers.find(q=>q.id===b.lockTarget&&q.alive);
+        if(target&&target.rollDodgeTime<=0&&target.evasiveTime<=0){
+          const tx=wrappedDelta(b.x,target.x)+target.vx*.085;
+          const ty=target.y-b.y+target.vy*.085;
+          const wanted=Math.atan2(ty,tx);
+          const current=Math.atan2(b.vy,b.vx);
+          const diff=angleDiff(wanted,current);
+          if(Math.abs(diff)<.27){
+            const steer=clamp(diff,-dt*1.35,dt*1.35);
+            const speed=Math.hypot(b.vx,b.vy);
+            b.vx=Math.cos(current+steer)*speed;b.vy=Math.sin(current+steer)*speed;
+          }
+        }
+      }
       b.x+=(b.vx+state.wind.current*.18)*dt;b.y+=b.vy*dt;b.life-=dt;b.age=(b.age||0)+dt;
       const shooter=state.fliers[b.owner];
       const targets=state.fliers.filter(p=>p.id!==b.owner&&p.alive&&(!(state.teams||state.mode==='campaign')||p.team!==shooter?.team));
@@ -1420,7 +1497,13 @@ function plane(type,id,x,y,angle){
     }
     // Slightly smaller miniatures. Physics, hitbox and projectile origins unchanged.
     // G1: approximately 15% smaller than F4, preserving native proportions.
-    const miniatureScale=p.role==='bomber'?.390:p.role==='heavy'?.360:.345; // 25% smaller than G1
+    // Coarse-pointer landscape phones need readable aircraft: desktop stays
+    // miniature-sized, while mobile restores the original flight-game scale.
+    const isMobile=window.matchMedia?.('(pointer:coarse)')?.matches||
+      (window.innerWidth<=850&&window.innerHeight<=550);
+    const miniatureScale=isMobile
+      ?p.role==='bomber'?.57:p.role==='heavy'?.53:.50
+      :p.role==='bomber'?.390:p.role==='heavy'?.360:.345;
     c.scale(miniatureScale,miniatureScale);
     const artState=p.health<p.d.hull*.38?'damaged':p.health<p.d.hull*.70?'worn':'level';
     const paintPlane=()=>{
@@ -1490,6 +1573,29 @@ function plane(type,id,x,y,angle){
     c.save();c.beginPath();c.rect(0,31,W,H-31);c.clip();
     for(const p of state.fliers)if(p.alive)aircraft(p);
     c.restore();
+    // A restrained WWII gunsight: bracket the aircraft and fill a small
+    // acquisition arc. Full lock is earned, not automatic.
+    const hero=state.fliers[0],strength=hero?.tailLock||0;
+    const target=strength>.08?state.fliers.find(q=>q.id===hero.tailLockTarget&&q.alive):null;
+    if(target&&state.phase==='playing'){
+      c.save();c.lineWidth=.75;c.lineCap='round';
+      c.strokeStyle=strength>=.95?'#f8d38c':'#d4e4d3';
+      c.globalAlpha=.50+.45*strength;
+      const tx=target.x,ty=target.y,r=9;
+      for(const sx of [-1,1])for(const sy of [-1,1]){
+        c.beginPath();
+        c.moveTo(tx+sx*r,ty+sy*(r-3));
+        c.lineTo(tx+sx*r,ty+sy*r);
+        c.lineTo(tx+sx*(r-3),ty+sy*r);
+        c.stroke();
+      }
+      c.beginPath();c.arc(tx,ty,r+3,-Math.PI/2,-Math.PI/2+TAU*strength);c.stroke();
+      if(strength>=.95){
+        c.fillStyle='#fbe1aa';c.font='bold 5.2px monospace';c.textAlign='center';
+        c.fillText('TAIL LOCK',tx,ty-16);
+      }
+      c.restore();
+    }
   }
   function bar(x,y,w,value,max,color){
     g.fillStyle='#243946';g.fillRect(x,y,w,4);
