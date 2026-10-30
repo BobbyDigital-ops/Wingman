@@ -6,6 +6,7 @@
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
+  const f1SpriteTrial=new URLSearchParams(window.location.search).get('f1')==='1';
   const modelCanvas=document.getElementById('aircraft-layer');
   const modelCtx=modelCanvas.getContext('2d',{alpha:true});
   let g=canvas.getContext('2d',{alpha:false});
@@ -1382,7 +1383,12 @@ function plane(type,id,x,y,angle){
     // physics. Larger bombers communicate their imposing defensive role.
     c.scale(p.role==='bomber'?.69:p.role==='heavy'?.64:.61,
             p.role==='bomber'?.69:p.role==='heavy'?.64:.61);
-    aircraftArt?.draw(c,p.type,p.health<p.d.hull*.38?'damaged':p.health<p.d.hull*.70?'worn':'level');
+    const artState=p.health<p.d.hull*.38?'damaged':p.health<p.d.hull*.70?'worn':'level';
+    // F1 prototype: opt-in 2.5D sprite trial. Keep the old hand-drawn
+    // aircraft for every other plane and for all regular players.
+    if(!(f1SpriteTrial&&window.WingmanF1Preview?.draw(c,p.type,artState))){
+      aircraftArt?.draw(c,p.type,artState);
+    }
     if(p.boosting){
       // Cool air streaks, not a jet flame: WWII engines don't have afterburners.
       c.strokeStyle='#d7eff6a0';c.lineWidth=.65;
