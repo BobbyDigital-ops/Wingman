@@ -362,7 +362,7 @@ function missionReview(){
   </div>
  </section>`;
 }
-function show(){const views={title,profiles,home,operations,aircraft,pilots,career,records,options,outcome,review:missionReview};const oldMap=stage.querySelector('.campaign-ladder-scroll');const mapMemory=oldMap?{rank:oldMap.dataset.rank,top:oldMap.scrollTop}:null;
+function show(){const views={title,profiles,home,operations,aircraft,pilots,career,records,options,outcome,review:missionReview};const oldMap=stage.querySelector('.campaign-ladder-scroll');const mapMemory=oldMap?.closest?.('.wm-v13-ladder')?{rank:oldMap.dataset.rank,top:oldMap.scrollTop}:null;
 stage.innerHTML=(views[S.screen]||home)();
 const newMap=stage.querySelector('.campaign-ladder-scroll');
 if(newMap){if(mapMemory&&mapMemory.rank===newMap.dataset.rank)newMap.scrollTop=mapMemory.top;else{const current=newMap.querySelector('.route-map-row.is-current');if(current){const top=current.getBoundingClientRect().top-newMap.getBoundingClientRect().top+newMap.scrollTop;newMap.scrollTop=Math.max(0,Math.min(newMap.scrollHeight-newMap.clientHeight,top-newMap.clientHeight*.65));}}}document.querySelector('.utility-home').hidden=['home','title','profiles'].includes(S.screen);document.querySelector('.utility-settings').hidden=S.screen!=='career';document.querySelector('.career-settings-popup').hidden=true;nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===S.screen?'page':'false'));document.querySelector('#squadron strong').textContent=playerSave()?.profile?.name||'Guest Pilot';stage.querySelectorAll('select[data-setting]').forEach(sel=>sel.value=S[sel.dataset.setting]);stage.scrollTop=0;}
