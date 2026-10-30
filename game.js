@@ -1918,26 +1918,36 @@ function plane(type,id,x,y,angle){
     const theatre=window.WingmanStaticBackgrounds?.images?.[state.arena];
     const scene=theatre?.complete&&theatre.naturalWidth?theatre:background;
     const skyGap=SKY_EXTRA-state.cameraY;
-    // Keep the approved scenery at ground level. Extend ONLY its upper sky
-    // using the actual top pixels, with a restrained atmosphere above.
     if(skyGap>0.5){
-      g.drawImage(scene,0,0,scene.width,Math.min(3,scene.height),
-        0,0,W,skyGap+2);
-      const haze=g.createLinearGradient(0,0,0,skyGap+1);
-      const hues=['rgba(35,65,105,.36)','rgba(42,83,109,.22)',
-        'rgba(108,107,99,.19)','rgba(33,49,80,.34)'];
-      haze.addColorStop(0,hues[state.arena]||hues[0]);
-      haze.addColorStop(1,'rgba(120,160,192,0)');
-      g.fillStyle=haze;g.fillRect(0,0,W,skyGap+2);
-      // High-cloud wisps fade in as the player climbs; no stock art or
-      // replacement of the existing four battlefield images.
-      const amount=clamp(skyGap/140,0,1);
-      g.fillStyle='rgba(231,241,242,'+(amount*.13)+')';
-      for(let k=0;k<5;k++){
-        const cy=(17+k*29)%(skyGap+12);
-        const cx=(W*(k*.21+.09)+Math.sin(state.visualClock*.06+k)*9)%W;
-        g.beginPath();g.ellipse(cx,cy,36+k%3*14,2+k%2,0,0,TAU);g.fill();
+      // World-space extended sky: the previous implementation stretched a
+      // three-pixel source strip across 150 logical pixels. Never scale an
+      // image strip vertically to fill altitude. Paint at native geometry.
+      const palette=[
+        ['#213d68','#4d789d'], // Alpine
+        ['#366581','#83a8b4'], // Channel
+        ['#607081','#b9aaa1'], // North Africa
+        ['#27364e','#647788']  // Storm
+      ][state.arena]||['#213d68','#4d789d'];
+      const shade=g.createLinearGradient(0,-state.cameraY,0,skyGap);
+      shade.addColorStop(0,palette[0]);
+      shade.addColorStop(.65,palette[1]);
+      shade.addColorStop(1,palette[1]);
+      g.fillStyle=shade;g.fillRect(0,0,W,skyGap+1);
+      // Native-size distant cloud wisps, painted instead of stretched.
+      const cloudTone=state.arena===3?'rgba(197,211,221,.11)':
+        state.arena===2?'rgba(238,224,192,.12)':'rgba(230,241,241,.14)';
+      for(let k=0;k<7;k++){
+        const wy=19+k*21,sy=wy-state.cameraY;
+        if(sy< -9||sy>skyGap+7)continue;
+        const cx=W*(.08+(k*.18)%0.83)+Math.sin(k*2.6)*19;
+        g.fillStyle=cloudTone;
+        g.beginPath();g.ellipse(cx,sy,20+(k%3)*11,2.4+(k%2),0,0,TAU);g.fill();
+        g.beginPath();g.ellipse(cx+14,sy+3,15+(k%2)*9,1.4,0,0,TAU);g.fill();
       }
+      // Preserve a thin, unscaled image-edge transition with the original
+      // artwork. Its height remains two pixels, regardless of camera travel.
+      if(skyGap>=2)g.drawImage(scene,0,0,scene.width,Math.min(2,scene.height),
+        0,skyGap-2,W,2);
     }
     g.drawImage(scene,0,skyGap,W,H);
     drawWind();
