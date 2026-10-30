@@ -1566,8 +1566,10 @@ function plane(type,id,x,y,angle){
     c.restore();
   }
   function draw(){
-    // Static theatre artwork: no background animation or weather drift.
-    g.drawImage(background,0,0,W,H);
+    // Batch D static artwork: use the approved theatre image once loaded.
+    // Until its file is present (or while loading), the existing painted scene remains visible.
+    const theatre=window.WingmanStaticBackgrounds?.images?.[state.arena];
+    g.drawImage(theatre?.complete&&theatre.naturalWidth?theatre:background,0,0,W,H);
     drawWind();
     for(const t of state.trails){
       const fade=1-t.age/t.life;
