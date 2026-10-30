@@ -2,8 +2,8 @@
    Gameplay is separated from rendering so input can later be sourced from networking. */
 (() => {
   'use strict';
-  let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.5.0',GAME_PHASE='F1 COMBAT'; // stable release identifier
+  let W=520; const H=250, SKY_EXTRA=150, WORLD_H=H+SKY_EXTRA, STEP=1/60, TAU=Math.PI*2;
+  const GAME_VERSION='v0.6.0',GAME_PHASE='F2 VERTICAL SKY'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -35,7 +35,7 @@
     he111:{name:'HEINKEL HE 111',class:'bomber',nation:'Germany',speed:77,turn:1.75,hull:158,armour:92,radius:6.6,burst:4,interval:.32,cooldown:2.82,damage:10,bulletSpeed:162,gunLife:1.22,specialCd:10,color:'#a5ae9d',shade:'#576b61',accent:'#b4baca',special:'CLIMB'}
   };
   const state={
-    phase:'menu',selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
+    phase:'menu',cameraY:SKY_EXTRA,selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
     scores:[0,0],round:1,time:90,intermission:0,banner:'',bannerTime:0,paused:false,
     impactLock:0,trails:[],blasts:[],visualClock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2,teams:false,difficulty:'standard',
     wind:{active:false,base:0,current:0,elapsed:0},recordMode:'duel',challenge:'intercept',session:null,survivalCarry:null,supportCharge:0,supportTime:0,supportUses:0
@@ -262,6 +262,9 @@ function plane(type,id,x,y,angle){
       const enc=state.campaignEncounter;
       for(const [i,foe] of state.fliers.slice(1).entries())assignCampaignAI(foe,enc,i);
     }
+    // Preserve launch framing while giving every aircraft a larger world above it.
+    for(const p of state.fliers)p.y+=SKY_EXTRA;
+    state.cameraY=SKY_EXTRA;
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.trails=[];state.blasts=[];state.visualClock=0;
     state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
@@ -439,7 +442,7 @@ function plane(type,id,x,y,angle){
     for(let i=0;i<count;i++){
       const type=allied[(allied.indexOf(state.selected)+i+1)%allied.length];
       const p=plane(type,100+state.supportUses*2+i,clamp(hero.x-(i+1)*29,20,W-20),
-        clamp(hero.y+(i===0?-22:24),25,H-22),hero.angle);
+        clamp(hero.y+(i===0?-22:24),43,WORLD_H-24),hero.angle);
       p.team=0;p.support=true;p.supportTime=SUPPORT_DURATION;p.spawnSafe=.8;
       p.aiSkillLevel=.42;p.aiName=i===0?'WINGMAN ONE':'WINGMAN TWO';
       state.fliers.push(p);
@@ -484,7 +487,7 @@ function plane(type,id,x,y,angle){
     const boss=state.fliers.find(p=>p.queued);
     if(!boss)return;
     boss.queued=false;boss.alive=true;boss.health=boss.d.hull;boss.armour=boss.d.armour;
-    boss.x=W*.85;boss.y=H*.38;boss.angle=Math.PI+.12;boss.speed=boss.d.speed*.8;
+    boss.x=W*.85;boss.y=SKY_EXTRA+H*.38;boss.angle=Math.PI+.12;boss.speed=boss.d.speed*.8;
     boss.vx=Math.cos(boss.angle)*boss.speed;boss.vy=Math.sin(boss.angle)*boss.speed;
     boss.spawnSafe=2.5;boss.aiThink=0;
     state.bossReinforcementLaunched=true;
@@ -668,7 +671,7 @@ function plane(type,id,x,y,angle){
     const durations={reverse:16,roll:7,smoke:20,harden:22,deadeye:17,cut:15,dive:16};
     if(kind==='roll'){if(!triggerRoll(p))return false;}
     else if(kind==='reverse'){
-      const right=Math.cos(p.angle)>=0,up=p.y>H*.5;
+      const right=Math.cos(p.angle)>=0,up=p.y>WORLD_H*.5;
       p.swoop={kind:'reverse',startAngle:p.angle,direction:up?(right?-1:1):(right?1:-1),elapsed:0,duration:.43};
       p.swoopTime=.43;p.energy=Math.max(15,p.energy-8);
     }
@@ -694,23 +697,17 @@ function plane(type,id,x,y,angle){
     p.rollCooldown=p.role==='heavy'?HEAVY_ROLL_COOLDOWN:p.role==='fighter'?4:8;
     return true;
   }
+  // Soft physical sky boundary: no instant 180-degree heading reversal.
+  // AI plans around it; this is only the final fail-safe for players and skills.
   function crossTopEdge(p){
-    // The playfield is clipped below the HUD at y=31. Bounce as soon as the
-    // aircraft has left the visible sky; never wait until it leaves the canvas.
-    if(p.y>=31-p.d.radius)return false;
-    const speed=Math.max(p.speed,Math.hypot(p.vx,p.vy),p.d.speed*.65);
-    // Reverse the entire heading and the velocity, not just horizontal yaw.
-    // A climb to the upper left therefore returns descending to the right.
-    let turned=Math.atan2(-Math.sin(p.angle),-Math.cos(p.angle));
-    if(Math.sin(turned)<.35){
-      const dir=Math.cos(turned)>=0?1:-1;
-      turned=Math.atan2(.35,dir*Math.sqrt(1-.35*.35));
-    }
-    p.angle=turned;p.y=31+p.d.radius+2;
-    p.vx=Math.cos(turned)*speed;p.vy=Math.sin(turned)*speed;
-    p.turnVelocity=0;p.topRecovery=.43;
+    const top=34+p.d.radius;
+    if(p.y>=top)return false;
+    p.y=top+1;
+    p.vy=Math.max(4,p.vy*.16);
+    p.turnVelocity*=.55;
+    p.topRecovery=.065;
     p.swoop=null;p.swoopTime=0;
-    p.climbLoad=0;p.flightRisk=0;p.stallTime=0;
+    p.climbLoad=Math.max(0,(p.climbLoad||0)-18);
     return true;
   }
   function steerPlane(p,steer,dt){
@@ -733,8 +730,8 @@ function plane(type,id,x,y,angle){
       if(p.x>W+p.d.radius)p.x-=W+2*p.d.radius;
       crossTopEdge(p);
       // The manoeuvre should not bypass the normal ground hazard.
-      if(p.y>=H-13){
-        p.y=H-13;p.health=0;p.alive=false;
+      if(p.y>=WORLD_H-13){
+        p.y=WORLD_H-13;p.health=0;p.alive=false;
         p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
         if(state.blasts.length<12)state.blasts.push({
           x:p.x,y:p.y,r:p.d.radius+7,life:.65,max:.65,large:true
@@ -836,8 +833,8 @@ function plane(type,id,x,y,angle){
     if(p.x<-p.d.radius)p.x+=W+2*p.d.radius;
     else if(p.x>W+p.d.radius)p.x-=W+2*p.d.radius;
     crossTopEdge(p);
-    if(p.y>=H-13){
-      p.y=H-13;p.health=0;p.alive=false;
+    if(p.y>=WORLD_H-13){
+      p.y=WORLD_H-13;p.health=0;p.alive=false;
       p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
       if(state.blasts.length<12)state.blasts.push({
         x:p.x,y:p.y,r:p.d.radius+7,life:.65,max:.65,large:true
@@ -906,28 +903,28 @@ function plane(type,id,x,y,angle){
     if(threatened&&p.aiPlan!=='escape'&&p.aiThreatGrace<=0){
       p.aiPlan='escape';p.aiCommit=2.6+(p.type==='he111'?.15:0);
       p.aiThreatGrace=3.5;
-      p.aiEscapeSign=p.y>H*.43?-1:p.y<H*.34?1:((p.id%2)?1:-1);
+      p.aiEscapeSign=p.y>WORLD_H-155?-1:p.y<105?1:((p.id%2)?1:-1);
     }else if(p.aiCommit<=0){
       // Select the next leg only after the last bank has completed.
       if(dy>31&&range<182){p.aiPlan='bomb-approach';p.aiCommit=2.35;}
       else{p.aiPlan='reposition';p.aiCommit=2.8;}
     }
-    const danger=p.y>H*.55||(p.y>H*.39&&p.vy>13);
-    const ceiling=p.y<54&&p.vy< -13;
+    const danger=p.y>WORLD_H-112||(p.y>WORLD_H-165&&p.vy>13);
+    const ceiling=p.y<100&&p.vy< -9;
     let turnDirection=forward;
-    let goalY=clamp(target.y-53,70,H-116);
+    let goalY=clamp(target.y-53,74,WORLD_H-116);
     if(p.aiPlan==='escape'){
-      goalY=clamp(p.y+(p.aiEscapeSign||-1)*68,67,H-104);
+      goalY=clamp(p.y+(p.aiEscapeSign||-1)*68,76,WORLD_H-119);
     }else if(p.aiPlan==='reposition'){
-      goalY=clamp(target.y-57,76,H-114);
+      goalY=clamp(target.y-57,76,WORLD_H-114);
       // Hold the travel direction in the compact arena: a 180-degree turn
       // costs more altitude than the bomber can safely afford here.
     }else if(p.aiPlan==='bomb-approach'){
-      goalY=clamp(target.y-52,72,H-116);
+      goalY=clamp(target.y-52,72,WORLD_H-116);
       // Commit to the same flight leg until a safe reorientation is possible.
     }
-    if(danger)goalY=H*.29;
-    else if(ceiling)goalY=H*.49;
+    if(danger)goalY=WORLD_H-220;
+    else if(ceiling)goalY=165;
     const pitch=clamp((goalY-p.y)*.77,-43,43);
     const heading=Math.atan2(pitch,turnDirection*95);
     const err=angleDiff(heading,p.angle);
@@ -969,7 +966,7 @@ function plane(type,id,x,y,angle){
       // Commit to a banked break once, not a fresh random heading each frame.
       p.aiEvadeTime=.52+talent*.38;
       p.aiEvadeCooldown=2.7-talent*.65;
-      p.aiEscapeSign=p.y>H*.43?-1:p.y<H*.30?1:(p.id%2?1:-1);
+      p.aiEscapeSign=p.y>WORLD_H*.65?-1:p.y<WORLD_H*.30?1:(p.id%2?1:-1);
     }
 
     // Ground avoidance is bounded by actual descent and available turning
@@ -980,10 +977,10 @@ function plane(type,id,x,y,angle){
     const projected=p.y+descent*(p.role==='heavy'?3.10:2.20)+
       Math.max(0,Math.sin(p.angle))*13;
     const floorBuffer=(p.role==='heavy'?95:78)+(1-integrity)*8;
-    const floorDanger=p.y>(p.role==='heavy'?H-200:H-177)&&projected>H-floorBuffer;
+    const floorDanger=p.y>(p.role==='heavy'?WORLD_H-200:WORLD_H-177)&&projected>WORLD_H-floorBuffer;
     p.aiRecoveryTime=floorDanger?Math.max(p.aiRecoveryTime||0,p.role==='heavy'?1.32:.72):
       Math.max(0,(p.aiRecoveryTime||0)-STEP);
-    if(p.vy< -10&&p.y<H-38)p.aiRecoveryTime=0;
+    if(p.vy< -10&&p.y<WORLD_H-38)p.aiRecoveryTime=0;
     if(p.aiRecoveryTime>0){
       p.aiMode='recover';p.aiBoost=false;p.aiBreakTime=0;
       const heading=Math.atan2(-.55,p.vx>=0?1:-1);
@@ -991,7 +988,7 @@ function plane(type,id,x,y,angle){
     }
     // The ceiling is not a second ground. Ease out of climbing only when
     // actually approaching it; otherwise keep chasing across the full sky.
-    if(p.y<56&&p.vy< -12){
+    if(p.y<103&&p.vy< -9){
       p.aiMode='intercept';p.aiBoost=false;p.aiBreakTime=0;
       const heading=Math.atan2(.38,p.vx>=0?1:-1);
       return clamp(angleDiff(heading,p.angle)*2,-1,1);
@@ -1007,7 +1004,7 @@ function plane(type,id,x,y,angle){
       p.aiBreakTime=.4+(p.role==='heavy'?.1:0);
       p.aiBreakCooldown=3.1;
       const forward=Math.cos(p.angle)>=0?1:-1;
-      p.aiBreakSign=(p.y>H*.48?-1:1)*forward;
+      p.aiBreakSign=(p.y>WORLD_H*.54?-1:1)*forward;
     }
     p.aiMode=p.aiEvadeTime>0?'evade':
       p.aiBreakTime>0?'break':range>118?'intercept':'attack';
@@ -1052,7 +1049,7 @@ function plane(type,id,x,y,angle){
       // Only a badly damaged survivor opens distance. Weapon cooldown
       // alone must never cause a fighter to abandon the chase.
       tx=p.x+(p.vx>=0?85:-85);
-      ty=p.y>H*.54?p.y-35:p.y+20;
+      ty=p.y>WORLD_H*.56?p.y-35:p.y+20;
     }
     if(p.energy<28&&p.aiMode==='intercept')ty=Math.max(86,ty);
     if(rankAI&&state.campaignEncounter?.finalBoss&&p.id<=2&&
@@ -1060,7 +1057,7 @@ function plane(type,id,x,y,angle){
       const wing=state.fliers.find(q=>q.id>0&&q.id!==p.id&&q.id<=2&&q.alive);
       if(wing&&combatDistance(p,wing)<82)ty+=(p.id===1?-1:1)*16;
     }
-    ty=clamp(ty,p.role==='heavy'?71:54,p.role==='heavy'?H-135:H-95);
+    ty=clamp(ty,p.role==='heavy'?75:60,p.role==='heavy'?WORLD_H-135:WORLD_H-95);
     const goal=Math.atan2(ty-p.y,wrappedDelta(p.x,tx));
     const error=angleDiff(goal,p.angle);
     // A held directional turn is visibly stronger than the previous
@@ -1209,7 +1206,7 @@ function plane(type,id,x,y,angle){
   function explosion(x,y,r,owner,damage,cause='BOMB'){
     // Small layered impact flash, smoke/dust and a short-lived shockwave.
     // This is visual only: blast damage and collision radius are unchanged.
-    const ground=cause==='BOMB'&&y>=H-11;
+    const ground=cause==='BOMB'&&y>=WORLD_H-11;
     if(state.blasts.length<12)state.blasts.push({
       x,y,r:ground?11:8,life:.43,max:.43,large:false,ordnance:true,ground
     });
@@ -1284,7 +1281,7 @@ function plane(type,id,x,y,angle){
       }
       if(struck){state.bullets.splice(i,1);continue;}
       if(b.x<0)b.x+=W;else if(b.x>W)b.x-=W;
-      if(b.life<=0||b.y<31||b.y>H-4)
+      if(b.life<=0||b.y<31||b.y>WORLD_H-4)
         state.bullets.splice(i,1);
     }
     for(let i=state.bombs.length-1;i>=0;i--){
@@ -1294,8 +1291,8 @@ function plane(type,id,x,y,angle){
       b.age=(b.age||0)+dt;
       b.vy+=94*dt;b.x+=(b.vx+state.wind.current*.4)*dt;b.y+=b.vy*dt;b.life-=dt;
       const target=state.fliers.find(p=>p.id!==b.owner&&p.alive&&(!state.teams||p.team!==state.fliers[b.owner]?.team)&&distance(b,p)<p.d.radius+4);
-      if(b.y>=H-8||(b.age>.24&&target)){
-        explosion(b.x,Math.min(b.y,H-8),27,b.owner,40);
+      if(b.y>=WORLD_H-8||(b.age>.24&&target)){
+        explosion(b.x,Math.min(b.y,WORLD_H-8),27,b.owner,40);
         state.bombs.splice(i,1);continue;
       }
       if(b.life<=0||b.x<0||b.x>W)state.bombs.splice(i,1);
