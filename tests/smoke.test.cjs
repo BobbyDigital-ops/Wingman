@@ -170,15 +170,16 @@ test('all three native-sized miniature sprites load in the renderer',()=>{
  game.advance(40,1000);
  assert.equal(sprites.fliers.length,2);
 });
-test('Fighter Overdrive activates for a bounded duration and has a cooldown',()=>{
+test('Spitfire Corkscrew gives a brief bounded boost and distinct cooldown',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];
  game.internals.triggerSpecial(p);
- assert.ok(p.overdriveTime>2.5);
- assert.equal(p.specialCooldown,12);
+ assert.ok(p.overdriveTime>.9&&p.overdriveTime<=1.10);
+ assert.ok(p.corkscrewTime>.65);
+ assert.equal(p.specialCooldown,14);
  game.advance(8,1000);
  assert.equal(p.boosting,true);
- assert.ok(p.overdriveTime<2.8);
+ assert.ok(p.overdriveTime<1.10);
 });
 test('Bomber E releases exactly three spaced bombs and retains the rear gunner',()=>{
  const game=launch();game.listeners.get('bomber:click')();
@@ -267,30 +268,26 @@ test('floor collision crashes the plane and finishes the duel',()=>{
  assert.equal(p.alive,false);
  assert.equal(p.damageCause,'GROUND');
 });
-test('ceiling allows exit then re-enters with reversed horizontal heading and no damage',()=>{
+test('ceiling returns immediately below HUD on reversed heading, without damage',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];p.spawnSafe=0;
  p.y=1;p.angle=-Math.PI/3;p.speed=88;
  p.vx=44;p.vy=-75;p.climbLoad=30;
  const hp=p.health;
  game.internals.steerPlane(p,0,1/60);
- assert.ok(p.y<31,'aircraft may pass above playable sky before wrapping');
- assert.ok(p.vy<0,'flight continues upwards without ceiling bounce');
- p.y=-p.d.radius-1;
- game.internals.steerPlane(p,0,1/60);
  assert.ok(p.alive);assert.equal(p.health,hp);
- assert.ok(p.y>=39+p.d.radius,'aircraft returns visibly below the HUD');
- assert.ok(p.vx<0,'horizontal direction reverses');
- assert.ok(p.vy>0,'aircraft flies back into arena');
+ assert.ok(p.y>=31+p.d.radius,'no delayed top wrap above the HUD');
+ assert.ok(p.vx<0,'re-entry reverses horizontal direction');
+ assert.ok(p.vy>0,'re-entry points down into playable sky');
  assert.equal(p.flightRisk,0);
 });
-test('ceiling re-entry works during a special reversal too',()=>{
+test('ceiling re-entry also works during special manoeuvres',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];
  game.internals.triggerSpecial(p);
  p.y=-p.d.radius-2;
  game.internals.steerPlane(p,0,1/60);
- assert.ok(p.y>=39+p.d.radius&&p.vy>0);
+ assert.ok(p.y>=31+p.d.radius&&p.vy>0);
  assert.ok(p.alive);
 });
 
@@ -378,7 +375,7 @@ test('stall depends on rapid altitude gain, not height or low energy alone',()=>
 test('Heavy fighter shield reduces damage while active',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];
- p.role='heavy';
+ p.role='heavy';p.type='heavy';p.d=game.internals.PLANES.heavy;
  game.internals.triggerSpecial(p);
  assert.ok(p.armourTime>0);
  assert.equal(p.specialCooldown,20);
@@ -684,11 +681,11 @@ test('Phase 8 environment generator paints four distinct cached WWII theatres',(
   }
   assert.ok(new Set(records).size>=3,'four scenes differ in geometry');
 });
-test('Phase 8 damage smoke and shockwaves are bounded visual effects, not collision changes',()=>{
+test('G2 impacts use bounded metal sparks and smoke without changing collision',()=>{
   const game=launch();game.listeners.get('start:click')();
   const s=game.internals.state,p=s.fliers[0];p.spawnSafe=0;
   game.internals.hit(p,p.d.armour+45,p.x,p.y);
-  assert.ok(s.blasts.length>0,'impacts emit a short glow');
+  assert.ok(s.sparks.length>0,'impacts emit localised metal-impact sparks');
   p.health=p.d.hull*.27;p.armour=0;
   game.advance(25,3000);
   assert.ok(s.trails.length>0,'damaged aircraft emit drifting smoke');
@@ -763,8 +760,8 @@ test('steep dives produce useful overspeed that persists after leveling out',()=
   assert.ok(p.speed<=p.d.speed*1.60+1,'overspeed must remain bounded');
 });
 
-test('Spitfire Overdrive gains about 25 percent power; BF 109 keeps previous boost',()=>{
-  function overdriveSpeed(type){
+test('Spitfire short Corkscrew burst remains faster than ordinary Bf 109 Overdrive',()=>{
+  function boostedSpeed(type){
     const game=launch();game.listeners.get('start:click')();
     const p=game.internals.state.fliers[0];
     if(type==='bf109'){
@@ -773,18 +770,19 @@ test('Spitfire Overdrive gains about 25 percent power; BF 109 keeps previous boo
     }
     p.topRecovery=0;p.spawnSafe=0;
     game.internals.triggerSpecial(p);
-    for(let i=0;i<145;i++){
+    for(let i=0;i<34;i++){
       p.x=200;p.y=105;p.angle=0;p.climbLoad=0;
       game.internals.updatePlane(p,1/60,0);
     }
-    assert.ok(p.boosting,'Overdrive remains active during acceleration');
-    return p.speed/p.d.speed;
+    assert.ok(p.boosting,'boost must be active inside the documented window');
+    return {ratio:p.speed/p.d.speed,duration:p.overdriveTime};
   }
-  const spitfire=overdriveSpeed('fighter');
-  const bf109=overdriveSpeed('bf109');
-  assert.ok(spitfire>bf109*1.18,
-    `Spitfire boost should exceed previous fighter tuning by roughly 25%: ${spitfire} vs ${bf109}`);
-  assert.ok(spitfire<1.90+0.01,'Spitfire should respect the boosted speed ceiling');
+  const spitfire=boostedSpeed('fighter');
+  const bf109=boostedSpeed('bf109');
+  assert.ok(spitfire.ratio>bf109.ratio*1.07,
+    'Spitfire offers a larger early acceleration advantage than Bf 109');
+  assert.ok(spitfire.ratio<=1.84,'Spitfire respects the boost speed ceiling');
+  assert.ok(spitfire.duration<bf109.duration,'Spitfire burst is shorter than Bf 109 overdrive');
 });
 
 test('player roll recovers quickly without making AI dodge more often',()=>{
@@ -794,7 +792,7 @@ test('player roll recovers quickly without making AI dodge more often',()=>{
  assert.ok(player.rollRecovery<=.71,'player roll recovery is shortened');
  game.internals.triggerRoll(enemy);
  assert.ok(enemy.rollRecovery>=1.34,'AI keeps its original dodge interval');
- player.rollTime=0;player.rollRecovery=0;player.pilotSkill='roll';
+ player.rollTime=0;player.rollRecovery=0;player.rollCooldown=0;player.pilotSkill='roll';
  game.internals.triggerPilotSkill(player);
  assert.equal(player.skillCooldown,7,'pilot roll cooldown reduced from 14s to 7s');
 });
