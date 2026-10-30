@@ -29,6 +29,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
   state.qa=true;state.qaScenario='duel';state.qaWinner=null;
   state.qaDamage=Array(130).fill(0);state.qaHits=Array(130).fill(0);
  },
+ projectileStep(){projectiles(STEP);},
  advance(frames){
   for(let i=0;i<frames&&state.phase==='playing';i++)update(STEP);
   return {phase:state.phase,winner:state.qaWinner,flights:state.fliers.map(p=>({id:p.id,team:p.team,escort:!!p.escortProtected,alive:p.alive}))};
@@ -169,8 +170,8 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
   const campaignBonusesApplied=hero.d.hull>130&&hero.d.speed>82&&hero.d.turn>3.15;
   hero.spawnSafe=0;ally.spawnSafe=0;ally.x=hero.x+95;
   const before=hero.health;
-  state.bullets.push({x:hero.x-16,y:hero.y,vx:2100,vy:0,life:.8,age:.12,owner:ally.id,damage:45});
-  projectiles(STEP);
+  window.aiQA.state.bullets.push({x:hero.x-16,y:hero.y,vx:2100,vy:0,life:.8,age:.12,owner:ally.id,damage:45});
+  window.aiQA.projectileStep();
   const noFriendlyFire=hero.health===before;
   summary.campaignChecks={escortPresent,escortSurvived,escortLost,interceptionDeadline,campaignBonusesApplied,noFriendlyFire};
   if(Object.values(summary.campaignChecks).some(value=>!value))
