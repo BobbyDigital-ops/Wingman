@@ -224,12 +224,17 @@ function career(){
   const rival=rivalFor(c),stat=saved.records?.[c.id]||{},fought=(stat.wins||0)+(stat.losses||0);
   return '<button type="button" class="compact-rival '+(i===S.choice?'selected':'')+'" data-choice="'+i+'" aria-pressed="'+(i===S.choice)+'"><span class="compact-rival-photo">'+atlas(rival)+'</span><span class="compact-rival-info"><strong>'+esc(rival?.name||c.label)+'</strong><small>'+esc(c.mission||'DOGFIGHT')+' · '+esc(c.risk||'LOW')+' RISK · '+esc(c.timeLimit||120)+'s</small><span class="compact-rival-description">'+esc(c.briefing||rival?.bio||'Defeat your rival and survive the encounter.')+'</span><em>'+(fought?('W '+(stat.wins||0)+' / L '+(stat.losses||0)):'FIRST ENCOUNTER')+' · THREAT '+(c.threat??'—')+'/100 · +'+(c.suppliesAward||1)+' SUPPLIES'+(c.rewardTier===2?' · ELITE UPGRADE':'')+'</em></span></button>';
  }).join('');
- return `<section class="frame career-screen campaign-rework">${header('KING OF THE SKIES','RANK '+currentRank+' / 8 · '+run.lives+' LIVES')}
+ return `<section class="frame career-screen campaign-rework ${S.ladderExpanded?'is-map-expanded':'is-details-expanded'}">${header('KING OF THE SKIES','RANK '+currentRank+' / 8 · '+run.lives+' LIVES')}
  <div class="campaign-rework-content"><div class="campaign-main">
- <div class="campaign-ladder-head"><strong>ROAD TO ACE</strong><span>BRANCHING ROUTES · CLIMB TO THE FINAL ACE</span></div>
+ <div class="campaign-ladder-head"><strong>ROAD TO ACE</strong><span>BRANCHING ROUTES · CLIMB TO THE FINAL ACE</span>
+ <button type="button" class="wm-v13-map-toggle" data-action="ladder-toggle">${S.ladderExpanded?'VIEW MISSION DOSSIER ›':'← EXPAND LADDER'}</button></div>
  <div class="campaign-map-legend"><span>✈ INTERCEPT</span><span>◈ RECON</span><span>♠ ACE HUNT</span><span>✦ ESCORT</span><span>⚔ OUTNUMBERED</span><span>★ FINALE</span></div><div class="campaign-ladder-scroll" data-rank="${currentRank}" aria-label="Branching eight-rank campaign map">${connectedLadder}</div>
  <div class="campaign-rivals-title"><strong>CHOOSE YOUR NEXT OPPONENT</strong><small>THREE ROUTES · YOUR DECISION</small></div>
  <div class="campaign-rivals">${rivals}</div>
+ <div class="wm-v13-map-action"><span><small>YOUR CHOSEN SORTIE</small>
+ <strong>${esc(selected?.mission||'PATROL')} · ${esc(selected?.risk||'LOW')} RISK</strong>
+ <em>${esc(selected?.label||'ENEMY PILOT')}</em></span>
+ <button type="button" data-action="career-aircraft">SELECT AIRCRAFT ›</button></div>
  </div>
  <aside class="campaign-service-side"><div class="service-card">
  <div class="service-card-head"><span>${p?.faction==='Axis'?'LUFTWAFFE':'ROYAL AIR FORCE'}</span><small>ACTIVE CAMPAIGN · LIVE SERVICE RECORD</small></div>
@@ -365,6 +370,7 @@ function action(v){
  if(v==='opening-start'){S.screen='profiles';S.back=[];return show();}
  if(v==='back-to-splash'){S.screen='title';S.back=[];return show();}
  if(v==='profiles'){S.screen='profiles';S.back=['home'];return show();}
+ if(v==='ladder-toggle'){S.ladderExpanded=!S.ladderExpanded;return show();}
  if(v==='campaign-settings'){const panel=document.querySelector('.career-settings-popup');panel.hidden=!panel.hidden;return;}
  if(v==='restart-run'){if(!confirm('Restart King of the Skies? Select a pilot again and return to rank 1. Lifetime service statistics and medals are kept.'))return;const ok=api()?.restartCampaign?.();if(!ok)return;S.choice=0;S.career=false;S.page=0;S.pilotFilter=playerSave()?.profile?.faction||'Allies';const current=roster.findIndex(p=>p.id===playerSave()?.profile?.rosterId);S.pilotIndex=Math.max(0,current);S.screen='pilots';S.back=['career'];show();return;}
  if(v==='fullscreen'){const d=P.document;(d.fullscreenElement?d.exitFullscreen():d.documentElement.requestFullscreen()).catch(()=>{});return;}
