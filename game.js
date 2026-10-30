@@ -1191,11 +1191,16 @@ function plane(type,id,x,y,angle){
     for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);
     ctx.closePath();ctx.fill();
   }
-  // Cached, deterministic low-resolution 16-bit inspired alpine landscape.
-  // There are no image downloads and no per-frame scenery allocations.
+  // Cached panorama is prepared only on mission/arena change and resize.
+  // The independent layers move on screen without shifting physics/collisions.
+  let sceneryTravel=0,sceneryLastX=null;
   function makeBackground(){
-    // Four distinct 1940s aviation-theatre landscapes, pre-rendered once.
-    // No mountains or medieval castles transplanted into desert/coast scenes.
+    sceneryTravel=0;sceneryLastX=null;
+    if(window.WingmanScenery?.createPanorama){
+      return {panorama:window.WingmanScenery.createPanorama(
+        W,H,state.arena,Math.min(2.25,Math.max(1.6,renderScale)))};
+    }
+    // Offline fallback to the original one-canvas painted theatre.
     const c=document.createElement('canvas');
     c.width=Math.round(W*renderScale);c.height=Math.round(H*renderScale);
     const ctx=c.getContext('2d');
@@ -1550,7 +1555,15 @@ function plane(type,id,x,y,angle){
     c.restore();
   }
   function draw(){
-    g.drawImage(background,0,0,W,H);
+    if(background?.panorama&&window.WingmanScenery?.drawPanorama){
+      const lead=state.fliers[0];
+      if(lead?.alive&&state.phase==='playing'){
+        if(sceneryLastX!==null)sceneryTravel+=wrappedDelta(sceneryLastX,lead.x);
+        sceneryLastX=lead.x;
+      }else sceneryLastX=null;
+      window.WingmanScenery.drawPanorama(
+        g,background.panorama,W,H,sceneryTravel,state.visualClock,state.wind);
+    }else g.drawImage(background,0,0,W,H);
     if(window.WingmanScenery?.weather)
       window.WingmanScenery.weather(g,W,H,state.arena,state.visualClock,state.wind);
     drawWind();
