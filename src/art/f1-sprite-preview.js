@@ -1,5 +1,5 @@
 /* Wingman F — six compact, shaded 2.5D WWII aircraft miniatures.
- * Two approved F1 side profiles + four bespoke detailed multi-engine profiles.
+ * Two approved F1 side profiles + four photo-textured multi-engine replacements.
  * Images are drawn at the aircraft transform; no physics, bounds or control changes.
  * If an image is still loading the older Canvas silhouette is the safe fallback.
  */
@@ -7,15 +7,15 @@
 const config={
  fighter:{src:'f1-spitfire.webp',width:35.6,height:10.5,prop:true},
  bf109:{src:'f1-bf109.webp',width:35.6,height:10.5,prop:true},
- heavy:{src:'f2-beaufighter.webp',width:42.5,height:10.3},
- bf110:{src:'f2-bf110.webp',width:42.5,height:10.3},
- bomber:{src:'f2-lancaster.webp',width:47.0,height:12.0},
- he111:{src:'f2-he111.webp',width:47.0,height:12.0}
+ heavy:{src:'f2-beaufighter.webp',width:41.0,height:14.0},
+ bf110:{src:'f2-bf110.webp',width:41.0,height:14.0},
+ bomber:{src:'f2-lancaster.webp',width:46.0,height:15.2},
+ he111:{src:'f2-he111.webp',width:46.0,height:15.2}
 };
 const images={};
 for(const [type,spec] of Object.entries(config)){
  const img=new Image();img.decoding='async';
- img.src='./assets/aircraft/'+spec.src;
+ img.src='./assets/aircraft/'+spec.src+'?v=20261030F3real';
  images[type]=img;
 }
 function draw(ctx,type,variant){
