@@ -324,7 +324,7 @@ function plane(type,id,x,y,angle){
     startCampaignFight,showMenu:()=>showMenu(),
     isPlaying:()=>state.phase==='playing',
     aircraftSpecs:()=>Object.fromEntries(Object.entries(PLANES).map(([id,p])=>
-      [id,{speed:p.speed,turn:p.turn,armour:p.armour,hull:p.hull,damage:p.role==='bomber'?2.9:p.damage,radius:p.radius}]))
+      [id,{speed:p.speed,turn:p.turn,armour:p.armour,hull:p.hull,damage:(id==='bomber'||id==='he111')?2.9:p.damage,radius:p.radius}]))
   };
   const menuReturn=document.getElementById('menu-return');
   menuReturn?.addEventListener('click',showMenu);
