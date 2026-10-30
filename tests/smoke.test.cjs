@@ -42,7 +42,17 @@ function launch(){
   };
   let nextFrame;
   const sandbox={
-    document,window:{addEventListener:(type,cb)=>listeners.set('window:'+type,cb)},requestAnimationFrame:cb=>{nextFrame=cb},
+    document,
+    URLSearchParams,
+    localStorage:{getItem:()=>null,setItem:noop},
+    window:{
+      location:{search:''},
+      matchMedia:()=>({matches:false}),
+      devicePixelRatio:1,
+      innerWidth:960,innerHeight:540,
+      addEventListener:(type,cb)=>listeners.set('window:'+type,cb)
+    },
+    requestAnimationFrame:cb=>{nextFrame=cb},
     console
   };
   const instrumented=code.replace('  // All scenery is painted once;',
