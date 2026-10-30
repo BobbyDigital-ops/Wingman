@@ -6,33 +6,67 @@
   const PI2=Math.PI*2;
   function drawBomb(c,b){
     if(b.delay>0)return;
-    c.save();c.translate(b.x,b.y);
-    // A falling bomb pitches gradually from forward motion into a nose-first
-    // descent as gravity takes over. The nose of this miniature points down.
-    const a=-Math.atan2(b.vx,b.vy||.01);
-    c.rotate(a);
-    c.lineJoin='round';c.lineWidth=.55;
-    // Four stylised fins in side view, with a slender tail mount.
-    c.fillStyle='#66706a';c.strokeStyle='#293538';
+    const vx=Number.isFinite(b.vx)?b.vx:0;
+    const vy=Number.isFinite(b.vy)?b.vy:10;
+    c.save();
+    c.translate(b.x,b.y);
+    // Side-on WWII general-purpose bomb, nose pointing along the fall vector.
+    // Fins are narrow sheet-metal stabilisers, not the old large triangular
+    // "cartoon rocket" tail. Keep it recognisable at actual mobile size.
+    c.rotate(-Math.atan2(vx,vy||.01));
+    c.lineJoin='round';
+    // Rear box-fin stabiliser and its two diagonal supports.
+    c.fillStyle='#5b6654';
+    c.strokeStyle='#252f2c';
+    c.lineWidth=.52;
     c.beginPath();
-    c.moveTo(-.8,-2.6);c.lineTo(-2.6,-4);
-    c.lineTo(-2.1,-1.35);c.lineTo(-1.3,-1.1);
-    c.lineTo(1.3,-1.1);c.lineTo(2.1,-1.35);
-    c.lineTo(2.6,-4);c.lineTo(.8,-2.6);
+    c.moveTo(-.85,-3.0);c.lineTo(-2.45,-5.3);
+    c.lineTo(-2.35,-2.05);c.lineTo(-1.27,-1.65);
+    c.lineTo(1.27,-1.65);c.lineTo(2.35,-2.05);
+    c.lineTo(2.45,-5.3);c.lineTo(.85,-3.0);
     c.closePath();c.fill();c.stroke();
-    c.strokeStyle='#c6c4ac';c.lineWidth=.65;
-    c.beginPath();c.moveTo(0,-4.1);c.lineTo(0,-2.4);c.stroke();
-    // Olive-steel casing; rounded conical nose and fine edge highlight.
-    c.fillStyle='#454d46';c.strokeStyle='#202b30';c.lineWidth=.6;
+    // Slightly lighter far fin. The centre bracing stays dark and fine.
+    c.fillStyle='#85907a';
     c.beginPath();
-    c.moveTo(-1.35,-2.7);c.lineTo(1.35,-2.7);
-    c.lineTo(1.35,1.25);c.quadraticCurveTo(1.2,2.5,0,3.1);
-    c.quadraticCurveTo(-1.2,2.5,-1.35,1.25);
+    c.moveTo(.3,-3.15);c.lineTo(1.75,-4.55);
+    c.lineTo(1.58,-2.2);c.lineTo(.55,-1.65);c.closePath();c.fill();
+    c.strokeStyle='#354038';c.lineWidth=.40;
+    c.beginPath();c.moveTo(-2.2,-4.9);c.lineTo(-.7,-2.4);
+    c.moveTo(2.2,-4.9);c.lineTo(.7,-2.4);c.stroke();
+    // Slim retaining ring and tapered tail attachment.
+    c.fillStyle='#424c43';
+    c.beginPath();
+    c.moveTo(-1.08,-3.05);c.lineTo(1.08,-3.05);
+    c.lineTo(1.48,-1.8);c.lineTo(-1.48,-1.8);
+    c.closePath();c.fill();
+    c.strokeStyle='#a6ad96';c.lineWidth=.36;
+    c.beginPath();c.moveTo(-1.1,-3.05);c.lineTo(1.1,-3.05);c.stroke();
+    // Main steel casing: long parallel body, tapered ogive and rounded nose.
+    const shell=c.createLinearGradient(-1.65,0,1.65,0);
+    shell.addColorStop(0,'#303a32');
+    shell.addColorStop(.3,'#59634f');
+    shell.addColorStop(.74,'#6f775b');
+    shell.addColorStop(1,'#313b34');
+    c.fillStyle=shell;
+    c.strokeStyle='#202a27';c.lineWidth=.51;
+    c.beginPath();
+    c.moveTo(-1.47,-2.2);
+    c.lineTo(1.47,-2.2);
+    c.lineTo(1.55,1.95);
+    c.quadraticCurveTo(1.47,3.5,.71,4.78);
+    c.quadraticCurveTo(.4,5.3,0,5.48);
+    c.quadraticCurveTo(-.4,5.3,-.71,4.78);
+    c.quadraticCurveTo(-1.47,3.5,-1.55,1.95);
     c.closePath();c.fill();c.stroke();
-    c.strokeStyle='#9da58d';c.lineWidth=.43;
-    c.beginPath();c.moveTo(-.56,-2.1);c.lineTo(-.56,1.75);c.stroke();
-    c.strokeStyle='#9b896a';c.lineWidth=.52;
-    c.beginPath();c.moveTo(-1.25,-1.65);c.lineTo(1.25,-1.65);c.stroke();
+    // Narrow yellow identification band towards the nose, period-appropriate.
+    c.strokeStyle='#b3a16c';c.lineWidth=.56;
+    c.beginPath();c.moveTo(-1.43,2.13);c.lineTo(1.43,2.13);c.stroke();
+    // Tiny fuselage glint and seam; do not turn the bomb into a shiny missile.
+    c.strokeStyle='rgba(216,222,196,.52)';c.lineWidth=.36;
+    c.beginPath();c.moveTo(-.77,-1.45);c.lineTo(-.77,1.7);
+    c.quadraticCurveTo(-.74,3.4,-.26,4.45);c.stroke();
+    c.strokeStyle='#343d33';c.lineWidth=.35;
+    c.beginPath();c.moveTo(-1.32,-1.55);c.lineTo(1.32,-1.55);c.stroke();
     c.restore();
   }
   function drawRound(c,b,heavy){

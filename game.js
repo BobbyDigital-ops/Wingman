@@ -542,6 +542,7 @@ function plane(type,id,x,y,angle){
   function releaseBomb(p){
     state.bombs.push({x:p.x+p.vx*.035,y:p.y+7,vx:p.vx*.58,vy:Math.max(8,p.vy*.16+10),
       owner:p.id,life:4,delay:0,run:p.bombRunId,age:0});
+    sound('bombDrop');
   }
   function updateTailLock(p,dt){
     // Pursuit reward: earn lock by remaining BEHIND a similarly headed enemy
@@ -612,7 +613,7 @@ function plane(type,id,x,y,angle){
       owner:p.id,damage:p.d.damage,life:p.d.gunLife,age:0});
     emit(p.x+dx*(p.d.radius+3),p.y+dy*(p.d.radius+3),2,'#fff0a3',7);
     p.muzzleFlash=.12;
-    sound('shot');
+    sound(p.role==='heavy'?'cannon':'shot');
   }
   function emit(x,y,count,color,power,kind=''){
     for(let i=0;i<count&&state.sparks.length<100;i++){
@@ -1117,6 +1118,7 @@ function plane(type,id,x,y,angle){
               owner:p.id,damage:4.5,life:1.0,age:0,rearGun:true,
               tracer:p.rearTracerCount%3===0
             });
+            sound('rearShot');
             p.turretFlash=.12;
           }
         }
@@ -1163,7 +1165,7 @@ function plane(type,id,x,y,angle){
         vx:a*(ground?13:8),vy:-random(ground?7:3,ground?23:14),
         age:0,life:random(.65,1.25),heavy:true,ordnanceDust:ground});
     }
-    sound('boom');
+    sound(cause==='BOMB'||cause==='MINE'?'bombImpact':'boom');
     for(const p of state.fliers){
       if(!p.alive||p.id===owner||((state.teams||state.mode==='campaign')&&state.fliers[owner]?.team===p.team))continue;
       const d=Math.hypot(x-p.x,y-p.y);
@@ -1623,12 +1625,15 @@ function plane(type,id,x,y,angle){
       const sightX=hero.x+Math.cos(hero.angle)*(hero.d.radius+19);
       const sightY=hero.y+Math.sin(hero.angle)*(hero.d.radius+19);
       c.save();c.translate(sightX,sightY);c.rotate(hero.angle);
-      // User requested a *much* smaller graticule: 45% of G1.3 size.
-      c.scale(.45,.45);
+      // G2.1: another 22% smaller, nearly black aircraft gunsight.
+      // A very soft warm outline preserves visibility over storm clouds.
+      c.scale(.35,.35);
       c.lineCap='round';c.lineJoin='round';
-      c.globalAlpha=locked?.96:cue>.2?.70+.22*cue:.43;
-      c.strokeStyle=locked?'#f5cc7a':cue>.2?'#e5d4a9':'#cad5d1';
-      c.lineWidth=locked?.95:.7;
+      c.globalAlpha=locked?1:cue>.2?.88:.76;
+      c.strokeStyle=locked?'#100f0b':cue>.2?'#111713':'#10191b';
+      c.shadowColor='rgba(238,225,189,.38)';
+      c.shadowBlur=.95;
+      c.lineWidth=locked?1.3:1.05;
       const r=4.5;
       // Open circular graticule with four fine reference ticks.
       for(let k=0;k<4;k++){
@@ -1642,15 +1647,15 @@ function plane(type,id,x,y,angle){
         c.stroke();
       }
       c.beginPath();c.arc(0,0,.58,0,TAU);c.fillStyle=c.strokeStyle;c.fill();
-      // A brass sweep fills as target pursuit is sustained.
+      // Dark sweep: acquisition remains readable without a bright white ring.
       if(strength>.02){
-        c.strokeStyle=locked?'#ffdc89':'#d8b879';
+        c.strokeStyle=locked?'#18130d':'#25221a';
         c.lineWidth=1.4;
         c.beginPath();c.arc(0,0,7.8,-Math.PI/2,-Math.PI/2+TAU*strength);c.stroke();
       }
       if(locked){
-        // A subtle second confirmation notch, no large arcade text or rings.
-        c.fillStyle='#f5cc7a';c.fillRect(11,-1,2,2);
+        // Only two restrained notches acknowledge a confirmed firing solution.
+        c.fillStyle='#201a12';c.fillRect(11,-1,2,2);
         c.fillRect(-13,-1,2,2);
       }
       c.restore();
