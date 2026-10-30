@@ -641,5 +641,5 @@ function restartCampaign(){
   selectFaction=data.profile?.faction||'Allies';candidates=generateCandidates();
   save();view='select';render();return true;
  }
- window.WingmanCareer={restartCampaign,restartRun:()=>{active=null;pendingChoice=null;pendingAircraft=null;startRun(data?.profile?.plane);},finishEncounter,open:show,cancelEncounter:()=>{active=null;}};
+ window.WingmanCareer={suspendLegacyScreen:()=>{pendingChoice=null;pendingAircraft=null;showing=false;screen.hidden=true;},restartCampaign,restartRun:()=>{active=null;pendingChoice=null;pendingAircraft=null;startRun(data?.profile?.plane);},finishEncounter,open:show,cancelEncounter:()=>{active=null;}};
 })();
