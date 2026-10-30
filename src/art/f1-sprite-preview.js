@@ -1,50 +1,50 @@
-/* F1 prototype — genuinely alpha-matted, pre-rendered 2.5D side profiles.
- * Enabled ONLY with ?f1=1. All non-prototype aircraft use the original art.
- * A single side sprite is used in F1; banking/damage variants are later phases.
+/* Wingman F — six compact, shaded 2.5D WWII aircraft miniatures.
+ * Two approved F1 side profiles + four bespoke detailed multi-engine profiles.
+ * Images are drawn at the aircraft transform; no physics, bounds or control changes.
+ * If an image is still loading the older Canvas silhouette is the safe fallback.
  */
 (()=>{'use strict';
-  const specs={
-    fighter:'./assets/aircraft/f1-spitfire.webp',
-    bf109:'./assets/aircraft/f1-bf109.webp'
-  };
-  const images={};
-  for(const [type,url] of Object.entries(specs)){
-    const image=new Image();
-    image.decoding='async';
-    image.src=url;
-    images[type]=image;
-  }
-  function draw(ctx,type,variant){
-    const image=images[type];
-    if(!image?.complete||!image.naturalWidth)return false;
-    ctx.save();
-    const smoothing=ctx.imageSmoothingEnabled;
-    ctx.imageSmoothingEnabled=true;
-    // Source models face left, game forward faces right. Mirror once here,
-    // without changing game coordinates, flight direction or collision bounds.
-    ctx.scale(-1,1);
-    ctx.drawImage(image,-18.1,-5.35,36.2,10.7);
-    ctx.imageSmoothingEnabled=smoothing;
-    ctx.restore();
-    // Propeller is drawn in the game, not burned into the photo sprite.
-    ctx.save();
-    ctx.globalAlpha=.45;
-    ctx.lineWidth=.48;
-    ctx.strokeStyle='#dce6e8';
-    ctx.beginPath();ctx.ellipse(18.15,0,.7,4.5,0,0,Math.PI*2);ctx.stroke();
-    ctx.globalAlpha=.18;
-    ctx.fillStyle='#c8dade';
-    ctx.beginPath();ctx.ellipse(18.2,0,.9,3.7,0,0,Math.PI*2);ctx.fill();
-    if(variant==='worn'||variant==='damaged'){
-      ctx.globalAlpha=variant==='damaged'?.78:.38;
-      ctx.strokeStyle='#342c29';ctx.lineWidth=.55;
-      ctx.beginPath();
-      ctx.moveTo(-5.5,-1.8);ctx.lineTo(1,2.2);
-      ctx.moveTo(5.5,-2.3);ctx.lineTo(10,1.6);
-      ctx.stroke();
-    }
-    ctx.restore();
-    return true;
-  }
-  window.WingmanF1Preview={draw,images,types:Object.keys(specs)};
+const config={
+ fighter:{src:'f1-spitfire.webp',width:35.6,height:10.5,prop:true},
+ bf109:{src:'f1-bf109.webp',width:35.6,height:10.5,prop:true},
+ heavy:{src:'f2-beaufighter.webp',width:42.5,height:10.3},
+ bf110:{src:'f2-bf110.webp',width:42.5,height:10.3},
+ bomber:{src:'f2-lancaster.webp',width:47.0,height:12.0},
+ he111:{src:'f2-he111.webp',width:47.0,height:12.0}
+};
+const images={};
+for(const [type,spec] of Object.entries(config)){
+ const img=new Image();img.decoding='async';
+ img.src='./assets/aircraft/'+spec.src;
+ images[type]=img;
+}
+function draw(ctx,type,variant){
+ const spec=config[type],img=images[type];
+ if(!spec||!img?.complete||!img.naturalWidth)return false;
+ ctx.save();
+ const smoothing=ctx.imageSmoothingEnabled;
+ ctx.imageSmoothingEnabled=true;
+ // All artwork points left; mirror into the game's rightward forward axis.
+ ctx.scale(-1,1);
+ ctx.drawImage(img,-spec.width*.5,-spec.height*.5,spec.width,spec.height);
+ ctx.imageSmoothingEnabled=smoothing;
+ ctx.restore();
+ // F1 singles have a separate soft propeller disc at the nose. The multi-
+ // engine models already have correctly placed props inside the sprite.
+ if(spec.prop){
+  ctx.save();ctx.globalAlpha=.36;ctx.lineWidth=.44;
+  ctx.strokeStyle='#dce8e3';ctx.beginPath();
+  ctx.ellipse(spec.width*.5+.15,0,.65,4.35,0,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+ }
+ if(variant==='worn'||variant==='damaged'){
+  ctx.save();ctx.globalAlpha=variant==='damaged'?.55:.28;
+  ctx.strokeStyle='#2b2520';ctx.lineWidth=.4;
+  ctx.beginPath();ctx.moveTo(-7,0);ctx.lineTo(-3.3,2);
+  ctx.moveTo(5,-1);ctx.lineTo(8.5,1.35);ctx.stroke();
+  ctx.restore();
+ }
+ return true;
+}
+window.WingmanAircraftHD={draw,images,types:Object.keys(config)};
 })();

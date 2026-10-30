@@ -6,7 +6,8 @@
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
-  const f1SpriteTrial=new URLSearchParams(window.location.search).get('f1')==='1';
+  // All six aircraft use the new 2.5D artwork; ?classic=1 preserves the old renderer for comparison.
+  const useHdAircraft=new URLSearchParams(window.location.search).get('classic')!=='1';
   const modelCanvas=document.getElementById('aircraft-layer');
   const modelCtx=modelCanvas.getContext('2d',{alpha:true});
   let g=canvas.getContext('2d',{alpha:false});
@@ -16,7 +17,7 @@
   const DIVE_SPEED_GAIN=64;
   const DIVE_OVERSPEED_LIMIT=1.60;
   const CORKSCREW_SPIN_TIME=.72;
-  const CORKSCREW_BOOST_TIME=2.5;
+  const CORKSCREW_BOOST_TIME=1.10; // Short escape burst, not sustained overdrive.
   const CORKSCREW_COOLDOWN=14;
   const HEAVY_ROLL_COOLDOWN=13;
   const HEAVY_ROLL_DODGE=.17;
@@ -510,7 +511,7 @@ function plane(type,id,x,y,angle){
       p.corkscrewTime=CORKSCREW_SPIN_TIME;
       p.corkscrewDuration=CORKSCREW_SPIN_TIME;
       p.corkscrewRecovery=0;
-      p.speed=Math.min(p.d.speed*1.5,Math.max(p.speed,p.d.speed*1.40));
+      p.speed=Math.min(p.d.speed*1.43,Math.max(p.speed,p.d.speed*1.31));
       p.vx+=(Math.cos(p.angle)*p.speed-p.vx)*.38;
       p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*.38;
       emit(p.x,p.y,13,'#d4e9f5',25);
@@ -550,11 +551,11 @@ function plane(type,id,x,y,angle){
     p.muzzleFlash=.12;
     sound('shot');
   }
-  function emit(x,y,count,color,power){
+  function emit(x,y,count,color,power,kind=''){
     for(let i=0;i<count&&state.sparks.length<100;i++){
       const a=random(0,TAU),s=random(power*.25,power);
       state.sparks.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
-        life:random(.22,.7),max:.7,color,size:Math.random()<.2?2:1});
+        life:random(.22,.7),max:.7,color,size:Math.random()<.2?2:1,impact:kind==='impact'});
     }
   }
   function hit(p,amount,x,y,zoneOverride,cause='GUN',owner=null){
@@ -567,9 +568,14 @@ function plane(type,id,x,y,angle){
     const absorbed=Math.min(p.armour,remaining);
     p.armour-=absorbed;remaining-=absorbed;
     p.health=Math.max(0,p.health-remaining);
-    p.hitFlash=.17;p.damageCause=cause;p.damageNotice=1.15;
-    if(state.blasts.length<12)state.blasts.push({x,y,r:3,life:.19,max:.19,large:false});
-    emit(x,y,7,'#ffe0a0',26);sound('hit');
+    p.hitFlash=.15;p.hitX=x;p.hitY=y;p.damageCause=cause;p.damageNotice=1.15;
+    // Localised metal-impact sparks and brief grey debris instead of a yellow halo.
+    emit(x,y,10,'#f7d7a0',31,'impact');
+    emit(x,y,4,'#7c8985',15,'impact');
+    if(state.trails.length<115)state.trails.push({
+      x,y,vx:-p.vx*.06,vy:-p.vy*.06,age:0,life:.32,heavy:true
+    });
+    sound('hit');
     if(p.health<=0){
       p.alive=false;emit(p.x,p.y,28,'#ffc47e',75);emit(p.x,p.y,16,'#625765',35);
       if(state.blasts.length<12)state.blasts.push({x:p.x,y:p.y,r:p.d.radius+8,life:.65,max:.65,large:true});
@@ -709,7 +715,7 @@ function plane(type,id,x,y,angle){
     if(p.angle< -Math.PI)p.angle+=TAU;
     const power=1-.15*clamp((.6-p.health/p.d.hull)/.6,0,1);
     // A powerful but bounded Spitfire speed burst; Bf 109 retains Overdrive.
-    const boostGain=p.boosting?(p.type==='fighter'?1.94:1.40):1;
+    const boostGain=p.boosting?(p.type==='fighter'?1.75:1.40):1;
     const wanted=p.d.speed*engine*(p.engineCutTime>0?.42:1)*(p.diveTime>0?1.15:1)*power*(.87+.13*p.energy/100)*boostGain*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
     // Airspeed gained in a dive carries through a level-out, then fades.
     const drag=p.role==='fighter'?1.08:p.role==='heavy'?.93:.79;
@@ -721,7 +727,7 @@ function plane(type,id,x,y,angle){
     p.speed+=dt*exchange*(DIVE_SPEED_GAIN*dive*dive-29*climb*climb);
     if(p.diveTime>0){p.speed+=dt*11;p.vy+=dt*36;}
     // Higher but bounded dive ceiling; proportional Overdrive headroom.
-    const speedLimit=p.boosting?(p.type==='fighter'?2.08:1.78):DIVE_OVERSPEED_LIMIT;
+    const speedLimit=p.boosting?(p.type==='fighter'?1.83:1.78):DIVE_OVERSPEED_LIMIT;
     p.speed=clamp(p.speed,p.d.speed*.43,p.d.speed*engine*speedLimit);
     // The velocity vector gently follows the fuselage, rather than snapping.
     const follow=Math.min(1,dt*(p.role==='bomber'?3.2:p.role==='heavy'?4:5.1));
@@ -949,7 +955,7 @@ function plane(type,id,x,y,angle){
     p.armourTime=Math.max(0,p.armourTime-dt);
     const wasBoosting=p.overdriveTime>0;
     p.overdriveTime=Math.max(0,(p.overdriveTime||0)-dt);
-    if(p.type==='fighter'&&wasBoosting&&p.overdriveTime===0)p.corkscrewRecovery=.65;
+    if(p.type==='fighter'&&wasBoosting&&p.overdriveTime===0)p.corkscrewRecovery=.45;
     p.corkscrewTime=Math.max(0,(p.corkscrewTime||0)-dt);
     p.corkscrewRecovery=Math.max(0,(p.corkscrewRecovery||0)-dt);
     if(p.bombQueue>0){p.bombInterval-=dt;if(p.bombInterval<=0){releaseBomb(p);p.bombQueue--;p.bombInterval=.40;if(p.bombQueue===0)p.bombRunId++;}}
@@ -1375,27 +1381,50 @@ function plane(type,id,x,y,angle){
       c.strokeStyle='#dcece0b3';c.lineWidth=.65;
       c.beginPath();c.ellipse(0,0,p.d.radius+3,4,0,0,TAU);c.stroke();
     }
-    if(p.armourTime>0){
-      c.beginPath();c.ellipse(0,0,10,8,0,0,TAU);
-      c.strokeStyle='#b1ecf5c9';c.lineWidth=.75;c.stroke();
-    }
-    // Aircraft now read at phone resolution without altering hitboxes or
-    // physics. Larger bombers communicate their imposing defensive role.
-    c.scale(p.role==='bomber'?.69:p.role==='heavy'?.64:.61,
-            p.role==='bomber'?.69:p.role==='heavy'?.64:.61);
+    // Slightly smaller miniatures. Physics, hitbox and projectile origins unchanged.
+    const miniatureScale=p.role==='bomber'?.61:p.role==='heavy'?.565:.54;
+    c.scale(miniatureScale,miniatureScale);
     const artState=p.health<p.d.hull*.38?'damaged':p.health<p.d.hull*.70?'worn':'level';
-    // F1 prototype: opt-in 2.5D sprite trial. Keep the old hand-drawn
-    // aircraft for every other plane and for all regular players.
-    if(!(f1SpriteTrial&&window.WingmanF1Preview?.draw(c,p.type,artState))){
-      aircraftArt?.draw(c,p.type,artState);
+    const paintPlane=()=>{
+      if(!(useHdAircraft&&window.WingmanAircraftHD?.draw(c,p.type,artState))){
+        aircraftArt?.draw(c,p.type,artState);
+      }
+    };
+    paintPlane();
+    // Pilot Harden and the heavy-fighter armour special both flash the aircraft
+    // itself, like a power-up, rather than drawing a blue protection ring.
+    if((p.hardenTime>0||p.armourTime>0)&&Math.sin(state.visualClock*38)>-.06){
+      c.save();
+      c.globalAlpha=.80;
+      c.filter='brightness(3.5) saturate(.3)';
+      paintPlane();
+      c.restore();
     }
     if(p.boosting){
-      // Cool air streaks, not a jet flame: WWII engines don't have afterburners.
-      c.strokeStyle='#d7eff6a0';c.lineWidth=.65;
-      for(let i=-1;i<=1;i++){
-        c.beginPath();
-        c.moveTo(-17,i*5);c.lineTo(-25-i*2,i*5-1);
-        c.stroke();
+      if(p.type==='fighter'){
+        // A brief glow from the exhaust stacks and acceleration streaks;
+        // intentionally NOT an afterburner flame on a piston-engine aircraft.
+        const intensity=Math.min(1,p.overdriveTime/.35);
+        const flicker=.8+.2*Math.sin(state.visualClock*69);
+        c.save();
+        const glow=c.createRadialGradient(8,-.9,.25,8,-.9,5.5);
+        glow.addColorStop(0,'rgba(255,232,157,.8)');
+        glow.addColorStop(.36,'rgba(249,163,80,.46)');
+        glow.addColorStop(1,'rgba(249,163,80,0)');
+        c.globalAlpha=intensity*flicker;
+        c.fillStyle=glow;c.beginPath();c.ellipse(8,-.9,6,3.4,0,0,TAU);c.fill();
+        c.strokeStyle='#ffdfad';c.lineWidth=.55;
+        for(let i=0;i<3;i++){
+          const trail=-24-i*2.5-(state.visualClock*23%5);
+          c.globalAlpha=(.52-i*.1)*intensity;
+          c.beginPath();c.moveTo(trail,(-3+i*3));c.lineTo(trail+9,(-3+i*3));c.stroke();
+        }
+        c.restore();
+      }else{
+        c.strokeStyle='#e1ebdfa0';c.lineWidth=.55;
+        for(let i=-1;i<=1;i++){
+          c.beginPath();c.moveTo(-17,i*4);c.lineTo(-23,i*4);c.stroke();
+        }
       }
     }
     if(p.muzzleFlash>0){
@@ -1406,10 +1435,8 @@ function plane(type,id,x,y,angle){
       c.fillStyle='#ffc976';
       c.beginPath();c.moveTo(-14,-2.3);c.lineTo(-23,0);c.lineTo(-14,2.3);c.fill();
     }
-    if(p.hitFlash>0){
-      c.beginPath();c.ellipse(0,0,8,5,0,0,TAU);
-      c.strokeStyle='#fff0bd';c.lineWidth=.8;c.stroke();
-    }
+    // Impact flashes are rendered as localised sparks/debris in world space,
+    // never as a circle around the aircraft.
     c.restore();
     c.fillStyle='#1e3341d9';c.fillRect(p.x-7,p.y-14,14,5.5);
     c.font='bold 5px sans-serif';c.textAlign='center';c.textBaseline='top';
@@ -1619,7 +1646,13 @@ function plane(type,id,x,y,angle){
     drawModels();
     for(const p of state.sparks){
       g.globalAlpha=clamp(p.life/p.max,.2,1);
-      g.fillStyle=p.color;g.fillRect(Math.round(p.x),Math.round(p.y),p.size,p.size);
+      if(p.impact){
+        g.strokeStyle=p.color;g.lineWidth=.85;
+        g.beginPath();g.moveTo(p.x,p.y);
+        g.lineTo(p.x-p.vx*.07,p.y-p.vy*.07);g.stroke();
+      }else{
+        g.fillStyle=p.color;g.fillRect(Math.round(p.x),Math.round(p.y),p.size,p.size);
+      }
     }
     g.globalAlpha=1;
     // Text and meters are rendered only once, at native device resolution.
