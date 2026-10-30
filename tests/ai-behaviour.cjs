@@ -4,7 +4,7 @@
    Run: node tests/ai-behaviour.cjs [--seconds=60] [--reps=2]
 */
 'use strict';
-function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer']}={}){
+function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],difficulty='ace'}={}){
  let source=sources.game;
  const edit=(from,to)=>{if(source.split(from).length!==2)throw Error('QA anchor missing: '+from.slice(0,75));source=source.replace(from,to);};
  edit('      if(user.alive)updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);',
@@ -75,7 +75,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer']}
   for(let rep=0;rep<reps;rep++)for(let i=0;i<types.length;i++)for(let j=i+1;j<types.length;j++){
    for(const order of [0,1]){
     const a=order?types[j]:types[i],b=order?types[i]:types[j];seed=10001+rep*17029+i*1873+j*3899+order*1193;
-    window.aiQA.setup(a,b,'ace',scenario,rep%2===1);const x=window.aiQA.tick(Math.round(seconds*60));
+    window.aiQA.setup(a,b,difficulty,scenario,rep%2===1);const x=window.aiQA.tick(Math.round(seconds*60));
     summary.games++;summary.scenarios[scenario].games++;summary.scenarios[scenario].playerDamage+=x.damage[0];summary.scenarios[scenario].playerHits+=x.hits[0];if(x.winner===1)summary.enemyVictories++;
     for(let side=0;side<2;side++){
      const type=side===0?a:b,t=summary.byType[type],sc=summary.scenarios[scenario];
@@ -104,7 +104,7 @@ if(typeof module!=='undefined')module.exports={runAI};
 if(typeof require==='function'&&typeof module!=='undefined'&&require.main===module){
  const fs=require('node:fs'),path=require('node:path'),root=path.join(__dirname,'..');
  const load=p=>fs.readFileSync(path.join(root,p),'utf8');
- const result=runAI({game:load('game.js'),physics:load('src/physics/swoop-flight.js'),aircraft:load('src/art/aircraft.js'),scenery:load('src/art/scenery.js')},{reps:1,seconds:Number(process.argv.find(a=>a.startsWith('--seconds='))?.split('=')[1]||60)});
+ const result=runAI({game:load('game.js'),physics:load('src/physics/swoop-flight.js'),aircraft:load('src/art/aircraft.js'),scenery:load('src/art/scenery.js')},{reps:1,seconds:Number(process.argv.find(a=>a.startsWith('--seconds='))?.split('=')[1]||60),difficulty:process.argv.find(a=>a.startsWith('--difficulty='))?.split('=')[1]||'ace'});
  console.log(JSON.stringify(result,null,2));
  if(result.groundCrashes>0)process.exitCode=1;
 }
