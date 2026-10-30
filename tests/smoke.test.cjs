@@ -383,6 +383,9 @@ test('Heavy fighter shield reduces damage while active',()=>{
 test('G3A.2 near-ceiling fighter keeps chasing instead of bobbing in ground-recovery mode',()=>{
  const game=launch();game.listeners.get('start:click')();
  const [player,fighter]=game.internals.state.fliers;
+ // The test harness defaults to an enemy bomber; explicitly select a
+ // Messerschmitt so this regression actually tests fighter pursuit.
+ fighter.type='bf109';fighter.role='fighter';fighter.d=game.internals.PLANES.bf109;
  assert.equal(fighter.role,'fighter');
  fighter.y=39;fighter.vy=-13;fighter.vx=-60;fighter.angle=-Math.PI+.2;
  fighter.aiThink=0;fighter.aiMode='recover';fighter.aiRecoveryTime=0;
