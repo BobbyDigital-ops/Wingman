@@ -192,6 +192,16 @@ function sortieBonuses(run,plane,preferred){
  for(const key of Object.keys(m))m[key]=n(m[key],key==='armour'?.68:.78,1.30);
  return m;
 }
+// Performance grade reflects the completed sortie, not a promise about
+// difficulty. Tactical threat is a separate planning estimate.
+function sortieGrade(won,encounter,summary={}){
+ if(!won)return 'F';
+ const integrity=n(summary.integrity??1,0,1);
+ const remaining=n(summary.remainingSeconds??0,0,Math.max(1,encounter?.timeLimit||120));
+ const pace=remaining/Math.max(1,encounter?.timeLimit||120);
+ const quality=integrity*.72+pace*.28;
+ return quality>=.85?'S':quality>=.68?'A':quality>=.48?'B':'C';
+}
 function settle(run,encounter,won,remaining=1){
  normalizeRun(run);
  const integrity=n(remaining,0,1);
@@ -205,7 +215,7 @@ function settle(run,encounter,won,remaining=1){
  }
  return run;
 }
-const api={UPGRADES,ELITE_UPGRADES,SETBACKS,normalizeRun,decorateEncounter,threatRating,offerReward,claim,repair,sortieBonuses,settle};
+const api={UPGRADES,ELITE_UPGRADES,SETBACKS,normalizeRun,decorateEncounter,threatRating,sortieGrade,offerReward,claim,repair,sortieBonuses,settle};
 root.WingmanCampaign=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
