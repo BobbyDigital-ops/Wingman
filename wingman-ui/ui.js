@@ -16,8 +16,12 @@ const PLANES=[
 const liveSpecs=P.WingmanGame?.aircraftSpecs?.();
 if(liveSpecs)for(let i=0;i<TYPES.length;i++){const p=liveSpecs[TYPES[i]];if(!p)continue;PLANES[i][4]=p.speed;PLANES[i][5]=p.turn;PLANES[i][6]=p.armour;PLANES[i][7]=p.damage;}
 const OPS=[['1 VS 1','Classic dogfight','Head-to-head fighter combat.','duel'],['SURVIVAL','How long can you last?','Increasing waves of enemies.','survival'],['FREE FOR ALL','Every pilot for themselves','Multiple aircraft. One winner.','triple'],['2 VS 2','Team up','Fight with an AI wingman.','teams'],['CHALLENGES','Special operations','Time-limited combat objectives.','challenge']];
-const S={screen:'title',back:[],op:0,plane:0,opponent:'random',faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:0,campaignPanel:'ladder',difficulty:'standard',theatre:'0',sound:true,lastResult:null};
+const S={screen:'title',back:[],op:0,plane:0,opponent:'random',faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:0,campaignPanel:'ladder',difficulty:'standard',theatre:'0',sound:true,optionTab:'GAMEPLAY',lastResult:null};
 const stage=document.querySelector('#stage'),nav=document.querySelector('.nav');
+try{const savedOptions=JSON.parse(localStorage.getItem('wingman-ui-flight-presets-v1')||'null');
+ if(savedOptions&&['rookie','standard','ace'].includes(savedOptions.difficulty))S.difficulty=savedOptions.difficulty;
+ if(savedOptions&&['0','1','2','3'].includes(savedOptions.theatre))S.theatre=savedOptions.theatre;
+}catch{}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const aircraftPreviews={};
 const photo=name=>{return art[name]||'';};
@@ -72,7 +76,7 @@ function home(){
  return '<section class="frame wm-v12-home">'+
    '<div class="wm-v12-home-content">'+
    '<div class="wm-v12-home-intro"><span class="wm-v12-kicker">RAF FIGHTER COMMAND · OPERATIONS ROOM · 1940</span>'+
-   '<h1>WINGMAN</h1><div class="wm-v12-home-title">CHOOSE YOUR ADVENTURE</div>'+
+   '<h1>CHOOSE YOUR<br>ADVENTURE</h1><div class="wm-v12-home-title">WINGMAN · FLIGHT OPERATIONS</div>'+
    '<p>ONE WAR. TWO WAYS TO MAKE YOUR NAME.</p>'+
    (p?'<button type="button" class="wm-v12-identity" data-action="licence"><span class="wm-v12-identity-photo">'+atlas(p)+'</span><span><small>YOUR SERVICE RECORD</small><strong>'+esc(p.name)+'</strong><em>VIEW PILOT LICENCE ›</em></span></button>':
        '<button type="button" class="wm-v12-identity" data-action="pilots"><span>PERSONNEL OFFICE · SELECT YOUR PILOT ›</span></button>')+
@@ -281,7 +285,51 @@ function records(){
   '<div><span>'+esc(e.won?'VICTORY':'SHOT DOWN')+' · '+esc(e.grade||'—')+'</span><b>R'+esc(e.rank)+' · '+esc(e.mission||'SORTIE')+'</b><small>'+esc(e.rival||'RIVAL')+'</small></div>').join('')||'<p>No campaign sorties recorded.</p>'}</div></div>
  <div class="licence-actions">${confirmButton('← BACK','back','outline')}${confirmButton('KING OF THE SKIES →','career')}</div></section>`;
 }
-function options(){return `<section class="frame options-screen">${header('OPTIONS','TACTICS · CONTROLS · THEATRE')}<div class="inner option-rows"><div class="option-card"><h2>FLIGHT CONDITIONS</h2><label>DIFFICULTY <select data-setting="difficulty"><option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></label><label>THEATRE <select data-setting="theatre"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">STORM</option></select></label></div><div class="option-card"><h2>CONTROLS & SOUND</h2><p>A/D — STEER · SPACE — FIRE · E — AIRCRAFT ABILITY · Q — PILOT SKILL</p>${confirmButton('SOUND '+(S.sound?'ON':'OFF'),'sound','navy')}${confirmButton('SERVICE RECORD','records','navy')}</div></div><div class="inner">${confirmButton('← BACK','back','outline')}</div></section>`;}
+function options(){
+ const selected=S.optionTab||'GAMEPLAY';
+ const tabs=['GAMEPLAY','CONTROLS','AUDIO','GRAPHICS'].map(name=>
+   '<button type="button" role="tab" aria-selected="'+(selected===name)+'" data-option-tab="'+name+'">'+name+'</button>').join('');
+ let area='';
+ if(selected==='GAMEPLAY'){
+  area='<div class="wm-v14-field"><label for="wingman-flight-difficulty">ENEMY SKILL</label><select id="wingman-flight-difficulty" data-setting="difficulty">'+
+  '<option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></div>'+
+  '<div class="wm-v14-field"><label for="wingman-flight-theatre">BATTLEFIELD</label><select id="wingman-flight-theatre" data-setting="theatre">'+
+  '<option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option>'+
+  '<option value="2">NORTH AFRICA</option><option value="3">STORM</option></select></div>'+
+  '<p class="wm-v14-instructions">Mission rules are also available in Skirmish briefing. These presets carry across to your next sortie.</p>';
+ }else if(selected==='CONTROLS'){
+  area='<div class="wm-v14-instructions"><strong>FLIGHT STICK / KEYBOARD</strong><p>A / D — STEER AIRCRAFT</p>'+
+  '<p>SPACE — FIRE WEAPONS</p><p>E — AIRCRAFT ABILITY</p><p>Q — PILOT SKILL</p>'+
+  '<p>On mobile, use the in-flight touch controls. Existing bindings are unchanged.</p></div>';
+ }else if(selected==='AUDIO'){
+  area='<div class="wm-v14-instructions"><strong>WIRELESS / SOUND</strong>'+
+  '<p>Adjust the existing game audio without changing weapon or engine effects.</p></div>'+
+  confirmButton('SOUND '+(S.sound?'ON':'OFF'),'sound','navy');
+ }else{
+  area='<div class="wm-v14-instructions"><strong>DISPLAY & FLIGHT VIEW</strong>'+
+  '<p>Use fullscreen for an uninterrupted view of the battlefield.</p>'+
+  '<p>The current game rendering, terrain and aircraft sprites are preserved.</p></div>'+
+  confirmButton('⛶ TOGGLE FULLSCREEN','fullscreen','navy');
+ }
+ return '<section class="frame options-screen wm-v14-options">'+
+  header('AIRCRAFT CONTROLS','RAF MAINTENANCE DEPARTMENT · INSTRUMENTS OFFICE')+
+  '<div class="wm-v14-options-body">'+
+   '<div class="wm-v14-options-intro"><span>RAF MAINTENANCE DEPARTMENT / FORM 08</span>'+
+   '<h2>SET YOUR INSTRUMENTS</h2><p>Adjust your controls, audio and display before the next sortie.</p></div>'+
+   '<div class="wm-v14-options-grid">'+
+    '<aside class="wm-v14-console" aria-label="Decorative aircraft instrument console">'+
+     '<div class="wm-v14-dial" aria-hidden="true"><span>RPM</span><strong>24</strong><small>× 100</small></div>'+
+     '<div class="wm-v14-dial" aria-hidden="true"><span>ALT</span><strong>08</strong><small>× 1000 FT</small></div>'+
+     '<div class="wm-v14-dial" aria-hidden="true"><span>FUEL</span><strong>¾</strong><small>RESERVE</small></div>'+
+     '<div class="wm-v14-console-caption">GROUND CREW · INSTRUMENT CALIBRATION</div></aside>'+
+    '<div class="wm-v14-option-panel"><div class="wm-v14-kicker">AIR MINISTRY · INSTRUMENT & SYSTEMS OFFICE</div>'+
+     '<h3>FLIGHT CONFIGURATION</h3><div class="wm-v14-tabs" role="tablist" aria-label="Options categories">'+tabs+'</div>'+
+     '<div class="wm-v14-option-content" role="tabpanel">'+area+'</div>'+
+     '<div class="wm-v14-option-actions">'+
+      '<button class="btn navy" type="button" data-action="options-reset">RESET FLIGHT PRESETS</button>'+
+      '<button class="btn red" type="button" data-action="back">APPLY CHANGES ›</button></div></div>'+
+   '</div><div class="wm-v14-instrument-note">08 / INSTRUMENT PANEL · FIGHTER COMMAND</div></div></section>';
+}
 function outcome(){
  const saved=playerSave(),run=saved?.run,pending=run?.pendingReward;
  const isCareer=!!S.lastCareer||!!pending;
@@ -373,6 +421,7 @@ function go(screen){if(S.screen!==screen){S.back.push(S.screen);S.screen=screen;
 function back(){S.screen=S.back.pop()||'home';if(S.screen!=='aircraft')S.career=false;show()}
 function beginCareer(){const a=api();if(!a?.beginCareer?.())return;S.choice=0;S.career=false;S.screen='career';show()}
 function action(v){
+ if(v==='options-reset'){S.difficulty='standard';S.theatre='0';try{localStorage.setItem('wingman-ui-flight-presets-v1',JSON.stringify({difficulty:S.difficulty,theatre:S.theatre}))}catch{}return show();}
  if(v==='opening-start'){S.screen='profiles';S.back=[];return show();}
  if(v==='profile-back'){S.screen='title';S.back=[];return show();}
  if(v==='switch-profile'){S.screen='profiles';S.back=['home'];return show();}
@@ -411,6 +460,7 @@ document.addEventListener('click',e=>{
    }
    return;
  }
+ if(el.dataset.optionTab){S.optionTab=el.dataset.optionTab;return show()}
  if(el.dataset.action)return action(el.dataset.action);
  if(el.dataset.op!=null){S.op=Number(el.dataset.op);return show()}
  if(el.dataset.profileSlot!=null){
@@ -430,6 +480,8 @@ document.addEventListener('change',e=>{
  const key=e.target.dataset.setting;
  if(key==='op'){S.op=Number(e.target.value);show();return;}
  S[key]=e.target.value;
+ if(key==='difficulty'||key==='theatre')try{localStorage.setItem('wingman-ui-flight-presets-v1',
+  JSON.stringify({difficulty:S.difficulty,theatre:S.theatre}))}catch{}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.screen!=='title')back();else if((e.key==='Enter'||e.key===' ')&&S.screen==='title'){e.preventDefault();action('opening-start')}});
 window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.data?.wmUI==='career'){S.career=false;S.screen='career';S.back=[];S.lastResult=null;show()}if(e.data?.wmUI==='home'){S.career=false;S.screen='home';S.back=[];show()}if(e.data?.wmUI==='result'){S.lastResult=e.data.result;S.lastCareer=!!e.data.career;S.screen='outcome';S.back=[];show()}});
