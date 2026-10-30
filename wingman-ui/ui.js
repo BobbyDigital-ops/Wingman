@@ -48,6 +48,29 @@ function atlas(p){
 }
 function header(title,subtitle){return '<div class="section-header"><h1>'+title+'</h1><p>'+subtitle+'</p></div>'}
 function title(){return `<section class="frame poster-home v4-home opening-screen"><div class="opening-content"><div class="home-roundel"><i class="roundel"></i><span>RAF FIGHTER COMMAND · 1940</span></div><h1>WINGMAN</h1><p>THE SKIES ARE CALLING</p><button class="btn red opening-start" data-action="opening-start">PRESS TO START →</button><small>CHOOSE YOUR PILOT · EARN YOUR WINGS</small></div></section>`}
+function profiles(){
+ const fallback=playerSave();
+ const slots=P.WingmanProfiles?.list?.()||[{slot:0,active:true,
+   hasProfile:!!fallback?.profile?.rosterId,name:fallback?.profile?.name,
+   rank:fallback?.run?.rank||0,wins:fallback?.wins||0,rosterId:fallback?.profile?.rosterId}];
+ const cards=slots.map(item=>{
+   const p=pById(item.rosterId),picture=p?atlas(p):'<span class="wm-v13-unassigned">+</span>';
+   return '<button class="wm-v13-profile-card '+(item.active?'active':'')+'" type="button" data-profile="'+item.slot+'">'+
+    '<span class="wm-v13-profile-photo">'+picture+'</span>'+
+    '<span class="wm-v13-profile-copy"><small>SERVICE RECORD '+String(item.slot+1).padStart(2,'0')+
+    (item.active?' · CURRENT':'')+'</small>'+
+    '<strong>'+esc(item.name||'NEW PILOT')+'</strong>'+
+    '<span>'+(item.hasProfile?'RANK '+(item.rank||1)+' · '+(item.wins||0)+' CAMPAIGN WINS':'ENLIST A NEW AIRCREW MEMBER')+'</span>'+
+    '<em>'+(item.hasProfile?'SELECT THIS PROFILE ›':'CREATE PROFILE ›')+'</em></span></button>';
+ }).join('');
+ return '<section class="frame wm-v13-profiles"><div class="wm-v13-profiles-content">'+
+ '<span class="wm-v12-kicker">AIR MINISTRY · PERSONNEL OFFICE</span><h1>SELECT YOUR SERVICE RECORD</h1>'+
+ '<p>Choose your flying identity. Each service record has its own campaign and arcade history.</p>'+
+ '<div class="wm-v13-profile-cards">'+cards+'</div>'+
+ '<div class="wm-v13-profiles-footer"><span>THREE INDEPENDENT CAREERS · SAVED ON THIS DEVICE</span>'+
+ '<button type="button" data-action="back-to-splash">← BACK TO SPLASH</button></div>'+
+ '</div></section>';
+}
 function home(){
  const saved=playerSave(),p=player(),rank=saved?.run?.rank||1;
  const careerDetail=saved?.run?'CONTINUE · RANK '+rank+' / 8':'EIGHT RANKS · ONE LEGEND';
