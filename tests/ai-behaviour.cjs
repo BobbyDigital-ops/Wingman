@@ -164,7 +164,15 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
    label:'Bomber Raid',difficulty:'ace',timeLimit:54};
   window.aiQA.mission(bomber);window.aiQA.state.time=.005;
   const interceptionDeadline=window.aiQA.advance(2).winner===1;
-  summary.campaignChecks={escortPresent,escortSurvived,escortLost,interceptionDeadline};
+  window.aiQA.mission({...escort,playerAptitude:{hull:1.2,armour:1.15,damage:1.12,speed:1.04,turn:1.05}});
+  const hero=window.aiQA.state.fliers[0],ally=window.aiQA.state.fliers.find(p=>p.escortProtected);
+  const campaignBonusesApplied=hero.d.hull>130&&hero.d.speed>82&&hero.d.turn>3.15;
+  hero.spawnSafe=0;ally.spawnSafe=0;ally.x=hero.x+95;
+  const before=hero.health;
+  state.bullets.push({x:hero.x-16,y:hero.y,vx:2100,vy:0,life:.8,age:.12,owner:ally.id,damage:45});
+  projectiles(STEP);
+  const noFriendlyFire=hero.health===before;
+  summary.campaignChecks={escortPresent,escortSurvived,escortLost,interceptionDeadline,campaignBonusesApplied,noFriendlyFire};
   if(Object.values(summary.campaignChecks).some(value=>!value))
     throw Error('Campaign mission objective regression: '+JSON.stringify(summary.campaignChecks));
  }
