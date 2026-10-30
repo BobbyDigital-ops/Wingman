@@ -399,3 +399,21 @@ button.route-map-node:hover{transform:translateX(-50%) scale(1.12);box-shadow:0 
  .wm-live-aircraft .grid-plane-card[data-plane="4"]>img,
  .wm-live-aircraft .grid-plane-card[data-plane="5"]>img{width:78%!important}
 }
+
+/* Luftwaffe art actual painted-image inset. Width alone did not rescale the image
+   because the image panel's height was dominant. The internal padding does. */
+.wm-live-aircraft .grid-plane-card[data-plane="3"]>img,
+.wm-live-aircraft .grid-plane-card[data-plane="4"]>img,
+.wm-live-aircraft .grid-plane-card[data-plane="5"]>img{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  padding:clamp(10px,1.35vh,18px) clamp(35px,4vw,75px)!important;
+  object-fit:contain!important;
+  background:#17394a!important;
+}
+@media(max-width:700px){
+ .wm-live-aircraft .grid-plane-card[data-plane="3"]>img,
+ .wm-live-aircraft .grid-plane-card[data-plane="4"]>img,
+ .wm-live-aircraft .grid-plane-card[data-plane="5"]>img{width:100%!important;padding:9px 24px!important}
+}
