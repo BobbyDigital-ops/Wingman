@@ -41,7 +41,7 @@ function atlas(p){
  return '<span class="atlas-portrait" role="img" aria-label="'+esc(p.name)+' portrait" style="display:block;width:100%;height:100%;background-image:url('+src+');background-size:'+(cols*100)+'% '+(rows*100)+'%;background-position:'+x+'% '+y+'%"></span>';
 }
 function header(title,subtitle){return '<div class="section-header"><h1>'+title+'</h1><p>'+subtitle+'</p></div>'}
-function title(){return `<section class="frame poster-home v4-home opening-screen"><div class="opening-content"><div class="home-roundel"><i class="roundel"></i><span>RAF FIGHTER COMMAND · 1940</span></div><h1>WINGMAN</h1><p>THE SKIES ARE CALLING</p><button class="btn red opening-start" data-action="opening-start">PRESS TO START →</button><small>CHOOSE YOUR PILOT · EARN YOUR WINGS</small></div></section>`}
+function title(){return `<section class="frame poster-home v4-home opening-screen"><div class="opening-content"><div class="home-roundel"><i class="roundel"></i><span>RAF FIGHTER COMMAND · 1940</span></div><h1>WINGMAN</h1><p>THE SKIES ARE CALLING</p><button class="btn red opening-start" data-action="opening-start">PRESS TO START →</button><small>THREE SERVICE RECORDS · EARN YOUR WINGS</small></div></section>`}
 function profiles(){
  const fromBridge=api()?.listProfileSlots?.();
  const slots=Array.isArray(fromBridge)&&fromBridge.length===3?fromBridge:
