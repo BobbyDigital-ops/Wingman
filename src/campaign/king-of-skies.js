@@ -1,9 +1,9 @@
-/* Wingman v0.7 — King of the Skies campaign rules.
+/* Wingman v0.8 — King of the Skies mission variety and reward balancing.
    Pure data and deterministic route/reward logic. Existing save key and
    historical records remain authoritative in career.js. */
 (function(root){
 'use strict';
-const MAX_SUPPLIES=12;
+const MAX_SUPPLIES=12,MAX_EFFECTS=14;
 const UPGRADES=[
  {id:'reinforced-spars',name:'REINFORCED SPARS',detail:'+8% hull for the rest of this run',mods:{hull:.08}},
  {id:'armour-plates',name:'EXTRA ARMOUR',detail:'+10% armour for the rest of this run',mods:{armour:.10}},
@@ -13,6 +13,14 @@ const UPGRADES=[
  {id:'field-dressing',name:'FIELD DRESSING',detail:'Recover 35 aircraft condition now',condition:35},
  {id:'supply-cache',name:'SUPPLY CACHE',detail:'Collect 3 additional repair supplies',supplies:3}
 ];
+// Premium modifications are only offered after successful HIGH-risk sorties.
+const ELITE_UPGRADES=[
+ {id:'ace-weapon-sights',name:'ACE WEAPON SIGHTS',detail:'+12% gun damage for the rest of the run',mods:{damage:.12},elite:true},
+ {id:'combat-throttle',name:'COMBAT THROTTLE',detail:'+9% airspeed for the rest of the run',mods:{speed:.09},elite:true},
+ {id:'reinforced-frame',name:'REINFORCED AIRFRAME',detail:'+14% hull for the rest of the run',mods:{hull:.14},elite:true},
+ {id:'ace-control-cables',name:'ACE CONTROL CABLES',detail:'+11% handling for the rest of the run',mods:{turn:.11},elite:true},
+ {id:'flak-armouring',name:'FLAK ARMOURING',detail:'+17% armour for the rest of the run',mods:{armour:.17},elite:true}
+];
 const SETBACKS=[
  {id:'engine-wear',name:'ENGINE WEAR',detail:'-5% speed until repaired',mods:{speed:-.05}},
  {id:'wing-strain',name:'WING STRAIN',detail:'-6% handling until repaired',mods:{turn:-.06}},
@@ -21,21 +29,31 @@ const SETBACKS=[
 const n=(v,min,max)=>Math.max(min,Math.min(max,Number(v)||0));
 const pick=(arr,seed)=>arr[(Math.abs(seed)>>>0)%arr.length];
 const hash=(...v)=>{let x=2166136261;for(const value of v.join('|'))x=Math.imul(x^value.charCodeAt(0),16777619)>>>0;return x;};
-const byId=Object.fromEntries([...UPGRADES,...SETBACKS].map(v=>[v.id,v]));
+const byId=Object.fromEntries([...UPGRADES,...ELITE_UPGRADES,...SETBACKS].map(v=>[v.id,v]));
 function normalizeRun(run){
  if(!run)return null;
  run.supplies=n(run.supplies,0,MAX_SUPPLIES);
  run.condition=run.condition===undefined?100:n(run.condition,15,100);
- run.effects=Array.isArray(run.effects)?run.effects.filter(id=>typeof id==='string'&&byId[id]).slice(-7):[];
+ run.effects=Array.isArray(run.effects)?[...new Set(run.effects.filter(id=>typeof id==='string'&&byId[id]))].slice(-MAX_EFFECTS):[];
  if(run.pendingReward&&!Array.isArray(run.pendingReward.offers))run.pendingReward=null;
  return run;
 }
 function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
  const rank=n(run.rank,1,8),final=rank===8;
  const risk=lane===0?'LOW':lane===1?'MEDIUM':'HIGH';
- const objective=final?'final':lane===1&&rank>=4&&rank%3===1?'escort':
-   lane===0&&rank>=2?'intercept':
-   lane===2&&rank>=3?'outnumbered':'duel';
+ // Each row offers three genuinely distinct engagements. Every route still
+ // uses the existing pilots and real flight physics, never decorative labels.
+ const encounters=[
+  ['patrol','duel','ace-hunt'],
+  ['intercept','duel','ace-hunt'],
+  ['recon','ace-hunt','outnumbered'],
+  ['intercept','escort','outnumbered'],
+  ['recon','ace-hunt','outnumbered'],
+  ['intercept','ace-hunt','outnumbered'],
+  ['recon','escort','outnumbered'],
+  ['final','final','final']
+ ];
+ const objective=encounters[rank-1][lane];
  // Maintain the known real roster; don't create artificial pilots or replace art.
  if(objective==='intercept'){
    const type=run.faction==='Allies'?'he111':'bomber';
@@ -46,6 +64,26 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
        opponents:[rival],wingman:null,wingmen:[],
        attributes:rival.attributes,signature:rival.signature,
        archetype:rival.archetype,personality:rival.personality});
+   }
+ }
+ if(objective==='ace-hunt'){
+   const fighter=pool.find(p=>p.plane===(run.faction==='Allies'?'bf109':'fighter'));
+   if(fighter&&profile){
+     const rival=profile(fighter);
+     Object.assign(enc,{id:rival.id,label:rival.name,types:[rival.plane],
+       opponents:[rival],wingman:null,wingmen:[],attributes:rival.attributes,
+       signature:rival.signature,archetype:rival.archetype,personality:rival.personality});
+   }
+ }
+ if(objective==='recon'){
+   // A real defensive sortie against one pursuing fighter. Survive until
+   // reconnaissance finishes, or shoot down the pursuer early.
+   const pursuer=pool.find(p=>p.plane===(run.faction==='Allies'?'bf109':'fighter'));
+   if(pursuer&&profile){
+     const rival=profile(pursuer);
+     Object.assign(enc,{id:rival.id,label:rival.name,types:[rival.plane],
+       opponents:[rival],wingman:null,wingmen:[],attributes:rival.attributes,
+       signature:rival.signature,archetype:rival.archetype,personality:rival.personality});
    }
  }
  if(objective==='outnumbered'&&enc.opponents.length===1&&profile){
@@ -64,41 +102,60 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
  enc.mission=final?'FINAL SQUADRON':
    objective==='escort'?'BOMBER ESCORT':
    objective==='intercept'?'BOMBER INTERCEPTION':
+   objective==='recon'?'RECONNAISSANCE RUN':
+   objective==='ace-hunt'?'ACE HUNT':
    objective==='outnumbered'?'OUTNUMBERED PATROL':
    lane===1?'ACE DUEL':'SCOUT PATROL';
- enc.briefing=final?'Destroy the escort fighters and the final named ace.':
-   objective==='escort'?'Protect your allied bomber until relief arrives, or eliminate its attackers.':
-   objective==='intercept'?'Shoot down the enemy bomber before it escapes.':
-   objective==='outnumbered'?'Survive an outnumbered engagement and defeat both enemy pilots.':
-   lane===1?'Win an aggressive duel against a skilled rival.':
-   'Complete a cautious scouting engagement with uncertain rewards.';
- enc.timeLimit=final?165:objective==='escort'?65:
-   objective==='intercept'?Math.max(54,91-rank*3):
-   objective==='outnumbered'?112:115;
+ enc.briefing=final?'Defeat both escorts and the named final ace before time expires.':
+   objective==='escort'?'Protect your bomber until relief arrives, or defeat both attackers.':
+   objective==='intercept'?'Destroy the enemy bomber before it escapes into cloud cover.':
+   objective==='recon'?'Protect the reconnaissance aircraft: survive until the photographs are complete, or destroy the pursuer.':
+   objective==='ace-hunt'?'Bring down a veteran fighter before the short intercept window closes.':
+   objective==='outnumbered'?'Survive against two skilled pilots. Both must be defeated.':
+   lane===1?'Win a determined one-on-one duel.':
+   'Complete a lower-risk patrol. Rewards are modest and field setbacks are possible.';
+ enc.timeLimit=final?(lane===2?145:lane===1?160:175):
+   objective==='escort'?Math.max(65,79-rank*2):
+   objective==='intercept'?Math.max(54,96-rank*4):
+   objective==='recon'?Math.max(49,63-rank*2):
+   objective==='ace-hunt'?Math.max(60,87-rank*3):
+   objective==='outnumbered'?Math.max(97,126-rank*3):115;
  enc.escortType=objective==='escort'?(run.faction==='Allies'?'bomber':'he111'):null;
  enc.aiRank=n(rank+(lane===2?2:lane===1?1:0),1,8);
  enc.difficulty=enc.aiRank<=2?'rookie':enc.aiRank<=4?'standard':'ace';
  enc.suppliesAward=final?3:lane+1;
  enc.rewardTier=lane;
+ enc.threat=threatRating(enc);
  return enc;
+}
+function threatRating(enc){
+ // Planning estimate only, NOT a measured win probability.
+ const opponents=enc.types?.length||1,rank=enc.aiRank||enc.rank||1;
+ const task=enc.objective==='escort'?13:enc.objective==='ace-hunt'?14:
+   enc.objective==='outnumbered'?10:enc.objective==='final'?17:
+   enc.objective==='intercept'?5:enc.objective==='recon'?-13:0;
+ return Math.max(10,Math.min(100,Math.round(9+rank*8.5+
+   Math.max(0,opponents-1)*13+task+(enc.timeLimit<75&&enc.objective!=='recon'?7:0))));
 }
 function offerReward(run,encounter){
  normalizeRun(run);
  const lane=n(encounter?.lane,0,2);
  const seed=hash(run.seed,run.rank,run.visits,encounter?.id,lane);
  const available=UPGRADES.filter(u=>!run.effects.includes(u.id)||!u.mods);
- const picks=[];
- for(let i=0;i<3;i++){
-  const pool=available.filter(u=>!picks.includes(u.id));
+ const premium=ELITE_UPGRADES.filter(u=>!run.effects.includes(u.id));
+ const offers=[];
+ if(lane===2&&premium.length)offers.push(pick(premium,seed>>>2).id);
+ const target=lane===0?2:3;
+ for(let i=0;i<target*3&&offers.length<target;i++){
+  const pool=available.filter(u=>!offers.includes(u.id));
   if(!pool.length)break;
-  picks.push(pick(pool,seed+i*1789+Math.imul(i,91)).id);
+  offers.push(pick(pool,seed+i*1789+Math.imul(i,91)).id);
  }
- // Easy routes can surprise with a minor buff or a temporary mechanical
- // setback. Medium/hard routes always provide a beneficial choice.
+ // Low risk still guarantees a useful choice; in 1/4 of easy sorties
+ // the workshop uncovers a repairable mechanical problem on claiming it.
  const setback=lane===0&&seed%4===0?pick(SETBACKS,seed>>>5).id:null;
- const guaranteed=picks.filter(id=>!SETBACKS.find(x=>x.id===id));
  return {rank:run.rank,encounterId:encounter?.id||'',risk:encounter?.risk||'LOW',
-  offers:guaranteed.slice(0,lane===0?2:3),setback,claimed:false};
+  offers,setback,claimed:false};
 }
 function claim(run,id){
  normalizeRun(run);
@@ -112,6 +169,7 @@ function claim(run,id){
  else if(reward.supplies)run.supplies=n(run.supplies+reward.supplies,0,MAX_SUPPLIES);
  // Easy-route drawback lasts until a repair; never silently overwrite perks.
  if(pending.setback&&!run.effects.includes(pending.setback))run.effects.push(pending.setback);
+ run.effects=run.effects.slice(-MAX_EFFECTS);
  run.pendingReward=null;
  return true;
 }
@@ -147,7 +205,7 @@ function settle(run,encounter,won,remaining=1){
  }
  return run;
 }
-const api={UPGRADES,SETBACKS,normalizeRun,decorateEncounter,offerReward,claim,repair,sortieBonuses,settle};
+const api={UPGRADES,ELITE_UPGRADES,SETBACKS,normalizeRun,decorateEncounter,threatRating,offerReward,claim,repair,sortieBonuses,settle};
 root.WingmanCampaign=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
