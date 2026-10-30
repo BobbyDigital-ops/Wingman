@@ -3,10 +3,13 @@
  * No simulation framework or new hitboxes; backward compatible with classic.
  */
 (()=>{'use strict';
+  // G3B recovery: slow yaw made even full stick inputs unable to turn away
+  // from the terrain in time; retain wide bomber turns and inertia while
+  // allowing fighters to complete a genuine banked interception.
   const profiles={
-    fighter:{yaw:.66,rollResponse:7.0,flightTurn:2.35,velocityResponse:3.1},
-    heavy:{yaw:.60,rollResponse:4.5,flightTurn:1.40,velocityResponse:2.3},
-    bomber:{yaw:.48,rollResponse:2.7,flightTurn:.83,velocityResponse:1.9}
+    fighter:{yaw:1.50,rollResponse:7.0,flightTurn:2.35,velocityResponse:3.1},
+    heavy:{yaw:1.10,rollResponse:4.5,flightTurn:1.40,velocityResponse:2.3},
+    bomber:{yaw:.80,rollResponse:2.7,flightTurn:.83,velocityResponse:1.9}
   };
   const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
   const shortest=(target,current)=>Math.atan2(Math.sin(target-current),Math.cos(target-current));
