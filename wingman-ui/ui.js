@@ -25,7 +25,7 @@ const arcadeSave=()=>{try{return JSON.parse(localStorage.getItem('wingman-arcade
 const playerSave=()=>{try{return JSON.parse(localStorage.getItem('wingman-road-to-ace-v1')||'null')}catch{return null}};
 const api=()=>P.WingmanUIBridge;
 const campaignRules=P.WingmanCampaign;
-const perkById=id=>[...(campaignRules?.UPGRADES||[]),...(campaignRules?.SETBACKS||[])].find(p=>p.id===id);
+const perkById=id=>[...(campaignRules?.UPGRADES||[]),...(campaignRules?.ELITE_UPGRADES||[]),...(campaignRules?.SETBACKS||[])].find(p=>p.id===id);
 const confirmButton=(label,action,cl='red')=>'<button type="button" class="btn '+cl+'" data-action="'+action+'">'+label+'</button>';
 const rankTitles=['FIRST SORTIE','ROOKIE','REGULAR','EXPERIENCED','VETERAN','ELITE','ACE FLIGHT','FINAL ACE'];
 function pById(id){return roster.find(p=>p.id===id)}
@@ -97,6 +97,9 @@ function career(){
   const key=String(mission||'').toUpperCase();
   if(key.includes('FINAL'))return {icon:'★',name:'FINAL ACE'};
   if(key.includes('ESCORT'))return {icon:'✦',name:'BOMBER ESCORT'};
+  if(key.includes('RECON'))return {icon:'◈',name:'RECON SURVIVAL'};
+  if(key.includes('ACE HUNT'))return {icon:'♠',name:'ACE HUNT'};
+  if(key.includes('SCOUT'))return {icon:'⌖',name:'SCOUT PATROL'};
   if(key.includes('OUTNUMBERED'))return {icon:'⚔',name:'OUTNUMBERED'};
   if(key.includes('BOMBER'))return {icon:'✈',name:'BOMBER INTERCEPT'};
   if(key.includes('DOUBLE'))return {icon:'✦',name:'DOUBLE ACE'};
@@ -126,12 +129,12 @@ function career(){
  const connectedLadder='<div class="campaign-map-canvas"><svg class="map-connections" viewBox="0 0 100 840" preserveAspectRatio="none" aria-hidden="true">'+mapEdges+'</svg>'+ladder+'</div>';
  const rivals=choices.map((c,i)=>{
   const rival=rivalFor(c),stat=saved.records?.[c.id]||{},fought=(stat.wins||0)+(stat.losses||0);
-  return '<button type="button" class="compact-rival '+(i===S.choice?'selected':'')+'" data-choice="'+i+'" aria-pressed="'+(i===S.choice)+'"><span class="compact-rival-photo">'+atlas(rival)+'</span><span class="compact-rival-info"><strong>'+esc(rival?.name||c.label)+'</strong><small>'+esc(c.mission||'DOGFIGHT')+' · '+esc(c.risk||'LOW')+' RISK · '+esc(c.timeLimit||120)+'s</small><span class="compact-rival-description">'+esc(c.briefing||rival?.bio||'Defeat your rival and survive the encounter.')+'</span><em>'+(fought?('YOUR ENCOUNTERS '+fought+' · W '+(stat.wins||0)+' / L '+(stat.losses||0)):'FIRST ENCOUNTER')+' · +'+(c.suppliesAward||1)+' SUPPLIES</em></span></button>';
+  return '<button type="button" class="compact-rival '+(i===S.choice?'selected':'')+'" data-choice="'+i+'" aria-pressed="'+(i===S.choice)+'"><span class="compact-rival-photo">'+atlas(rival)+'</span><span class="compact-rival-info"><strong>'+esc(rival?.name||c.label)+'</strong><small>'+esc(c.mission||'DOGFIGHT')+' · '+esc(c.risk||'LOW')+' RISK · '+esc(c.timeLimit||120)+'s</small><span class="compact-rival-description">'+esc(c.briefing||rival?.bio||'Defeat your rival and survive the encounter.')+'</span><em>'+(fought?('W '+(stat.wins||0)+' / L '+(stat.losses||0)):'FIRST ENCOUNTER')+' · THREAT '+(c.threat??'—')+'/100 · +'+(c.suppliesAward||1)+' SUPPLIES'+(c.rewardTier===2?' · ELITE UPGRADE':'')+'</em></span></button>';
  }).join('');
  return `<section class="frame career-screen campaign-rework">${header('KING OF THE SKIES','RANK '+currentRank+' / 8 · '+run.lives+' LIVES')}
  <div class="campaign-rework-content"><div class="campaign-main">
  <div class="campaign-ladder-head"><strong>ROAD TO ACE</strong><span>BRANCHING ROUTES · CLIMB TO THE FINAL ACE</span></div>
- <div class="campaign-map-legend"><span>✈ BOMBER INTERCEPT</span><span>⚔ ACE DUEL</span><span>⌖ PATROL</span><span>✦ ESCORT</span><span>★ FINAL ACE</span><span>? UNREVEALED</span></div><div class="campaign-ladder-scroll" data-rank="${currentRank}" aria-label="Branching eight-rank campaign map">${connectedLadder}</div>
+ <div class="campaign-map-legend"><span>✈ INTERCEPT</span><span>◈ RECON</span><span>♠ ACE HUNT</span><span>✦ ESCORT</span><span>⚔ OUTNUMBERED</span><span>★ FINALE</span></div><div class="campaign-ladder-scroll" data-rank="${currentRank}" aria-label="Branching eight-rank campaign map">${connectedLadder}</div>
  <div class="campaign-rivals-title"><strong>CHOOSE YOUR NEXT OPPONENT</strong><small>THREE ROUTES · YOUR DECISION</small></div>
  <div class="campaign-rivals">${rivals}</div>
  </div>
@@ -146,7 +149,7 @@ function career(){
   <div class="wg-v7-perks"><small>ACTIVE UPGRADES & CONSEQUENCES</small>
   ${(run.effects||[]).length?run.effects.map(id=>'<span title="'+esc(perkById(id)?.detail||'')+'">'+esc(perkById(id)?.name||id)+'</span>').join(''):'<span>NONE · WIN SORTIES TO EARN UPGRADES</span>'}</div>
   ${confirmButton('FIELD REPAIR · 2 SUPPLIES','repair-airframe','navy')}</div>
- <div class="service-brief"><small>YOUR CHOSEN MISSION · ${esc(selected?.risk||'LOW')} RISK</small><b>${esc(selected?.mission||'DOGFIGHT')}</b><span>${esc(selected?.briefing||'CHOOSE A MISSION')}</span><em>RIVAL ${esc(selected?.label||'UNKNOWN')} · +${selected?.suppliesAward||1} SUPPLIES</em></div>
+ <div class="service-brief"><small>YOUR CHOSEN MISSION · ${esc(selected?.risk||'LOW')} RISK · EST. THREAT ${selected?.threat??'—'}/100</small><b>${esc(selected?.mission||'DOGFIGHT')}</b><span>${esc(selected?.briefing||'CHOOSE A MISSION')}</span><em>RIVAL ${esc(selected?.label||'UNKNOWN')} · +${selected?.suppliesAward||1} SUPPLIES${selected?.rewardTier===2?' · PREMIUM REWARD AVAILABLE':''}</em></div>
  <div class="service-actions">${confirmButton('SELECT AIRCRAFT →','career-aircraft','red')}${confirmButton('← BACK','back','outline')}</div>
  </div></aside></div></section>`;
 }
@@ -171,7 +174,7 @@ function records(){
  <div class="licence-seal"><span>✦ ${p?.faction==='Axis'?'LUFTWAFFE':'RAF FIGHTER COMMAND'}</span><span>SERVICE NO. ${esc(p?.id||'UNASSIGNED').toUpperCase()}</span><span class="licence-stamp">ACTIVE SERVICE</span></div>
  <div class="licence-honours"><b>DECORATIONS &amp; HONOURS</b><p>${saved?.medals?.length?saved.medals.map(m=>esc(m.replace(/-/g,' ').toUpperCase())).join(' · '):'No campaign decorations recorded yet.'} · ARCADE HONOURS ${arc?.unlocks?.length||0}</p></div>
  <div class="wg-v7-records-log"><strong>RECENT CAMPAIGN SORTIES</strong>${(saved?.service||[]).slice(-6).reverse().map(e=>
-  '<div><span>'+esc(e.won?'VICTORY':'SHOT DOWN')+'</span><b>R'+esc(e.rank)+' · '+esc(e.mission||'SORTIE')+'</b><small>'+esc(e.rival||'RIVAL')+'</small></div>').join('')||'<p>No campaign sorties recorded.</p>'}</div></div>
+  '<div><span>'+esc(e.won?'VICTORY':'SHOT DOWN')+' · '+esc(e.grade||'—')+'</span><b>R'+esc(e.rank)+' · '+esc(e.mission||'SORTIE')+'</b><small>'+esc(e.rival||'RIVAL')+'</small></div>').join('')||'<p>No campaign sorties recorded.</p>'}</div></div>
  <div class="licence-actions">${confirmButton('← BACK','back','outline')}${confirmButton('KING OF THE SKIES →','career')}</div></section>`;
 }
 function options(){return `<section class="frame options-screen">${header('OPTIONS','TACTICS · CONTROLS · THEATRE')}<div class="inner option-rows"><div class="option-card"><h2>FLIGHT CONDITIONS</h2><label>DIFFICULTY <select data-setting="difficulty"><option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></label><label>THEATRE <select data-setting="theatre"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">STORM</option></select></label></div><div class="option-card"><h2>CONTROLS & SOUND</h2><p>A/D — STEER · SPACE — FIRE · E — AIRCRAFT ABILITY · Q — PILOT SKILL</p>${confirmButton('SOUND '+(S.sound?'ON':'OFF'),'sound','navy')}${confirmButton('SERVICE RECORD','records','navy')}</div></div><div class="inner">${confirmButton('← BACK','back','outline')}</div></section>`;}
@@ -183,7 +186,7 @@ function outcome(){
  const flightLog=(saved?.service||[]).slice(-3).reverse();
  const rewards=pending?.offers?.map(id=>{
   const perk=perkById(id);if(!perk)return '';
-  return '<button type="button" class="wg-v7-reward-card" data-reward="'+esc(id)+'"><span>SELECT REWARD</span><strong>'+esc(perk.name)+'</strong><small>'+esc(perk.detail)+'</small></button>';
+  return '<button type="button" class="wg-v7-reward-card'+(perk.elite?' wg-v8-elite':'')+'" data-reward="'+esc(id)+'"><span>'+(perk.elite?'ELITE · HIGH-RISK REWARD':'SELECT REWARD')+'</span><strong>'+esc(perk.name)+'</strong><small>'+esc(perk.detail)+'</small></button>';
  }).join('')||'';
  if(!isCareer)return `<section class="frame career-screen v4-career">${header('AFTER ACTION REPORT','FIGHTER COMMAND · COMBAT DEBRIEF')}
  <div class="inner career-intro-layout"><div class="career-hangar-art"><span class="art-stamp">AIRCRAFT RETURNING · 1940</span></div>
@@ -197,8 +200,8 @@ function outcome(){
     <h2>${esc(pending?'VICTORY — CLAIM YOUR SPOILS':completed?'KING OF THE SKIES — LEGEND':title)}</h2>
     <p>${esc(report.mission||'COMBAT SORTIE')} · ${esc(report.label||'ENEMY SQUADRON')}</p>
     <div class="wg-v7-debrief-stats"><span>${saved?.wins||0} VICTORIES</span><span>${saved?.losses||0} LOSSES</span>
-    <span>${run?run.lives+' LIVES LEFT':'RUN FINISHED'}</span></div>
-    <small>Recent operations</small><div class="wg-v7-debrief-log">${flightLog.map(e=>'<div>'+esc(e.won?'✓':'✕')+' R'+esc(e.rank)+' · '+esc(e.mission||'DOGFIGHT')+' · '+esc(e.rival||'RIVAL')+'</div>').join('')}</div>
+    <span>${run?run.lives+' LIVES LEFT':'RUN FINISHED'}</span><span>SORTIE GRADE ${esc(report.grade||'—')}</span></div>
+    <small>Recent operations</small><div class="wg-v7-debrief-log">${flightLog.map(e=>'<div>'+esc(e.won?'✓':'✕')+' '+esc(e.grade||'—')+' · R'+esc(e.rank)+' · '+esc(e.mission||'DOGFIGHT')+' · '+esc(e.rival||'RIVAL')+'</div>').join('')}</div>
    </div>
    <div class="wg-v7-debrief-choice">
     ${pending?`<span class="wg-v7-overline">${esc(pending.risk)} RISK MISSION · REWARD EARNED</span>
@@ -240,7 +243,7 @@ function missionReview(){
       <div><small>PILOT</small><strong>${esc(pilot)}</strong></div>
       <div><small>MISSION</small><strong>${esc(detail)}</strong></div>
       <div><small>THEATRE</small><strong>${career?'CAMPAIGN ASSIGNMENT':esc(sites[Number(S.theatre)]||sites[0])}</strong></div>
-      <div><small>DIFFICULTY</small><strong>${career?esc(selectedMission?.risk||'MISSION DEFINED')+' RISK':esc(S.difficulty.toUpperCase())}</strong></div>
+      <div><small>DIFFICULTY</small><strong>${career?esc(selectedMission?.risk||'MISSION DEFINED')+' RISK · EST. THREAT '+(selectedMission?.threat??'—')+'/100':esc(S.difficulty.toUpperCase())}</strong></div>
       ${career?'<div><small>RIVAL / TARGET</small><strong>'+esc(selectedMission?.label||'UNKNOWN')+'</strong></div>':''}
       ${!career&&OPS[S.op][3]==='duel'?'<div><small>OPPONENT AIRCRAFT</small><strong>'+esc(S.opponent==='random'?'RANDOM OPPONENT':PLANES[TYPES.indexOf(S.opponent)]?.[0]||'RANDOM OPPONENT')+'</strong></div>':''}
      </div>
