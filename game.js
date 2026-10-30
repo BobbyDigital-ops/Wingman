@@ -414,8 +414,9 @@ function plane(type,id,x,y,angle){
       const hero=state.fliers[0];
       const integrity=hero?.d?clamp((Math.max(0,hero.health)+Math.max(0,hero.armour))/
         Math.max(1,hero.d.hull+hero.d.armour),0,1):0;
+      const kills=state.fliers.filter(p=>p.team===1&&!p.alive&&!p.queued).length;
       window.WingmanCareer?.finishEncounter?.(won,state.campaignEncounter,{
-        integrity,remainingSeconds:Math.max(0,state.time),
+        integrity,kills,remainingSeconds:Math.max(0,state.time),
         elapsedSeconds:Math.max(0,(state.campaignEncounter?.timeLimit||120)-state.time)
       });
       return;
