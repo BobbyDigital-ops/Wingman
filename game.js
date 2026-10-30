@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.2.3',GAME_PHASE='G2.3'; // stable release identifier
+  const GAME_VERSION='v0.3.0',GAME_PHASE='G3A'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -885,6 +885,37 @@ function plane(type,id,x,y,angle){
     p.pilotSkill=personality?.signature||raw.signature||encounter.signature||'roll';
     p.aiThink=0;
   }
+  function bomberFlightPlan(p,target){
+    // A bomber is a high-altitude weapons platform, not a dogfighter.
+    // Hold its current horizontal direction, regulate altitude with a shallow
+    // pitch and let rear gunners / physical bomb runs do the fighting.
+    // No upward velocity hacks, teleports or faster-than-player turning.
+    p.aiBoost=false;
+    const direction=p.vx>=0?1:-1;
+    const desiredAltitude=clamp(Math.min(target.y-43,H*.36),61,101);
+    // Recover early enough that a very slow-turning Lancaster can still
+    // trade its dive momentum for a safe climb within the normal flight model.
+    const unsafe=p.y>H*.54||(p.y>H*.44&&p.vy>10);
+    const waypointY=unsafe?H*.245:desiredAltitude;
+    const climb=clamp((waypointY-p.y)*.58,-53,33);
+    const goal=Math.atan2(climb,direction*110);
+    const error=angleDiff(goal,p.angle);
+    p.aiMode=unsafe?'recover':'bomb-run';
+    p.aiRecoveryTime=unsafe?1.0:Math.max(0,(p.aiRecoveryTime||0)-STEP);
+    // Smooth steering proportional to heading error, capped by the existing
+    // bomber yaw/roll physics. Avoid the old bang-bang turning oscillation.
+    const steer=Math.abs(error)<.035?0:clamp(error*1.65,-1,1);
+    const dropHeight=target.y-p.y;
+    if(!unsafe&&p.aiBombDelay<=0&&p.specialCooldown<=0&&target.spawnSafe<=0&&
+       dropHeight>=32&&dropHeight<=112){
+      const fallTime=clamp(Math.sqrt(Math.max(0,2*(dropHeight-7)/94)),.25,1.1);
+      const releaseX=p.x+p.vx*.035;
+      const projectedX=target.x+(target.vx-p.vx*.58)*fallTime;
+      const aligned=Math.abs(wrappedDelta(releaseX,projectedX))<24;
+      if(aligned&&combatDistance(p,target)<158)triggerSpecial(p);
+    }
+    return steer;
+  }
   function aiInput(p,target){
     p.aiThink=Math.max(0,p.aiThink-STEP);
     const rankAI=state.mode==='campaign'&&p.id>0;
@@ -896,6 +927,9 @@ function plane(type,id,x,y,angle){
     const targetAngle=Math.atan2(target.y-p.y,wrappedDelta(p.x,target.x));
     if(target.smokescreen>0&&p.aiMode==='attack'&&Math.random()<.36)p.aiThink=Math.max(p.aiThink,.28);
     const enemyBehind=Math.abs(angleDiff(Math.atan2(p.y-target.y,wrappedDelta(target.x,p.x)),target.angle))<.65;
+    // Dedicated bomber tactics: level, deliberate runs rather than chasing
+    // the opponent through low-altitude dogfight manoeuvres.
+    if(p.role==='bomber')return bomberFlightPlan(p,target);
     // Predict an unsafe flight path well in advance. Recovery only chooses
     // steering; it never modifies position, velocity or gravity. This keeps AI
     // on precisely the same inertial flight physics as the player.

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 'use strict';
-// Test-only instrumentation of the production game.js engine; no gameplay hooks ship.
+// Test-only instrumentation of the production game.js and swoop-flight engine.
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),path=require('path');
 const source=fs.readFileSync(path.join(__dirname,'../game.js'),'utf8');
+const flightPhysics=fs.readFileSync(path.join(__dirname,'../src/physics/swoop-flight.js'),'utf8');
 const types=['fighter','bf109','heavy','bf110','bomber','he111'];
 const arenas=['alpine','coast','desert','storm'],difficulties=['rookie','standard','ace'];
 function edit(s,find,replacement){assert.equal(s.split(find).length,2,'Missing/nonunique anchor '+find.slice(0,60));return s.replace(find,replacement);}
@@ -19,7 +20,7 @@ function launch(){
  '            if(state.bench)window.s.shots[p.id]++;\n            state.bullets.push({\n              x:muzzleX');
  src=edit(src,'          if(hitBody||hitWing){\n            if(b.owner===0&&state.session)state.session.hits++;\n            hit(target,b.damage',
  '          if(hitBody||hitWing){\n            if(state.bench)window.s.hits[b.owner]++;\n            if(b.owner===0&&state.session)state.session.hits++;\n            hit(target,b.damage');
- src=edit(src,'  function emit(x,y,count,color,power){','  function emit(x,y,count,color,power){if(state.bench)return;');
+ src=edit(src,"  function emit(x,y,count,color,power,kind=''){","  function emit(x,y,count,color,power,kind=''){if(state.bench)return;");
  src=edit(src,'  function endRound(winner){','  function endRound(winner){if(state.bench){state.benchWinner=winner;state.phase="result";return;}');
  const api=[
  'window.balance={',
@@ -33,7 +34,7 @@ function launch(){
  'run(frames){',
  'const initial=state.fliers.map(p=>p.health+p.armour),ground=[false,false];let framesElapsed=0,bad=false;',
  'for(let k=0;k<frames&&state.phase==="playing";k++){update(STEP);framesElapsed++;',
- 'for(const p of state.fliers){if(!p.alive&&p.damageCause==="GROUND")ground[p.id]=true;if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||!Number.isFinite(p.health))bad=true;}',
+ 'for(const p of state.fliers){if(!p.alive&&p.damageCause==="GROUND")ground[p.id]=true;if(![p.x,p.y,p.vx,p.vy,p.health].every(Number.isFinite))bad=true;}',
  'if(bad)break;',
  '}',
  'const remaining=state.fliers.map(p=>p.health+p.armour);const fractions=remaining.map((x,i)=>x/initial[i]);',
@@ -49,8 +50,14 @@ function launch(){
  elements.frame={getBoundingClientRect:()=>({width:520,height:250})};
  const document={hidden:false,documentElement:{style:{setProperty:noop}},getElementById:k=>k==='game'||k==='aircraft-layer'?canvas:(elements[k]??={value:'',hidden:false,textContent:'',classList:{add:noop,remove:noop,toggle:noop},setAttribute:noop,addEventListener:noop}),createElement:()=>({getContext:()=>ctx}),querySelectorAll:()=>[],addEventListener:noop};
  let seed=1;const math=Object.create(Math);math.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
- const window={matchMedia:()=>({matches:false}),devicePixelRatio:1,innerHeight:250,addEventListener:noop};
- vm.runInNewContext(src,{Math:math,document,window,requestAnimationFrame:noop,console},{filename:'game.js',timeout:3000});
+ const window={location:{search:''},matchMedia:()=>({matches:false}),devicePixelRatio:1,innerWidth:1280,innerHeight:720,addEventListener:noop};
+ const context={Math:math,document,window,requestAnimationFrame:noop,console,
+  URLSearchParams,localStorage:{getItem:()=>null,setItem:noop}};
+ // Test the actual G1+ Swoop model; without it the tournament silently
+ // measures obsolete Classic flight physics and cannot inform production.
+ vm.runInNewContext(flightPhysics,context,{filename:'src/physics/swoop-flight.js',timeout:3000});
+ assert.ok(window.WingmanFlightPhysics,'Swoop physics must be present for all fixtures');
+ vm.runInNewContext(src,context,{filename:'game.js',timeout:3000});
  return {api:window.balance,seed:n=>seed=n>>>0};
 }
 function tournament({reps=1,seconds=90,wind='random',arenaFilter=null,difficultyFilter=null}={}){

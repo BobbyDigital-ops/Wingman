@@ -13,4 +13,4 @@ jobs:
       - name: Syntax check
         run: node --check game.js
       - name: Runtime smoke tests
-        run: node --test tests/smoke.test.cjs
+        run: npm run test:unit

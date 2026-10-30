@@ -26,3 +26,21 @@ test('wind-on flight benchmark can run without nonfinite physics',()=>{
  assert.equal(result.matches.length,30);
  assert.ok(result.matches.every(x=>!x.bad && x.wind));
 });
+
+test('G3A: bomber cruise avoids suicidal dives without disabling bomb runs',()=>{
+ const result=tournament({reps:1,seconds:55,wind:'off',arenaFilter:'alpine',difficultyFilter:'standard'});
+ assert.equal(result.meta.games,30);
+ assert.ok(result.matches.every(x=>!x.bad),'no nonfinite flight states');
+ for(const type of ['bomber','he111']){
+   const bomber=result.summary[type];
+   assert.ok(bomber.groundPct<=10, type+' must not repeatedly crash under normal combat');
+   assert.ok(bomber.bombs>0, type+' must still perform real bomb runs');
+ }
+});
+test('G3A: severe crosswind remains physically stable',()=>{
+ const result=tournament({reps:1,seconds:45,wind:'on',arenaFilter:'storm',difficultyFilter:'ace'});
+ assert.equal(result.meta.games,30);
+ assert.ok(result.matches.every(x=>!x.bad),'wind caused invalid physics');
+ assert.ok(result.summary.bomber.groundPct<=15);
+ assert.ok(result.summary.he111.groundPct<=15);
+});
