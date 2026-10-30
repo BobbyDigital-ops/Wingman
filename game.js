@@ -1197,8 +1197,19 @@ function plane(type,id,x,y,angle){
   function makeBackground(){
     sceneryTravel=0;sceneryLastX=null;
     if(window.WingmanScenery?.createPanorama){
-      return {panorama:window.WingmanScenery.createPanorama(
-        W,H,state.arena,Math.min(2.25,Math.max(1.6,renderScale)))};
+      // D3: one fixed image per battlefield, composed once at mission start.
+      // No scrolling, parallax, cloud drift or positional camera movement.
+      const panorama=window.WingmanScenery.createPanorama(
+        W,H,state.arena,Math.min(2.25,Math.max(1.6,renderScale)));
+      const picture=document.createElement('canvas');
+      const resolution=Math.min(2.25,Math.max(1.6,renderScale));
+      picture.width=Math.round(W*resolution);
+      picture.height=Math.round(H*resolution);
+      const painter=picture.getContext('2d',{alpha:false});
+      painter.setTransform(picture.width/W,0,0,picture.height/H,0,0);
+      painter.imageSmoothingEnabled=false;
+      window.WingmanScenery.drawPanorama(painter,panorama,W,H,0,0,null);
+      return picture;
     }
     // Offline fallback to the original one-canvas painted theatre.
     const c=document.createElement('canvas');
@@ -1555,17 +1566,8 @@ function plane(type,id,x,y,angle){
     c.restore();
   }
   function draw(){
-    if(background?.panorama&&window.WingmanScenery?.drawPanorama){
-      const lead=state.fliers[0];
-      if(lead?.alive&&state.phase==='playing'){
-        if(sceneryLastX!==null)sceneryTravel+=wrappedDelta(sceneryLastX,lead.x);
-        sceneryLastX=lead.x;
-      }else sceneryLastX=null;
-      window.WingmanScenery.drawPanorama(
-        g,background.panorama,W,H,sceneryTravel,state.visualClock,state.wind);
-    }else g.drawImage(background,0,0,W,H);
-    if(window.WingmanScenery?.weather)
-      window.WingmanScenery.weather(g,W,H,state.arena,state.visualClock,state.wind);
+    // Static theatre artwork: no background animation or weather drift.
+    g.drawImage(background,0,0,W,H);
     drawWind();
     for(const t of state.trails){
       const fade=1-t.age/t.life;
