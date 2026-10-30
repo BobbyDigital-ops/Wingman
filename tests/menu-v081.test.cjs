@@ -47,7 +47,7 @@ test('reference main menu presents Skirmish and King of the Skies',()=>{
  assert.match(t.body(),/KING OF/);
  assert.match(t.body(),/data-action="operations"/);
  assert.match(t.body(),/data-action="career"/);
- assert.match(t.body(),/data-action="pilots"/);
+ assert.match(t.body(),/data-action="switch-profile"/);
 });
 test('Skirmish operations, RAF/Luftwaffe switching, back and launch preserve settings',()=>{
  const t=make(save);t.action('opening-start');t.click({profileSlot:'0'});t.action('operations');
