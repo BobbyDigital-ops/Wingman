@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, SKY_EXTRA=150, WORLD_H=H+SKY_EXTRA, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.6.0',GAME_PHASE='F2 VERTICAL SKY'; // stable release identifier
+  const GAME_VERSION='v0.6.1',GAME_PHASE='F2.1 SKY & TACTICS'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -952,7 +952,7 @@ function plane(type,id,x,y,angle){
     const talent=rankAI?clamp(p.aiSkillLevel||0,0,1):
       state.recordMode==='survival'?
         clamp((state.difficulty==='ace'?.57:state.difficulty==='rookie'?.12:.34)+(state.round-1)*.065,0,1):
-        state.difficulty==='ace'?1:state.difficulty==='rookie'?0:.55;
+        state.difficulty==='ace'?1:state.difficulty==='rookie'?0:.76;
     const style=rankAI?p.aiStyle:'hunter';
     const dx=wrappedDelta(p.x,target.x),dy=target.y-p.y;
     const range=Math.hypot(dx,dy);
@@ -965,14 +965,21 @@ function plane(type,id,x,y,angle){
     const targetLateral=Math.abs(dx*targetNoseY-dy*targetNoseX);
     const shotFromTarget=Math.atan2(-dy,wrappedDelta(target.x,p.x));
     const targetAiming=Math.abs(angleDiff(shotFromTarget,target.angle))<.48;
-    const trueThreat=target.spawnSafe<=0&&range<128&&targetAiming&&target.burstLeft>0;
+    // React to a pursuer on the six before they fire, but only when
+    // physically inside a narrow rear corridor, not with omniscient dodges.
+    const tailed=ahead< -15&&range<125&&
+      Math.abs(angleDiff(target.angle,p.angle))<.78&&
+      Math.abs(dx*noseY-dy*noseX)<43;
+    const underFire=target.spawnSafe<=0&&range<128&&
+      targetAiming&&target.burstLeft>0;
+    const trueThreat=underFire||(tailed&&talent>.19);
     p.aiEvadeTime=Math.max(0,(p.aiEvadeTime||0)-STEP);
     p.aiEvadeCooldown=Math.max(0,(p.aiEvadeCooldown||0)-STEP);
     if(trueThreat&&p.aiEvadeTime<=0&&p.aiEvadeCooldown<=0){
       // Commit to a banked break once, not a fresh random heading each frame.
-      p.aiEvadeTime=.52+talent*.38;
-      p.aiEvadeCooldown=2.7-talent*.65;
-      p.aiEscapeSign=p.y>WORLD_H*.65?-1:p.y<WORLD_H*.30?1:(p.id%2?1:-1);
+      p.aiEvadeTime=.55+talent*.43;
+      p.aiEvadeCooldown=2.5+talent*.18;
+      p.aiEscapeSign=p.y>WORLD_H*.66?-1:p.y<WORLD_H*.30?1:(dy>=0?-1:1);
     }
 
     // Ground avoidance is bounded by actual descent and available turning
@@ -1014,8 +1021,10 @@ function plane(type,id,x,y,angle){
       const forward=Math.cos(p.angle)>=0?1:-1;
       p.aiBreakSign=(p.y>WORLD_H*.54?-1:1)*forward;
     }
+    const attackRange=rankAI?119+talent*32:
+      state.difficulty==='ace'?151:state.difficulty==='rookie'?118:138;
     p.aiMode=p.aiEvadeTime>0?'evade':
-      p.aiBreakTime>0?'break':range>118?'intercept':'attack';
+      p.aiBreakTime>0?'break':range>attackRange?'intercept':'attack';
     // Campaign rivals retain recognisable tendencies without overriding
     // their fundamental need to close, track and shoot their opponent.
     if(rankAI&&p.aiMode==='attack'&&style==='survivor'&&
@@ -1039,6 +1048,14 @@ function plane(type,id,x,y,angle){
       const trail=clamp(range*.24,16,32);
       tx=target.x-targetNoseX*trail+target.vx*predict;
       ty=target.y-targetNoseY*trail+target.vy*predict;
+    }
+    // Convert an acquired tail position into an actual gun line.
+    // Physics still limits how rapidly the aircraft can change heading.
+    const firingSolution=interceptPoint(p,target);
+    if(p.aiMode==='attack'&&ahead>10&&range<155){
+      const weight=clamp((165-range)/110,0,1)*(.25+.55*talent);
+      tx+=wrappedDelta(tx,firingSolution.x)*weight;
+      ty+=(firingSolution.y-ty)*weight;
     }
     if(rankAI){
       if(style==='duellist'&&range>45&&p.aiMode==='intercept')ty-=12;
@@ -1075,7 +1092,7 @@ function plane(type,id,x,y,angle){
     p.aiBoost=false;
 
     // Actual guns use their own firing axis, not the tail-position waypoint.
-    const solution=interceptPoint(p,target);
+    const solution=firingSolution;
     const fireAngle=Math.atan2(solution.y-p.y,wrappedDelta(p.x,solution.x));
     const aimError=Math.abs(angleDiff(fireAngle,p.angle));
     const gunCone=rankAI?.11+talent*.12:
@@ -1090,7 +1107,7 @@ function plane(type,id,x,y,angle){
          (p.armour<p.d.armour*.75||target.burstLeft>0||target.rearShots>0))
         triggerSpecial(p);
       if(p.role==='fighter'&&p.aiMode==='intercept'&&
-         range>122&&facing<.8)triggerSpecial(p);
+         range>104&&facing<.78&&p.y>110&&p.y<WORLD_H-105)triggerSpecial(p);
     }
     if(rankAI&&p.skillCooldown<=0&&talent>.19){
       if(p.aiMode==='evade'&&
