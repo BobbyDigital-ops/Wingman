@@ -4,14 +4,17 @@ for(const [k,v] of Object.entries(art))root.style.setProperty('--art-'+k,'url("'
 const P=window.parent;
 const roster=P.WingmanRoster||[];
 const TYPES=['fighter','heavy','bomber','bf109','bf110','he111'];
+// Values are refreshed from the authoritative game stats when the UI mounts.
 const PLANES=[
  ['SPITFIRE','RAF · AGILE FIGHTER','CORKSCREW','The iconic all-rounder. Superb handling and firepower.',82,3.15,40,11,'Allies'],
  ['BEAUFIGHTER','RAF · HEAVY FIGHTER','SHIELD','Heavy guns and excellent protection for tough missions.',75,1.98,78,16,'Allies'],
- ['LANCASTER','RAF · BOMBER','DEFENSIVE GUNNERS','A resilient bomber with defensive turrets.',66,1.3,124,10,'Allies'],
+ ['LANCASTER','RAF · LIGHT STRIKE','ASSISTED BOMBS','A nimble strike bomber. Set up overhead attacks, escape fast; weak defensive guns.',75,1.72,98,2.9,'Allies'],
  ['BF 109E EMIL','LUFTWAFFE · AGILE FIGHTER','OVERDRIVE','Nimble, aggressive and built for sharp interception.',87,3.02,42,11,'Axis'],
  ['BF 110 ZERSTÖRER','LUFTWAFFE · HEAVY FIGHTER','SHIELD','A powerful twin-engine destroyer with heavy forward armament.',78,1.91,75,17,'Axis'],
- ['HEINKEL HE 111','LUFTWAFFE · MEDIUM BOMBER','DEFENSIVE GUNNERS','A sturdy bomber protected by defensive gunners.',69,1.35,116,10,'Axis']
+ ['HEINKEL HE 111','LUFTWAFFE · LIGHT STRIKE','ASSISTED BOMBS','An agile strike aircraft with a dangerous bomb attack but light rear defence.',77,1.75,92,2.9,'Axis']
 ];
+const liveSpecs=P.WingmanGame?.aircraftSpecs?.();
+if(liveSpecs)for(let i=0;i<TYPES.length;i++){const p=liveSpecs[TYPES[i]];if(!p)continue;PLANES[i][4]=p.speed;PLANES[i][5]=p.turn;PLANES[i][6]=p.armour;PLANES[i][7]=p.damage;}
 const OPS=[['1 VS 1','Classic dogfight','Head-to-head fighter combat.','duel'],['SURVIVAL','How long can you last?','Increasing waves of enemies.','survival'],['FREE FOR ALL','Every pilot for themselves','Multiple aircraft. One winner.','triple'],['2 VS 2','Team up','Fight with an AI wingman.','teams'],['CHALLENGES','Special operations','Time-limited combat objectives.','challenge']];
 const S={screen:'title',back:[],op:0,plane:0,faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:0,difficulty:'standard',theatre:'0',sound:true,lastResult:null};
 const stage=document.querySelector('#stage'),nav=document.querySelector('.nav');
@@ -58,7 +61,7 @@ function aircraft(){
   return '<button type="button" class="grid-plane-card '+(selected?'selected':'')+'" data-plane="'+i+'" aria-pressed="'+selected+'"><img src="'+photo('aircraft-art-'+i)+'" alt="'+p[0]+' painted reference aircraft"><div class="grid-plane-body"><div class="grid-plane-name"><strong>'+p[0]+'</strong><span class="selection-stamp">'+(selected?'✓ SELECTED':'SELECT')+'</span></div><span class="grid-plane-role">'+p[1]+'</span><div class="grid-plane-stats">'+statBar('SPEED',p[4],96)+statBar('TURN',p[5].toFixed(2),3.5)+statBar('ARMOUR',Math.round(p[6]*bonus),140)+statBar('GUN DMG',+(p[7]*bonus).toFixed(1),19)+'</div><span class="plane-ability">✦ ABILITY: '+p[2]+'<small>'+(['E · Spinning escape and powerful speed burst.','E · Temporarily reduces incoming damage.','Automatic rear defence. E · Drop a three-bomb salvo.'][i%3])+'</small></span>'+(fav?'<span class="specialist">★ SPECIALIST +10% HULL / ARMOUR / GUN DMG</span>':'')+'</div></button>';
  }).join('')}</div>
  ${!career?`<div class="conditions"><label>AI DIFFICULTY <select data-setting="difficulty"><option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></label><label>THEATRE<select data-setting="theatre"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">STORM FRONT</option></select></label></div>`:`<div class="notice">YOUR PILOT: ${esc(save.profile.name)} · PREFERRED AIRCRAFT: ${esc(PLANES[TYPES.indexOf(speciality)]?.[0]||'FIGHTER')}</div>`}
- <div class="screen-actions">${confirmButton('← BACK','back','outline')}${confirmButton(career?'CONFIRM AIRCRAFT & FLY →':'SCRAMBLE →',career?'launch-career':'launch-arcade',career?'red':'gold')}</div></div></section>`;
+ <div class="screen-actions">${confirmButton('← BACK','back','outline')}${confirmButton('READY FOR SORTIE →','mission-review',career?'red':'gold')}</div></div></section>`;
 }
 function pilots(){
  const saved=playerSave(),list=roster.filter(p=>p.faction===S.pilotFilter);
@@ -160,7 +163,26 @@ function records(){
 }
 function options(){return `<section class="frame options-screen">${header('OPTIONS','TACTICS · CONTROLS · THEATRE')}<div class="inner option-rows"><div class="option-card"><h2>FLIGHT CONDITIONS</h2><label>DIFFICULTY <select data-setting="difficulty"><option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></label><label>THEATRE <select data-setting="theatre"><option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option><option value="2">NORTH AFRICA</option><option value="3">STORM</option></select></label></div><div class="option-card"><h2>CONTROLS & SOUND</h2><p>A/D — STEER · SPACE — FIRE · E — AIRCRAFT ABILITY · Q — PILOT SKILL</p>${confirmButton('SOUND '+(S.sound?'ON':'OFF'),'sound','navy')}${confirmButton('SERVICE RECORD','records','navy')}</div></div><div class="inner">${confirmButton('← BACK','back','outline')}</div></section>`;}
 function outcome(){const saved=playerSave(),result=S.lastResult||'SORTIE COMPLETE',isCareer=!!S.lastCareer;return `<section class="frame career-screen v4-career">${header('AFTER ACTION REPORT','FIGHTER COMMAND · COMBAT DEBRIEF')}<div class="inner career-intro-layout"><div class="career-hangar-art"><span class="art-stamp">AIRCRAFT RETURNING · 1940</span></div><div class="career-block"><span class="notice">SORTIE LOG</span><h2>${esc(result)}</h2><p>${isCareer?(esc(saved?.profile?.name||'Pilot')+' · '+(saved?.wins||0)+' VICTORIES · '+(saved?.losses||0)+' LOSSES'):'THE BATTLE IS FINISHED. READY FOR YOUR NEXT SORTIE?'}</p>${isCareer?confirmButton('CONTINUE KING OF THE SKIES →','career-continue'):confirmButton('FLY AGAIN →','fly-again')}${isCareer?'':confirmButton('CHANGE AIRCRAFT','change-aircraft','navy')}${confirmButton('RETURN TO MENU','return-home','outline')}</div></div></section>`;}
-function show(){const views={title,home,operations,aircraft,pilots,career,records,options,outcome};const oldMap=stage.querySelector('.campaign-ladder-scroll');const mapMemory=oldMap?{rank:oldMap.dataset.rank,top:oldMap.scrollTop}:null;
+function missionReview(){
+ const p=PLANES[S.plane],career=S.career,op=OPS[S.op];
+ const sites=['ALPINE FRONT','ENGLISH CHANNEL','NORTH AFRICA','STORM FRONT'];
+ const pilot=playerSave()?.profile?.name||'GUEST PILOT';
+ const detail=career?'KING OF THE SKIES · ACTIVE SORTIE':op[0]+' · '+op[1].toUpperCase();
+ return `<section class="frame wm-v11-review"><div class="wm-v11-review-panel">
+  <div class="wm-v11-eyebrow">RAF FIGHTER COMMAND · MISSION ORDERS</div>
+  <h1>FINAL BRIEFING</h1><p class="wm-v11-sub">REVIEW THE AIRCRAFT AND CONDITIONS BEFORE TAKEOFF.</p>
+  <div class="wm-v11-review-grid"><div class="wm-v11-review-photo"><img src="${photo('aircraft-art-'+S.plane)}" alt="${esc(p[0])} — existing Wingman aircraft artwork"></div>
+  <div class="wm-v11-manifest">
+   <div><small>AIRCRAFT</small><strong>${esc(p[0])}</strong></div>
+   <div><small>PILOT</small><strong>${esc(pilot)}</strong></div>
+   <div><small>MISSION</small><strong>${esc(detail)}</strong></div>
+   <div><small>THEATRE</small><strong>${career?'CAMPAIGN ASSIGNMENT':esc(sites[Number(S.theatre)]||sites[0])}</strong></div>
+   <div><small>DIFFICULTY</small><strong>${career?'MISSION-DEFINED':esc(S.difficulty.toUpperCase())}</strong></div>
+  </div></div>
+  <div class="screen-actions">${confirmButton('← BACK TO HANGAR','back','outline')}${confirmButton('SCRAMBLE ▶',career?'launch-career':'launch-arcade','red')}</div>
+ </div></section>`;
+}
+function show(){const views={title,home,operations,aircraft,pilots,career,records,options,outcome,review:missionReview};const oldMap=stage.querySelector('.campaign-ladder-scroll');const mapMemory=oldMap?{rank:oldMap.dataset.rank,top:oldMap.scrollTop}:null;
 stage.innerHTML=(views[S.screen]||home)();
 const newMap=stage.querySelector('.campaign-ladder-scroll');
 if(newMap){if(mapMemory&&mapMemory.rank===newMap.dataset.rank)newMap.scrollTop=mapMemory.top;else{const current=newMap.querySelector('.route-map-row.is-current');if(current){const top=current.getBoundingClientRect().top-newMap.getBoundingClientRect().top+newMap.scrollTop;newMap.scrollTop=Math.max(0,Math.min(newMap.scrollHeight-newMap.clientHeight,top-newMap.clientHeight*.65));}}}document.querySelector('.utility-home').hidden=S.screen==='home'||S.screen==='title';document.querySelector('.utility-settings').hidden=S.screen!=='career';document.querySelector('.career-settings-popup').hidden=true;nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===S.screen?'page':'false'));document.querySelector('#squadron strong').textContent=playerSave()?.profile?.name||'Guest Pilot';stage.querySelectorAll('select[data-setting]').forEach(sel=>sel.value=S[sel.dataset.setting]);stage.scrollTop=0;}
@@ -179,6 +201,7 @@ function action(v){
  if(v==='aircraft'){S.career=false;return go('aircraft')}
  if(['home','options','records'].includes(v))return go(v);
  if(v==='operations-next'){S.career=false;return go('aircraft')}
+ if(v==='mission-review')return go('review');
  if(v==='sound'){S.sound=!S.sound;api()?.toggleSound?.();return show()}
  if(v==='confirm-pilot'){const p=roster[S.pilotIndex];if(!p)return;const status=api()?.choosePilot?.(p.id);if(status===false)return;S.faction=p.faction;S.plane=Math.max(0,TYPES.indexOf(p.plane));S.career=false;S.screen='home';S.back=[];return show()}
  if(v==='begin-career')return beginCareer();
