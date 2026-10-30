@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.3.3',GAME_PHASE='G3A.3'; // stable release identifier
+  const GAME_VERSION='v0.3.4',GAME_PHASE='G3B'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -936,167 +936,151 @@ function plane(type,id,x,y,angle){
     }
     return steer;
   }
+  // G3B: fighter and heavy-fighter AI is a positional dogfighter, not a
+  // patrol waypoint controller. Every decision returns ordinary stick input.
+  // Aircraft position, inertia, stall and weapons remain in the real physics.
   function aiInput(p,target){
-    p.aiThink=Math.max(0,p.aiThink-STEP);
-    const rankAI=state.mode==='campaign'&&p.id>0;
-    const talent=rankAI?(p.aiSkillLevel||0):state.recordMode==='survival'?
-      clamp((state.difficulty==='ace'?.57:state.difficulty==='rookie'?.12:.34)+(state.round-1)*.065,0,1):
-      state.difficulty==='ace'?1:state.difficulty==='rookie'?0:.55;
-    const style=rankAI?p.aiStyle:'hunter';
-    const range=combatDistance(p,target);
-    const targetAngle=Math.atan2(target.y-p.y,wrappedDelta(p.x,target.x));
-    if(target.smokescreen>0&&p.aiMode==='attack'&&Math.random()<.36)p.aiThink=Math.max(p.aiThink,.28);
-    const enemyBehind=Math.abs(angleDiff(Math.atan2(p.y-target.y,wrappedDelta(target.x,p.x)),target.angle))<.65;
-    // Dedicated bomber tactics: level, deliberate runs rather than chasing
-    // the opponent through low-altitude dogfight manoeuvres.
     if(p.role==='bomber')return bomberFlightPlan(p,target);
-    // Predict an unsafe flight path well in advance. Recovery only chooses
-    // steering; it never modifies position, velocity or gravity. This keeps AI
-    // on precisely the same inertial flight physics as the player.
-    const descent=Math.max(0,p.vy);
-    const integrity=clamp(p.health/Math.max(1,p.d.hull),0,1);
-    const roleLead=p.role==='bomber'?3.25:p.role==='heavy'?2.85:2.5;
-    const predictiveY=p.y+descent*roleLead+
-      Math.max(0,Math.sin(p.angle))*25;
-    // Healthy pilots look further ahead. Damage makes late recovery more likely
-    // without random "suicide" behaviour or impossible anti-gravity boosts.
-    const buffer=integrity>.45?74:clamp(61+(integrity-.2)*30,50,74);
-    const floorDanger=p.y>H-190&&predictiveY>H-buffer;
-    if(floorDanger)p.aiRecoveryTime=Math.max(p.aiRecoveryTime||0,1.65);
-    else p.aiRecoveryTime=Math.max(0,(p.aiRecoveryTime||0)-STEP);
-    if(p.vy< -13&&p.y<H-91)p.aiRecoveryTime=0;
-    if(p.aiRecoveryTime>0){
-      p.aiMode='recover';p.aiThink=0;p.aiBoost=false;
-      // Shallow climb-outs preserve horizontal momentum, rather than a
-      // near-vertical snap from a dive. Real turn-rate limits apply.
-      const climbHeading=p.vx>=0?-.65:-Math.PI+.65;
-      const diff=angleDiff(climbHeading,p.angle);
-      return Math.abs(diff)<.095?0:Math.sign(diff);
-    }
-    if(p.aiThink<=0){
-      // Top-of-screen re-entry already turns a climbing aircraft around.
-      // Never force another ground-style recovery here: doing so repeatedly
-      // breaks fighter pursuit and causes obvious vertical bobbing.
-      if(p.y<46) p.aiMode='intercept';
-      else if(target.burstLeft>0&&range<(rankAI?65+talent*52:95)) p.aiMode='evade';
-      else if(enemyBehind&&range<(rankAI?54+talent*40:80)) p.aiMode='break';
-      else if(p.gunCooldown>0&&range<110) p.aiMode='extend';
-      else if(range>150) p.aiMode='intercept';
-      else p.aiMode='attack';
-      if(rankAI){
-        if((style==='guardian'||style==='survivor')&&range<145&&
-           (p.health<p.d.hull*(style==='guardian'?.76:.87)||p.armour<p.d.armour*.52))
-          p.aiMode='extend';
-        if(style==='trickster'&&enemyBehind&&range<115)p.aiMode='break';
-        if(style==='interceptor'&&range>95&&p.y>H*.45)p.aiMode='intercept';
-        if(style==='sniper'&&range<50&&target.burstLeft>0)p.aiMode='evade';
-        if((style==='brawler'||style==='hunter')&&range<150&&target.gunCooldown>0)p.aiMode='attack';
-      }
-      if(rankAI&&talent<.58&&Math.random()<(1-talent)*.16)p.aiMistake=.3+(1-talent)*.35;
-      const patience=rankAI?(p.aiPersonality?.patience??.55):.55;
-      p.aiThink=rankAI?(.75-talent*.53+Math.random()*(.29-talent*.12))*(1.12-patience*.22):
-        state.recordMode==='survival'?(.68-talent*.45)+Math.random()*.17:
-        (state.difficulty==='rookie'?.68:state.difficulty==='ace'?.23:.35)+Math.random()*.22;
-    }
-    const solution=interceptPoint(p,target);
-    // Rookies aim near present position; aces account for bullet travel time.
-    // Neither receives homing bullets or forced steering.
-    const lead=rankAI?.18+talent*.72:state.recordMode==='survival'?.20+talent*.7:
-      state.difficulty==='rookie'?.20:state.difficulty==='ace'?.90:.55;
-    const aimDx=solution.x-(p.x+wrappedDelta(p.x,target.x));
-    let tx=target.x+aimDx*lead,ty=target.y+(solution.y-target.y)*lead;
-    if(rankAI){
-      if(style==='duellist'&&range<110)ty-=18;
-      if(style==='hunter'&&range<125)tx+=target.vx*.13;
-      if(style==='sniper'&&range>55){tx+=target.vx*.10;ty+=target.vy*.10;}
-      if(style==='interceptor'&&range>80)ty=Math.min(ty,target.y-30);
-      if(style==='trickster'&&p.aiMode==='break')ty+=p.y>H*.5?-28:28;
-      if(style==='survivor'&&range<90&&p.gunCooldown>0)ty+=p.y>H*.55?-26:24;
-      if(p.aiMistake>0){p.aiMistake=Math.max(0,p.aiMistake-STEP);ty+=25*(1-talent);}
+    const rankAI=state.mode==='campaign'&&p.id>0;
+    const talent=rankAI?clamp(p.aiSkillLevel||0,0,1):
+      state.recordMode==='survival'?
+        clamp((state.difficulty==='ace'?.57:state.difficulty==='rookie'?.12:.34)+(state.round-1)*.065,0,1):
+        state.difficulty==='ace'?1:state.difficulty==='rookie'?0:.55;
+    const style=rankAI?p.aiStyle:'hunter';
+    const dx=wrappedDelta(p.x,target.x),dy=target.y-p.y;
+    const range=Math.hypot(dx,dy);
+    const directAngle=Math.atan2(dy,dx);
+    const facing=Math.abs(angleDiff(directAngle,p.angle));
+    const noseX=Math.cos(p.angle),noseY=Math.sin(p.angle);
+    const ahead=dx*noseX+dy*noseY;
+    const targetNoseX=Math.cos(target.angle),targetNoseY=Math.sin(target.angle);
+    const targetAhead=dx*targetNoseX+dy*targetNoseY;
+    const targetLateral=Math.abs(dx*targetNoseY-dy*targetNoseX);
+    const shotFromTarget=Math.atan2(-dy,wrappedDelta(target.x,p.x));
+    const targetAiming=Math.abs(angleDiff(shotFromTarget,target.angle))<.48;
+    const trueThreat=target.spawnSafe<=0&&range<128&&targetAiming&&
+      (target.burstLeft>0||range<83&&targetAhead< -10);
+    p.aiEvadeTime=Math.max(0,(p.aiEvadeTime||0)-STEP);
+    p.aiEvadeCooldown=Math.max(0,(p.aiEvadeCooldown||0)-STEP);
+    if(trueThreat&&p.aiEvadeTime<=0&&p.aiEvadeCooldown<=0){
+      // Commit to a banked break once, not a fresh random heading each frame.
+      p.aiEvadeTime=.52+talent*.38;
+      p.aiEvadeCooldown=2.7-talent*.65;
+      p.aiEscapeSign=p.y>H*.54?-1:p.y<H*.32?1:(p.id%2?1:-1);
     }
 
-    if(p.aiMode==='recover'){tx=p.x+Math.cos(p.angle)*25;ty=H*.43;}
-    if(p.aiMode==='extend'){
-      tx=p.x+Math.cos(p.angle)*125;ty=p.y+Math.sin(p.angle)*85;
-      if(p.y>H-50)ty=H*.4;
+    // Ground avoidance is bounded by actual descent and available turning
+    // space. The previous 2.5-second projection activated as high as y=60
+    // and repeatedly hijacked pursuit with an artificial upward orbit.
+    const descent=Math.max(0,p.vy);
+    const integrity=clamp(p.health/Math.max(1,p.d.hull),0,1);
+    const projected=p.y+descent*(p.role==='heavy'?1.42:1.20)+
+      Math.max(0,Math.sin(p.angle))*13;
+    const floorBuffer=(p.role==='heavy'?62:52)+(1-integrity)*8;
+    const floorDanger=p.y>H-122&&projected>H-floorBuffer;
+    p.aiRecoveryTime=floorDanger?Math.max(p.aiRecoveryTime||0,.72):
+      Math.max(0,(p.aiRecoveryTime||0)-STEP);
+    if(p.vy< -10&&p.y<H-38)p.aiRecoveryTime=0;
+    if(p.aiRecoveryTime>0){
+      p.aiMode='recover';p.aiBoost=false;
+      const heading=Math.atan2(-.55,p.vx>=0?1:-1);
+      return clamp(angleDiff(heading,p.angle)*2,-1,1);
     }
-    if(p.aiMode==='break'){tx=p.x+(p.x-target.x)*.9;ty=p.y<H*.5?H*.66:H*.27;}
+    // The ceiling is not a second ground. Ease out of climbing only when
+    // actually approaching it; otherwise keep chasing across the full sky.
+    if(p.y<56&&p.vy< -12){
+      p.aiMode='recover';p.aiBoost=false;
+      const heading=Math.atan2(.38,p.vx>=0?1:-1);
+      return clamp(angleDiff(heading,p.angle)*2,-1,1);
+    }
+
+    const behindNose=ahead< -13;
+    p.aiMode=p.aiEvadeTime>0?'evade':
+      behindNose&&range<115?'break':
+      range>118?'intercept':'attack';
+    // Campaign rivals retain recognisable tendencies without overriding
+    // their fundamental need to close, track and shoot their opponent.
+    if(rankAI&&p.aiMode==='attack'&&style==='survivor'&&
+       p.health<p.d.hull*.38&&range<58)p.aiMode='extend';
+
+    // Turn toward a predicted interception only when the opponent is
+    // forward; immediately turn back at a close crossing. Never create an
+    // artificial waypoint ahead of our own aircraft as the old AI did.
+    const availableLead=clamp(range/Math.max(185,p.d.bulletSpeed),.04,.65);
+    const lead=rankAI?.20+talent*.64:
+      state.difficulty==='rookie'?.18:state.difficulty==='ace'?.84:.52;
+    const predict=facing>1.1||range<25?.04:availableLead*lead;
+    let tx=target.x+target.vx*predict;
+    let ty=target.y+target.vy*predict;
+
+    // A fighter already approaching from astern settles behind the enemy,
+    // rather than blindly chasing the centre of a spinning sprite.
+    const tailing=targetAhead>24&&targetLateral<58&&
+      Math.abs(angleDiff(target.angle,p.angle))<1.0&&range<145;
+    if(tailing&&p.aiMode==='attack'){
+      const trail=clamp(range*.24,16,32);
+      tx=target.x-targetNoseX*trail+target.vx*predict;
+      ty=target.y-targetNoseY*trail+target.vy*predict;
+    }
+    if(rankAI){
+      if(style==='duellist'&&range>45&&p.aiMode==='intercept')ty-=12;
+      if(style==='interceptor'&&range>90)ty-=15;
+      if(style==='sniper'&&p.aiMode==='attack')tx+=target.vx*.06;
+      if(style==='brawler'&&p.aiMode==='attack')ty=target.y+target.vy*predict;
+    }
     if(p.aiMode==='evade'){
-      const a=targetAngle+Math.PI*.65;tx=p.x+Math.cos(a)*85;ty=p.y+Math.sin(a)*55;
+      // Brief S-break under a real gun threat; no teleport and no
+      // permanent retreat. Once clear, the fighter seeks a firing solution.
+      const escapeX=p.vx>=0?90:-90;
+      tx=p.x+escapeX;
+      ty=p.y+p.aiEscapeSign*62;
       if(p.rollRecovery<=0&&range<75)triggerRoll(p);
+    }else if(p.aiMode==='extend'){
+      // Only a badly damaged survivor opens distance. Weapon cooldown
+      // alone must never cause a fighter to abandon the chase.
+      tx=p.x+(p.vx>=0?85:-85);
+      ty=p.y>H*.54?p.y-35:p.y+20;
     }
-    if(p.aiMode==='intercept'){
-      tx=target.x+aimDx*lead;ty=target.y+(solution.y-target.y)*lead;
-      if(p.energy<38)ty=Math.max(70,ty);
-    }
-    // The AI can spend limited boost to intercept or extend out of danger.
-    p.aiBoost=false;
-    // Bombers seek the high ground and track crossing opportunities.
-    if(p.role==='bomber'&&p.aiMode!=='recover'){
-      tx=target.x+target.vx*.3;
-      ty=p.y>target.y-25?Math.max(43,target.y-48):Math.max(45,target.y-22);
-      // A bomb run requires time to develop and a predicted firing solution.
-      const dropHeight=target.y-p.y;
-      const fallTime=clamp(Math.sqrt(Math.max(0,2*(dropHeight-7)/94)),.25,1.1);
-      const releaseX=p.x+p.vx*.035;
-      const projectedX=target.x+(target.vx-p.vx*.58)*fallTime;
-      const aligned=Math.abs(wrappedDelta(releaseX,projectedX))<22;
-      if(p.aiBombDelay<=0&&p.specialCooldown<=0&&target.spawnSafe<=0&&
-         dropHeight>=32&&dropHeight<=112&&aligned&&range<155)
-        triggerSpecial(p);
-    }
-    // Wingmen in the final mission make complementary attack passes. They
-    // spread vertically instead of flying directly on top of each other.
-    // This changes steering decisions, never aircraft damage or hitboxes.
+    if(p.energy<28&&p.aiMode==='intercept')ty=Math.max(86,ty);
     if(rankAI&&state.campaignEncounter?.finalBoss&&p.id<=2&&
        (p.aiMode==='intercept'||p.aiMode==='attack')){
-      const wing=state.fliers.find(other=>other.id>0&&other.id!==p.id&&other.id<=2&&other.alive);
-      const side=p.id===1?-1:1;
-      if(wing&&combatDistance(p,wing)<85){
-        ty+=side*(16+12*(p.aiSkillLevel||0));
-        tx+=target.vx*(side<0?.16:-.14);
-      }
+      const wing=state.fliers.find(q=>q.id>0&&q.id!==p.id&&q.id<=2&&q.alive);
+      if(wing&&combatDistance(p,wing)<82)ty+=(p.id===1?-1:1)*16;
     }
-    // Never clamp x to screen edges: crossing the seam is a normal path.
-    ty=clamp(ty,48,H-43);
-    // Bombers and heavy fighters favour higher, safer attack corridors. Their
-    // real, slower turning radii need more airspace; no artificial ground lift.
-    if(p.role==='bomber')ty=Math.min(ty,H-99);
-    else if(p.role==='heavy')ty=Math.min(ty,H-74);
-    const facing=Math.abs(angleDiff(targetAngle,p.angle));
-    // G3A.3: never steer a fighter away from the opponent just because it
-    // crossed close behind the nose. The old 'continue forward' override
-    // caused repeated screen laps instead of turning to re-engage.
-    // Real flight inertia still limits how quickly a fighter can turn.
-    const wrapDx=wrappedDelta(p.x,tx);
-    const goal=Math.atan2(ty-p.y,wrapDx);
+    ty=clamp(ty,p.role==='heavy'?71:54,p.role==='heavy'?H-78:H-43);
+    const goal=Math.atan2(ty-p.y,wrappedDelta(p.x,tx));
     const error=angleDiff(goal,p.angle);
-    const turn=Math.abs(error)<.085?0:Math.sign(error);
-    const baseTolerance=rankAI?.11+talent*.14:state.recordMode==='survival'?.13+talent*.1:state.difficulty==='rookie'?.13:state.difficulty==='ace'?.22:.18;
-    const tolerance=rankAI&&style==='sniper'?baseTolerance*.67:rankAI&&style==='brawler'?baseTolerance*1.12:baseTolerance;
-    if(p.aiMode==='attack'&&range<(rankAI?115+talent*65:165)&&Math.abs(error)<tolerance&&
-      target.spawnSafe<=0&&target.rollDodgeTime<=0&&p.gunCooldown<=0&&p.burstLeft===0&&
-      (p.role!=='bomber'||range<72&&Math.random()<.16))triggerBurst(p);
-    if(p.specialCooldown<=0){
-      if(p.role==='heavy'&&range<100&&(p.armour<p.d.armour*.75||target.burstLeft>0||target.rearShots>0))triggerSpecial(p);
-      if(p.role==='fighter'&&(p.aiMode==='intercept'||p.aiMode==='extend')&&range>75)triggerSpecial(p);
+    // A held directional turn is visibly stronger than the previous
+    // stop-start binary steering near the sight line.
+    const turn=Math.abs(error)<.045?0:clamp(error*2.2,-1,1);
+    p.aiBoost=false;
+
+    // Actual guns use their own firing axis, not the tail-position waypoint.
+    const solution=interceptPoint(p,target);
+    const fireAngle=Math.atan2(solution.y-p.y,wrappedDelta(p.x,solution.x));
+    const aimError=Math.abs(angleDiff(fireAngle,p.angle));
+    const gunCone=rankAI?.11+talent*.12:
+      state.difficulty==='rookie'?.11:state.difficulty==='ace'?.21:.17;
+    if((p.aiMode==='attack'||p.aiMode==='intercept')&&range<165&&
+       ahead>12&&aimError<gunCone&&target.spawnSafe<=0&&
+       target.rollDodgeTime<=0&&p.gunCooldown<=0&&p.burstLeft===0){
+      triggerBurst(p);
     }
-    // Veteran enemies deliberately use their own pilot skill; rookies
-    // largely rely on elementary manoeuvres and are slower to react.
+    if(p.specialCooldown<=0){
+      if(p.role==='heavy'&&range<100&&
+         (p.armour<p.d.armour*.75||target.burstLeft>0||target.rearShots>0))
+        triggerSpecial(p);
+      if(p.role==='fighter'&&p.aiMode==='intercept'&&
+         range>122&&facing<.8)triggerSpecial(p);
+    }
     if(rankAI&&p.skillCooldown<=0&&talent>.19){
-      const threatened=(p.aiMode==='evade'||p.aiMode==='break'||enemyBehind)&&range<(75+talent*45);
-      const offensive=(p.aiMode==='attack'||p.aiMode==='intercept')&&range<(90+talent*30);
-      if(threatened&&['roll','reverse','smoke','harden','cut','dive'].includes(p.pilotSkill))
+      if(p.aiMode==='evade'&&
+         ['roll','reverse','smoke','harden','cut','dive'].includes(p.pilotSkill))
         triggerPilotSkill(p);
-      else if(offensive&&p.pilotSkill==='deadeye'&&facing<.35)
+      else if(p.aiMode==='attack'&&p.pilotSkill==='deadeye'&&aimError<.3)
         triggerPilotSkill(p);
-      else if(p.aiStyle==='interceptor'&&p.pilotSkill==='dive'&&
-          p.aiMode==='intercept'&&p.y<target.y-25&&range<165)
-        triggerPilotSkill(p);
-      else if(p.aiStyle==='guardian'&&p.pilotSkill==='harden'&&
-          (p.armour<p.d.armour*.6||p.health<p.d.hull*.75))
-        triggerPilotSkill(p);
-      else if(p.aiStyle==='trickster'&&p.pilotSkill==='smoke'&&enemyBehind&&range<155)
+      else if(style==='guardian'&&p.pilotSkill==='harden'&&
+         (p.armour<p.d.armour*.6||p.health<p.d.hull*.75))
         triggerPilotSkill(p);
     }
     return turn;
