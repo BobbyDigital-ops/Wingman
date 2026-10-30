@@ -134,10 +134,13 @@ function aircraft(){
  const rail=career?
    '<div class="wm-v12-service-locked">'+esc(typeName)+'<small>YOUR ACTIVE SQUADRON</small></div>':
    ['Allies','Axis'].map(n=>'<button class="wm-v12-faction '+(n===faction?'selected':'')+'" type="button" data-faction="'+n+'" aria-pressed="'+(n===faction)+'">'+(n==='Axis'?'✠ LUFTWAFFE':'◉ RAF')+' <span>›</span></button>').join('');
+ const theatreName=['ALPINE FRONT','ENGLISH CHANNEL','NORTH AFRICA','STORM FRONT'][Number(S.theatre)]||'ALPINE FRONT';
+ const rivalName=S.opponent==='random'?'RANDOM ENEMY':PLANES[TYPES.indexOf(S.opponent)]?.[0]||'RANDOM ENEMY';
  const settings=!career?
-  '<div class="wm-v12-hangar-settings"><label>DIFFICULTY<select data-setting="difficulty"><option value="rookie">ROOKIE</option><option value="standard">REGULAR</option><option value="ace">ACE</option></select></label>'+
-  '<label>THEATRE<select data-setting="theatre"><option value="0">ALPINE</option><option value="1">CHANNEL</option><option value="2">N. AFRICA</option><option value="3">STORM</option></select></label>'+
-  (OPS[S.op][3]==='duel'?'<label>OPPONENT<select data-setting="opponent"><option value="random">RANDOM</option>'+TYPES.map((t,i)=>'<option value="'+t+'">'+esc(PLANES[i][0])+'</option>').join('')+'</select></label>':'')+'</div>':
+  '<div class="wm-v13-flight-summary"><span>FLIGHT ORDERS</span>'+
+  '<strong>'+esc(OPS[S.op]?.[0]||'DOGFIGHT')+'</strong>'+
+  '<small>'+esc(S.difficulty.toUpperCase())+' · '+esc(theatreName)+(OPS[S.op]?.[3]==='duel'?' · '+esc(rivalName):'')+'</small>'+
+  '<em>← BACK TO MODIFY CONDITIONS</em></div>':
   '<div class="wm-v12-campaign-note">★ '+esc(save.profile.name)+' · '+esc(save.run.choices?.[S.choice]?.mission||'CAMPAIGN SORTIE')+
   (fav?' · SPECIALIST +10% HULL / ARMOUR / DAMAGE':'')+'</div>';
  return '<section class="frame wm-v12-hangar">'+
