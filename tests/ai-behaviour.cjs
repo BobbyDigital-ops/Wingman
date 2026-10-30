@@ -4,7 +4,7 @@
    Run: node tests/ai-behaviour.cjs [--seconds=60] [--reps=2]
 */
 'use strict';
-function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],difficulty='ace',campaignCheck=false}={}){
+function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],difficulty='ace',campaignCheck=false,campaignScenarios=[]}={}){
  let source=sources.game;
  const edit=(from,to)=>{if(source.split(from).length!==2)throw Error('QA anchor missing: '+from.slice(0,75));source=source.replace(from,to);};
  edit('      if(user.alive)updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);',
@@ -21,10 +21,10 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
  edit('  // All scenery is painted once;',`  window.aiQA={state,
  mission(enc){
   state.qa=false;state.mode='campaign';state.recordMode='campaign';
-  state.selected='fighter';state.enemyType=enc.types[0];state.campaignEncounter=enc;state.campaignAirframe=null;
+  state.selected=enc.playerType||'fighter';state.enemyType=enc.types[0];state.campaignEncounter=enc;state.campaignAirframe=null;
   state.participants=enc.types.length+1;
   state.teams=enc.types.length>1||enc.objective==='escort';
-  state.difficulty=enc.difficulty||'ace';state.arena=0;state.round=1;
+  state.difficulty=enc.qaDifficulty||enc.difficulty||'ace';state.arena=0;state.round=1;
   newRound();state.wind={active:false,base:0,current:0,elapsed:0};
   state.qa=true;state.qaScenario='duel';state.qaWinner=null;
   state.qaDamage=Array(130).fill(0);state.qaHits=Array(130).fill(0);
@@ -150,6 +150,35 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
  for(const [k,v] of Object.entries(summary.modes))summary.modes[k]=round(v);
  for(const k of Object.keys(summary.maxTailByType))summary.maxTailByType[k]=round(summary.maxTailByType[k]);
  summary.bomberAboveSeconds=round(summary.bomberAboveSeconds);summary.bomberClimbingSeconds=round(summary.bomberClimbingSeconds);
+ // Identical player bot and deterministic seeds for every mission; reported
+ // rates describe THIS scripted opponent, not a human win probability.
+ if(campaignScenarios.length){
+  const matches=[];
+  for(const enc of campaignScenarios){
+   const samples=[];
+   for(let trial=0;trial<2;trial++){
+    let h=2166136261;
+    for(const ch of String(enc.id||enc.objective||'mission')+String(enc.rank||1)+String(enc.lane||0)+trial)
+      h=Math.imul(h^ch.charCodeAt(0),16777619)>>>0;
+    seed=h;
+    window.aiQA.mission({...enc,qaDifficulty:'standard'});
+    const start=window.aiQA.state.fliers[0],startingCondition=start.health+start.armour;
+    const result=window.aiQA.advance(Math.ceil((enc.timeLimit||120)*60)+2);
+    const hero=window.aiQA.state.fliers[0];
+    samples.push({win:result.winner===0,loss:result.winner===1,
+      seconds:Math.max(0,Math.round((enc.timeLimit||120)-window.aiQA.state.time)),
+      integrity:+((Math.max(0,hero.health)+Math.max(0,hero.armour))/Math.max(1,startingCondition)).toFixed(2),
+      killed:window.aiQA.state.fliers.filter(p=>p.team===1&&!p.alive&&!p.queued).length,
+      crashed:window.aiQA.state.fliers.filter(p=>p.damageCause==='GROUND').length});
+   }
+   matches.push({rank:enc.rank,lane:enc.lane,objective:enc.objective,risk:enc.risk,
+      aiRank:enc.aiRank,threat:enc.threat,opponents:enc.types?.length||0,
+      winRate:Math.round(samples.filter(x=>x.win).length/samples.length*100),
+      avgIntegrity:+(samples.reduce((n,x)=>n+x.integrity,0)/samples.length).toFixed(2),
+      crashes:samples.reduce((n,x)=>n+x.crashed,0),samples});
+  }
+  summary.campaignBenchmark=matches;
+ }
  if(campaignCheck){
   const escort={objective:'escort',rank:4,aiRank:5,types:['bf109','bf110'],
    opponents:[{id:'bf109',name:'Rival One',plane:'bf109'},{id:'bf110',name:'Rival Two',plane:'bf110'}],
