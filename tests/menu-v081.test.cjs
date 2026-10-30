@@ -20,6 +20,9 @@ function make(save){
   WingmanGame:{aircraftSpecs:()=>({fighter:{speed:83,turn:3.16,armour:40,damage:11},
    bf110:{speed:77,turn:1.90,armour:75,damage:17}})},
   WingmanUIBridge:{
+   listProfileSlots:()=>[{slot:0,active:true,hasProfile:true,name:'Pilot RAF',faction:'Allies',rosterId:'ace-01',rank:null},
+    {slot:1,active:false,hasProfile:false},{slot:2,active:false,hasProfile:false}],
+   selectProfileSlot:index=>({ok:true,reload:false,hasProfile:index===0,slot:index}),
    startArcade:opts=>(logs.push({action:'arcade',opts}),true),
    startCareer:(choice,plane)=>(logs.push({action:'career',choice,plane}),true),
    hide:()=>logs.push({action:'hide'}),
@@ -38,6 +41,8 @@ const save={profile:{name:'Pilot RAF',faction:'Allies',rosterId:'ace-01',plane:'
  wins:2,losses:1,kills:2,records:{},service:[],run:null};
 test('reference main menu presents Skirmish and King of the Skies',()=>{
  const t=make(save);t.action('opening-start');
+ assert.match(t.body(),/SELECT YOUR SERVICE RECORD/);
+ t.click({profileSlot:'0'});
  assert.match(t.body(),/CHOOSE YOUR ADVENTURE/);
  assert.match(t.body(),/KING OF/);
  assert.match(t.body(),/data-action="operations"/);
@@ -45,9 +50,10 @@ test('reference main menu presents Skirmish and King of the Skies',()=>{
  assert.match(t.body(),/data-action="pilots"/);
 });
 test('Skirmish operations, RAF/Luftwaffe switching, back and launch preserve settings',()=>{
- const t=make(save);t.action('opening-start');t.action('operations');
+ const t=make(save);t.action('opening-start');t.click({profileSlot:'0'});t.action('operations');
  assert.match(t.body(),/01 · MISSION TYPE/);
- t.click({op:'0'});t.change('difficulty','ace');t.change('theatre','2');
+ assert.match(t.body(),/data-setting="op"/);
+ t.change('op','0');t.change('difficulty','ace');t.change('theatre','2');
  t.action('operations-next');assert.equal(t.window.WingmanLiveUI.state.screen,'aircraft');
  for(let i=0;i<3;i++)assert.ok(t.body().includes('asset-'+i+'.jpg'));
  for(let i=3;i<6;i++)assert.ok(!t.body().includes('asset-'+i+'.jpg'));
@@ -67,7 +73,7 @@ test('campaign locked faction, pilot specialism and handoff remain intact',()=>{
  data.run={rank:5,lives:2,faction:'Allies',aircraft:'fighter',condition:88,supplies:4,
   effects:[],choices:[{id:'ace-21',mission:'ACE HUNT',label:'Pilot Axis',risk:'HIGH',timeLimit:78,
    types:['bf109'],objective:'ace-hunt',briefing:'Intercept a rival'}]};
- const t=make(data);t.action('opening-start');t.action('career');t.window.WingmanLiveUI.state.choice=0;
+ const t=make(data);t.action('opening-start');t.click({profileSlot:'0'});t.action('career');t.window.WingmanLiveUI.state.choice=0;
  t.action('career-aircraft');assert.equal(t.window.WingmanLiveUI.state.screen,'aircraft');
  assert.match(t.body(),/YOUR ACTIVE SQUADRON/);
  assert.doesNotMatch(t.body(),/data-faction="Axis"/);
@@ -81,4 +87,18 @@ test('no model art files or canonical aircraft identifiers were replaced',()=>{
  assert.match(src,/photo\('aircraft-art-'\+i\)/);
  assert.match(src,/photo\('aircraft-art-'\+S\.plane\)/);
  assert.match(src,/function atlas\(p\)/);
+});
+test('campaign ladder gets its own full view and sortie choices have their own view',()=>{
+ const data=JSON.parse(JSON.stringify(save));
+ data.run={rank:5,lives:2,faction:'Allies',aircraft:'fighter',condition:87,supplies:5,
+  effects:[],choices:[{id:'ace-21',mission:'ACE HUNT',label:'Pilot Axis',risk:'HIGH',timeLimit:78,
+   types:['bf109'],objective:'ace-hunt',briefing:'Intercept a rival'}]};
+ const t=make(data);t.action('opening-start');t.click({profileSlot:'0'});t.action('career');
+ assert.match(t.body(),/wm-v13-ladder/);
+ assert.match(t.body(),/campaign-ladder-scroll/);
+ assert.match(t.body(),/VIEW FULL LADDER/);
+ t.action('campaign-sortie');
+ assert.match(t.body(),/wm-v13-sortie/);
+ assert.match(t.body(),/SELECT AIRCRAFT/);
+ t.action('campaign-map');assert.match(t.body(),/wm-v13-ladder/);
 });
