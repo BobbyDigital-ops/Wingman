@@ -4,69 +4,43 @@
  */
 (()=>{'use strict';
   const PI2=Math.PI*2;
+  // Compact WWII general-purpose bomb: blunt ogive, cylindrical casing and
+  // open box-fin stabiliser. Small enough relative to all six miniatures.
   function drawBomb(c,b){
     if(b.delay>0)return;
-    const vx=Number.isFinite(b.vx)?b.vx:0;
-    const vy=Number.isFinite(b.vy)?b.vy:10;
-    c.save();
-    c.translate(b.x,b.y);
-    // Side-on WWII general-purpose bomb, nose pointing along the fall vector.
-    // Fins are narrow sheet-metal stabilisers, not the old large triangular
-    // "cartoon rocket" tail. Keep it recognisable at actual mobile size.
+    const vx=Number.isFinite(b.vx)?b.vx:0,vy=Number.isFinite(b.vy)?b.vy:10;
+    c.save();c.translate(b.x,b.y);
     c.rotate(-Math.atan2(vx,vy||.01));
+    c.scale(.46,.46);
     c.lineJoin='round';
-    // Rear box-fin stabiliser and its two diagonal supports.
-    c.fillStyle='#5b6654';
-    c.strokeStyle='#252f2c';
-    c.lineWidth=.52;
+    // Box-fin tail: slim square stabiliser and diagonal internal brace.
+    c.fillStyle='#4f5849';c.strokeStyle='#232b26';c.lineWidth=.58;
     c.beginPath();
-    c.moveTo(-.85,-3.0);c.lineTo(-2.45,-5.3);
-    c.lineTo(-2.35,-2.05);c.lineTo(-1.27,-1.65);
-    c.lineTo(1.27,-1.65);c.lineTo(2.35,-2.05);
-    c.lineTo(2.45,-5.3);c.lineTo(.85,-3.0);
-    c.closePath();c.fill();c.stroke();
-    // Slightly lighter far fin. The centre bracing stays dark and fine.
-    c.fillStyle='#85907a';
-    c.beginPath();
-    c.moveTo(.3,-3.15);c.lineTo(1.75,-4.55);
-    c.lineTo(1.58,-2.2);c.lineTo(.55,-1.65);c.closePath();c.fill();
-    c.strokeStyle='#354038';c.lineWidth=.40;
-    c.beginPath();c.moveTo(-2.2,-4.9);c.lineTo(-.7,-2.4);
-    c.moveTo(2.2,-4.9);c.lineTo(.7,-2.4);c.stroke();
-    // Slim retaining ring and tapered tail attachment.
-    c.fillStyle='#424c43';
-    c.beginPath();
-    c.moveTo(-1.08,-3.05);c.lineTo(1.08,-3.05);
-    c.lineTo(1.48,-1.8);c.lineTo(-1.48,-1.8);
-    c.closePath();c.fill();
-    c.strokeStyle='#a6ad96';c.lineWidth=.36;
-    c.beginPath();c.moveTo(-1.1,-3.05);c.lineTo(1.1,-3.05);c.stroke();
-    // Main steel casing: long parallel body, tapered ogive and rounded nose.
-    const shell=c.createLinearGradient(-1.65,0,1.65,0);
-    shell.addColorStop(0,'#303a32');
-    shell.addColorStop(.3,'#59634f');
-    shell.addColorStop(.74,'#6f775b');
-    shell.addColorStop(1,'#313b34');
-    c.fillStyle=shell;
-    c.strokeStyle='#202a27';c.lineWidth=.51;
-    c.beginPath();
-    c.moveTo(-1.47,-2.2);
-    c.lineTo(1.47,-2.2);
-    c.lineTo(1.55,1.95);
-    c.quadraticCurveTo(1.47,3.5,.71,4.78);
-    c.quadraticCurveTo(.4,5.3,0,5.48);
-    c.quadraticCurveTo(-.4,5.3,-.71,4.78);
-    c.quadraticCurveTo(-1.47,3.5,-1.55,1.95);
-    c.closePath();c.fill();c.stroke();
-    // Narrow yellow identification band towards the nose, period-appropriate.
-    c.strokeStyle='#b3a16c';c.lineWidth=.56;
-    c.beginPath();c.moveTo(-1.43,2.13);c.lineTo(1.43,2.13);c.stroke();
-    // Tiny fuselage glint and seam; do not turn the bomb into a shiny missile.
-    c.strokeStyle='rgba(216,222,196,.52)';c.lineWidth=.36;
-    c.beginPath();c.moveTo(-.77,-1.45);c.lineTo(-.77,1.7);
-    c.quadraticCurveTo(-.74,3.4,-.26,4.45);c.stroke();
-    c.strokeStyle='#343d33';c.lineWidth=.35;
-    c.beginPath();c.moveTo(-1.32,-1.55);c.lineTo(1.32,-1.55);c.stroke();
+    c.moveTo(-2.7,-4.8);c.lineTo(-2.7,-2.45);
+    c.lineTo(-1.0,-2.1);c.lineTo(1.0,-2.1);
+    c.lineTo(2.7,-2.45);c.lineTo(2.7,-4.8);
+    c.lineTo(2.06,-4.8);c.lineTo(2.06,-3.04);
+    c.lineTo(.83,-2.68);c.lineTo(-.83,-2.68);
+    c.lineTo(-2.06,-3.04);c.lineTo(-2.06,-4.8);c.closePath();
+    c.fill();c.stroke();
+    c.strokeStyle='#a0a48b';c.lineWidth=.45;
+    c.beginPath();c.moveTo(-2.4,-4.4);c.lineTo(-.87,-2.7);
+    c.moveTo(2.4,-4.4);c.lineTo(.87,-2.7);c.stroke();
+    c.fillStyle='#383f35';c.fillRect(-1.08,-3,2.16,1.28);
+    // WWII olive-drab body with a round/blunt ogive, not rocket pointed.
+    const shell=c.createLinearGradient(-1.63,0,1.63,0);
+    shell.addColorStop(0,'#272e2a');shell.addColorStop(.4,'#545d4c');
+    shell.addColorStop(.7,'#69725b');shell.addColorStop(1,'#2b332c');
+    c.fillStyle=shell;c.strokeStyle='#222a27';c.lineWidth=.62;
+    c.beginPath();c.moveTo(-1.63,-2.05);c.lineTo(1.63,-2.05);
+    c.lineTo(1.63,2.3);c.quadraticCurveTo(1.55,3.55,.78,4.23);
+    c.quadraticCurveTo(0,5,-.78,4.23);
+    c.quadraticCurveTo(-1.55,3.55,-1.63,2.3);c.closePath();
+    c.fill();c.stroke();
+    c.strokeStyle='#aa9b6d';c.lineWidth=.65;
+    c.beginPath();c.moveTo(-1.52,2.50);c.lineTo(1.52,2.50);c.stroke();
+    c.strokeStyle='rgba(230,225,192,.39)';c.lineWidth=.4;
+    c.beginPath();c.moveTo(-.65,-1.62);c.lineTo(-.65,2.07);c.stroke();
     c.restore();
   }
   function drawRound(c,b,heavy){

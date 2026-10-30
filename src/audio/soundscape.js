@@ -2,7 +2,7 @@
    One continuously modulated motor voice, event-limited weapon and medal cues. */
 (()=>{'use strict';
  let ctx=null,master=null,motor=null,motorFilter=null,motorGain=null;
- let muted=false,lastFire=-10,lastHit=-10,lastFlight=0,lastBombWhistle=-10;
+ let muted=false,lastFire=-10,lastHit=-10,lastCrash=-10,lastFlight=0,lastBombWhistle=-10;
  let noiseBuffer=null;
  try{muted=localStorage.getItem('wingman-audio-muted')==='true';}catch{}
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -24,7 +24,7 @@
    master.connect(ctx.destination);
    // Cache one varied broadband sample for short gun and explosion impulses.
    // All sounds are generated locally, with no downloaded audio assets.
-   const len=Math.ceil(ctx.sampleRate*.42);
+   const len=Math.ceil(ctx.sampleRate*1.35);
    noiseBuffer=ctx.createBuffer(1,len,ctx.sampleRate);
    const samples=noiseBuffer.getChannelData(0);
    let seed=0x582f1987;
@@ -50,33 +50,43 @@
  }
  function noise(duration,volume=0.045,delay=0,options={}){
   if(muted||!ctx||ctx.state!=='running'||!master||!noiseBuffer)return;
-  const now=ctx.currentTime+delay;
+  const at=ctx.currentTime+delay;
+  const len=Math.min(duration,noiseBuffer.duration-.01);
   const src=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
   src.buffer=noiseBuffer;
   filter.type=options.filter||'lowpass';
-  filter.frequency.setValueAtTime(options.frequency||1600,now);
-  filter.Q.value=options.q??.8;
-  gain.gain.setValueAtTime(.001,now);
-  gain.gain.linearRampToValueAtTime(volume,now+.004);
-  gain.gain.exponentialRampToValueAtTime(.001,now+duration);
+  filter.frequency.setValueAtTime(options.frequency||800,at);
+  if(options.toFrequency){
+    filter.frequency.exponentialRampToValueAtTime(options.toFrequency,at+len);
+  }
+  filter.Q.value=options.q??.7;
+  gain.gain.setValueAtTime(.001,at);
+  gain.gain.linearRampToValueAtTime(volume,at+.004);
+  gain.gain.exponentialRampToValueAtTime(.001,at+len);
   src.connect(filter);filter.connect(gain);gain.connect(master);
-  const maxOffset=Math.max(0,noiseBuffer.duration-duration-.015);
-  const offset=maxOffset?((now*5.913)%maxOffset):0;
-  src.start(now,offset,Math.max(.012,duration));
+  const offsetRange=Math.max(0,noiseBuffer.duration-len-.015);
+  const offset=offsetRange?((at*5.913)%offsetRange):0;
+  src.start(at,offset,len);
  }
  function gunCrack(heavy=false,rear=false){
   const now=ctx.currentTime;
-  const minInterval=heavy?.095:rear?.075:.052;
-  if(now-lastFire<minInterval)return;
+  // Avoid overlapping dozens of full-volume impulses during automatic fire.
+  if(now-lastFire<(heavy?.095:rear?.077:.052))return;
   lastFire=now;
-  // A very short broadband pressure crack, followed by low mechanical
-  // resonance. Two different spectral profiles for cannon and machine guns.
-  const variation=.96+.08*((now*17.7)%1);
-  noise(heavy?.104:rear?.063:.077,heavy?.145:rear?.073:.104,0,
-    {filter:'bandpass',frequency:heavy?720:rear?1320:1020,q:heavy?.45:.55});
-  tone((heavy?132:rear?175:205)*variation,heavy?68:rear?118:122,
-    heavy?.12:.085,heavy?.098:rear?.049:.066,'triangle');
-  if(heavy)noise(.078,.055,.023,{filter:'lowpass',frequency:430,q:.7});
+  // No pitched laser tone. A short broadband muzzle report with a dark
+  // low-mid pressure pulse and fast mechanical tail for machine-gun bursts.
+  const cut=heavy?430:rear?690:580;
+  const vol=heavy?.18:rear?.11:.155;
+  noise(heavy?.15:.105,vol,0,
+    {filter:'lowpass',frequency:cut,toFrequency:heavy?135:rear?210:175,q:.48});
+  noise(.026,heavy?.083:rear?.056:.079,0,
+    {filter:'highpass',frequency:heavy?850:1150,q:.44});
+  noise(heavy?.12:.077,heavy?.072:.043,.013,
+    {filter:'bandpass',frequency:heavy?290:rear?445:360,q:.63});
+  if(heavy){
+    // A low, very brief cannon recoil bloom instead of a high square-wave.
+    tone(86,49,.13,.078,'sine');
+  }
  }
  function bombWhistle(){
   if(!ctx||ctx.state!=='running'||muted||!master)return;
@@ -104,11 +114,30 @@
   noise(.9,.020,.21,{filter:'bandpass',frequency:630,q:.5});
  }
  function bombImpact(){
-  // Thick low-frequency thump plus rough rolling detonation and dust.
-  tone(116,42,.56,.16,'sawtooth');
-  tone(70,38,.5,.12,'triangle',.02);
-  noise(.34,.17,0,{filter:'lowpass',frequency:690,q:.5});
-  noise(.31,.048,.1,{filter:'bandpass',frequency:310,q:.6});
+  // Low pressure wave and a crumbling tail: no electronic descending bloop.
+  noise(.58,.17,0,{filter:'lowpass',frequency:430,toFrequency:90,q:.5});
+  noise(.085,.09,0,{filter:'highpass',frequency:850,q:.5});
+  noise(.45,.063,.065,{filter:'bandpass',frequency:240,toFrequency:135,q:.5});
+  tone(66,39,.43,.075,'sine');
+ }
+ function metalHit(){
+  // A short sheet-metal snap, followed by a soft shrapnel rattle.
+  // Deliberately NON-TONAL so gun strikes don't sound like UI bleeps.
+  noise(.036,.082,0,{filter:'highpass',frequency:1300,q:.6});
+  noise(.13,.071,.007,{filter:'bandpass',frequency:590,toFrequency:310,q:.78});
+  noise(.078,.029,.018,{filter:'lowpass',frequency:430,q:.5});
+ }
+ function aircraftCrash(){
+  const now=ctx.currentTime;
+  if(now-lastCrash<.24)return;
+  lastCrash=now;
+  // Heavy structural breakup and fuel detonation, clearly separate from
+  // routine bullet hits and from the mission victory/defeat UI jingle.
+  noise(.14,.19,0,{filter:'highpass',frequency:470,q:.48});
+  noise(.72,.205,0,{filter:'lowpass',frequency:490,toFrequency:85,q:.47});
+  noise(.46,.104,.083,{filter:'bandpass',frequency:185,toFrequency:110,q:.49});
+  noise(.21,.055,.23,{filter:'highpass',frequency:780,q:.6});
+  tone(68,36,.51,.10,'sine');
  }
  function play(type){
   if(muted)return;
@@ -122,13 +151,11 @@
   }else if(type==='bombImpact'){
     bombImpact();
   }else if(type==='hit'){
-    if(now-lastHit<.07)return;lastHit=now;
-    tone(245,98,.095,.046,'triangle');
-    noise(.063,.075,0,{filter:'bandpass',frequency:1450,q:.65});
+    if(now-lastHit<.065)return;lastHit=now;metalHit();
+  }else if(type==='crash'){
+    aircraftCrash();
   }else if(type==='boom'){
-    tone(132,40,.41,.126,'sawtooth');
-    tone(64,37,.47,.104,'triangle');
-    noise(.29,.115,0,{filter:'lowpass',frequency:620,q:.6});
+    aircraftCrash();
   }else if(type==='special'){
     tone(390,610,.21,.052,'triangle');tone(250,470,.15,.045,'sine',.045);
   }else if(type==='boss'){
@@ -138,7 +165,8 @@
   }else if(type==='victory'){
     [392,523,659,784,1046].forEach((f,i)=>tone(f,f*.99,.34,.083,'triangle',i*.18));
   }else if(type==='defeat'){
-    [310,245,185].forEach((f,i)=>tone(f,f*.8,.28,.080,'sawtooth',i*.22));
+    // Do not play a descending arcade "blip" immediately after a crash.
+    // The physical impact supplies the feedback; the result screen is visual.
   }
  }
  function startEngine(){

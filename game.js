@@ -3,6 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
+  const GAME_VERSION='v0.2.2',GAME_PHASE='G2.2'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -351,7 +352,7 @@ function plane(type,id,x,y,angle){
     if(state.phase!=='playing')return;
     if(state.mode==='campaign'){
       window.WingmanAudio?.stopEngine();
-      state.phase='result';sound('boom');
+      state.phase='result';
       const won=winner===0;
       sound(won?'victory':'defeat');
       ui.resultTitle.textContent=won?'SORTIE WON':'SHOT DOWN';
@@ -363,7 +364,6 @@ function plane(type,id,x,y,angle){
     const won=winner===0;
     if(won){state.scores[0]++;state.session.roundsWon++;}
     else state.scores[1]++;
-    sound('boom');
     if(state.recordMode==='survival'&&won){
       const hero=state.fliers[0];
       const hull=hero.health+hero.d.hull*.14,armour=hero.armour+hero.d.armour*.24;
@@ -639,7 +639,8 @@ function plane(type,id,x,y,angle){
     if(state.trails.length<115)state.trails.push({
       x,y,vx:-p.vx*.06,vy:-p.vy*.06,age:0,life:.32,heavy:true
     });
-    sound('hit');
+    // One event per damage instance: shrapnel on hit, structural breakup on kill.
+    sound(p.health<=0?'crash':'hit');
     if(p.health<=0){
       p.alive=false;emit(p.x,p.y,28,'#ffc47e',75);emit(p.x,p.y,16,'#625765',35);
       if(state.blasts.length<12)state.blasts.push({x:p.x,y:p.y,r:p.d.radius+8,life:.65,max:.65,large:true});
@@ -647,7 +648,6 @@ function plane(type,id,x,y,angle){
         state.banner='ENEMY DOWN — '+(p.aiName?.match(/"([^"]+)"/)?.[1]||'HOSTILE');
         state.bannerTime=1.9;
       }
-      sound('boom');
       if(owner===0&&p.id!==0&&state.session)state.session.kills++;
       battleOutcomeAfterDeath(p);
     }
@@ -731,6 +731,10 @@ function plane(type,id,x,y,angle){
       if(p.y>=H-13){
         p.y=H-13;p.health=0;p.alive=false;
         p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
+        if(state.blasts.length<12)state.blasts.push({
+          x:p.x,y:p.y,r:p.d.radius+7,life:.65,max:.65,large:true
+        });
+        sound('crash');
         battleOutcomeAfterDeath(p);
       }
       // Reversals can consume existing climb reserve, never create altitude.
@@ -817,21 +821,6 @@ function plane(type,id,x,y,angle){
     // The velocity vector still turns smoothly (no sudden arcade snap).
     if(p.flightRisk>0)p.vy+=dt*(5+15*p.flightRisk);
     if(swoopPhysics&&p.invertedNow)p.vy+=dt*9;
-    // Emergency lift represents AI pulling out of a dive early. Apply as a
-    // finite acceleration; never teleport the aircraft or silently reset it.
-    if(p.id!==0&&p.aiRecoveryTime>0&&p.y>H-111&&p.vy>0){
-      const proximity=clamp((p.y-(H-111))/96,0,1);
-      const integrity=clamp(p.health/Math.max(1,p.d.hull),0,1);
-      // Badly damaged controls/engines cannot pull out as effectively.
-      // An undamaged opponent still receives the full safety acceleration.
-      const damaged=clamp((.55-integrity)/.55,0,1);
-      const pursuer=nearestEnemy(p);
-      const pressured=!!(pursuer&&pursuer.alive&&
-        combatDistance(p,pursuer)<75&&pursuer.burstLeft>0);
-      const authority=(1-.48*damaged)*(pressured?.86:1);
-      const correction=dt*(45+205*proximity)*authority;
-      p.vy=Math.max(-p.d.speed*.6,p.vy-correction);
-    }
     const oldY=p.y;
     p.x+=(p.vx+state.wind.current)*dt;p.y+=p.vy*dt;
     // Fast, sustained ascents increase load. A dive drains it quickly.
@@ -845,6 +834,10 @@ function plane(type,id,x,y,angle){
     if(p.y>=H-13){
       p.y=H-13;p.health=0;p.alive=false;
       p.damageCause='GROUND';emit(p.x,p.y,26,'#ffbb80',48);
+      if(state.blasts.length<12)state.blasts.push({
+        x:p.x,y:p.y,r:p.d.radius+7,life:.65,max:.65,large:true
+      });
+      sound('crash');
       battleOutcomeAfterDeath(p);
     }
   }
@@ -903,30 +896,28 @@ function plane(type,id,x,y,angle){
     const targetAngle=Math.atan2(target.y-p.y,wrappedDelta(p.x,target.x));
     if(target.smokescreen>0&&p.aiMode==='attack'&&Math.random()<.36)p.aiThink=Math.max(p.aiThink,.28);
     const enemyBehind=Math.abs(angleDiff(Math.atan2(p.y-target.y,wrappedDelta(target.x,p.x)),target.angle))<.65;
-    // Begin pulling out BEFORE the impact point is reached. Account for
-    // downward velocity, pitch, and the inertia of heavy aircraft.
-    // Predict the ground over an entire turning arc, not simply the current
-    // dive. The new inertial model needs 2–3 seconds' advance warning.
+    // Predict an unsafe flight path well in advance. Recovery only chooses
+    // steering; it never modifies position, velocity or gravity. This keeps AI
+    // on precisely the same inertial flight physics as the player.
     const descent=Math.max(0,p.vy);
-    const braking=p.role==='bomber'?2.65:p.role==='heavy'?2.40:2.15;
-    const projectedY=p.y+descent*braking+
-      Math.max(0,Math.sin(p.angle))*33;
-    // Earlier, more conservative escape decisions for intact AI aircraft.
-    // Damage compromises their ability to recover, but does not deliberately
-    // cause a crash or grant the player a random instant win.
-    const floorDanger=p.y>H-163&&projectedY>H-80 ||
-      p.y>H-108&&descent>10;
-    if(floorDanger)p.aiRecoveryTime=Math.max(p.aiRecoveryTime||0,1.8);
+    const integrity=clamp(p.health/Math.max(1,p.d.hull),0,1);
+    const roleLead=p.role==='bomber'?3.25:p.role==='heavy'?2.85:2.5;
+    const predictiveY=p.y+descent*roleLead+
+      Math.max(0,Math.sin(p.angle))*25;
+    // Healthy pilots look further ahead. Damage makes late recovery more likely
+    // without random "suicide" behaviour or impossible anti-gravity boosts.
+    const buffer=integrity>.45?74:clamp(61+(integrity-.2)*30,50,74);
+    const floorDanger=p.y>H-190&&predictiveY>H-buffer;
+    if(floorDanger)p.aiRecoveryTime=Math.max(p.aiRecoveryTime||0,1.65);
     else p.aiRecoveryTime=Math.max(0,(p.aiRecoveryTime||0)-STEP);
-    if(p.vy< -18&&p.y<H-91)p.aiRecoveryTime=0;
+    if(p.vy< -13&&p.y<H-91)p.aiRecoveryTime=0;
     if(p.aiRecoveryTime>0){
-      p.aiMode='recover';p.aiThink=0;
-      p.aiBoost=false;
-      // A shallow climbing arc is more achievable than a tight vertical pivot.
-      // Pick the nearest upward heading based on horizontal momentum.
-      const climbHeading=p.vx>=0?-.88:-Math.PI+.88;
+      p.aiMode='recover';p.aiThink=0;p.aiBoost=false;
+      // Shallow climb-outs preserve horizontal momentum, rather than a
+      // near-vertical snap from a dive. Real turn-rate limits apply.
+      const climbHeading=p.vx>=0?-.65:-Math.PI+.65;
       const diff=angleDiff(climbHeading,p.angle);
-      return Math.abs(diff)<.07?0:Math.sign(diff);
+      return Math.abs(diff)<.095?0:Math.sign(diff);
     }
     if(p.aiThink<=0){
       if(p.y<46) p.aiMode='recover';
@@ -1011,6 +1002,10 @@ function plane(type,id,x,y,angle){
     }
     // Never clamp x to screen edges: crossing the seam is a normal path.
     ty=clamp(ty,48,H-43);
+    // Bombers and heavy fighters favour higher, safer attack corridors. Their
+    // real, slower turning radii need more airspace; no artificial ground lift.
+    if(p.role==='bomber')ty=Math.min(ty,H-99);
+    else if(p.role==='heavy')ty=Math.min(ty,H-74);
     const facing=Math.abs(angleDiff(targetAngle,p.angle));
     if(p.role==='fighter'&&p.aiMode==='attack'&&range<65&&facing>1){tx=p.x+p.vx*.65;ty=clamp(p.y-35,45,H-30);}
     const wrapDx=wrappedDelta(p.x,tx);
@@ -1625,9 +1620,9 @@ function plane(type,id,x,y,angle){
       const sightX=hero.x+Math.cos(hero.angle)*(hero.d.radius+19);
       const sightY=hero.y+Math.sin(hero.angle)*(hero.d.radius+19);
       c.save();c.translate(sightX,sightY);c.rotate(hero.angle);
-      // G2.1: another 22% smaller, nearly black aircraft gunsight.
+      // G2.2: a further 34% smaller, dark period reflector sight.
       // A very soft warm outline preserves visibility over storm clouds.
-      c.scale(.35,.35);
+      c.scale(.23,.23);
       c.lineCap='round';c.lineJoin='round';
       c.globalAlpha=locked?1:cue>.2?.88:.76;
       c.strokeStyle=locked?'#100f0b':cue>.2?'#111713':'#10191b';
@@ -1742,7 +1737,7 @@ function plane(type,id,x,y,angle){
       state.participants>2?(state.teams?'2 v 2':state.participants+' ACES'):
       state.scores[0]+' : '+state.scores[1];
     g.textAlign='center';g.fillStyle=gold;g.font='bold 5.4px monospace';
-    g.fillText('W I N G M A N',cx,6);
+    g.fillText('W I N G M A N  ·  '+GAME_VERSION,cx,6);
     g.fillStyle=white;g.font='bold 12px Georgia,serif';
     g.fillText(score,cx,17,Math.max(52,W*.20));
     g.fillStyle='#d4c4a6';g.font='bold 5.8px monospace';
