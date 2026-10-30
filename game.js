@@ -973,11 +973,11 @@ function plane(type,id,x,y,angle){
     // and repeatedly hijacked pursuit with an artificial upward orbit.
     const descent=Math.max(0,p.vy);
     const integrity=clamp(p.health/Math.max(1,p.d.hull),0,1);
-    const projected=p.y+descent*(p.role==='heavy'?1.85:1.70)+
+    const projected=p.y+descent*(p.role==='heavy'?3.10:1.70)+
       Math.max(0,Math.sin(p.angle))*13;
-    const floorBuffer=(p.role==='heavy'?75:68)+(1-integrity)*8;
-    const floorDanger=p.y>H-150&&projected>H-floorBuffer;
-    p.aiRecoveryTime=floorDanger?Math.max(p.aiRecoveryTime||0,.72):
+    const floorBuffer=(p.role==='heavy'?95:68)+(1-integrity)*8;
+    const floorDanger=p.y>(p.role==='heavy'?H-200:H-150)&&projected>H-floorBuffer;
+    p.aiRecoveryTime=floorDanger?Math.max(p.aiRecoveryTime||0,p.role==='heavy'?1.32:.72):
       Math.max(0,(p.aiRecoveryTime||0)-STEP);
     if(p.vy< -10&&p.y<H-38)p.aiRecoveryTime=0;
     if(p.aiRecoveryTime>0){
@@ -1056,7 +1056,7 @@ function plane(type,id,x,y,angle){
       const wing=state.fliers.find(q=>q.id>0&&q.id!==p.id&&q.id<=2&&q.alive);
       if(wing&&combatDistance(p,wing)<82)ty+=(p.id===1?-1:1)*16;
     }
-    ty=clamp(ty,p.role==='heavy'?71:54,p.role==='heavy'?H-108:H-95);
+    ty=clamp(ty,p.role==='heavy'?71:54,p.role==='heavy'?H-135:H-95);
     const goal=Math.atan2(ty-p.y,wrappedDelta(p.x,tx));
     const error=angleDiff(goal,p.angle);
     // A held directional turn is visibly stronger than the previous
