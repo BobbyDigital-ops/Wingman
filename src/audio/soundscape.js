@@ -1,8 +1,18 @@
-/* Wingman audio engine — original synthesised effects, no copyrighted samples or downloads.
-   One continuously modulated motor voice, event-limited weapon and medal cues. */
+/* Wingman audio engine — CC0 recorded firearm reports + original synthetic effects.
+   Field-recorded machine-gun/cannon layers are cached locally; all other sounds remain procedural.
+   Original gun audio provenance: assets/audio/guns/README.md */
 (()=>{'use strict';
  let ctx=null,master=null,motor=null,motorFilter=null,motorGain=null;
  let muted=false,lastFire=-10,lastHit=-10,lastCrash=-10,lastFlight=0,lastBombWhistle=-10;
+ let lastGunTail=-10,gunShotIndex=0,gunBus=null,gunAssetsPromise=null;
+ const GUN_FILES={
+   mg:['./assets/audio/guns/mg-0.wav','./assets/audio/guns/mg-1.wav','./assets/audio/guns/mg-2.wav'],
+   cannon:['./assets/audio/guns/cannon-0.wav','./assets/audio/guns/cannon-1.wav'],
+   mgTail:'./assets/audio/guns/mg-tail.mp3',
+   cannonTail:'./assets/audio/guns/cannon-tail.mp3'
+ };
+ const gunBuffers={mg:[],cannon:[],mgTail:null,cannonTail:null};
+ const recordedGunfire=new URLSearchParams(window.location?.search||'').get('guns')!=='synthetic';
  let noiseBuffer=null;
  try{muted=localStorage.getItem('wingman-audio-muted')==='true';}catch{}
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -22,6 +32,18 @@
    ctx=new AC();
    master=ctx.createGain();master.gain.value=muted?0:.42;
    master.connect(ctx.destination);
+   // Gun bus compressor makes each field-recorded report audible on small
+   // laptop/phone speakers without clipping when several shots overlap.
+   if(ctx.createDynamicsCompressor){
+     const compressor=ctx.createDynamicsCompressor();
+     compressor.threshold.value=-18;
+     compressor.knee.value=13;
+     compressor.ratio.value=3.4;
+     compressor.attack.value=.004;
+     compressor.release.value=.19;
+     gunBus=ctx.createGain();gunBus.connect(compressor);compressor.connect(master);
+   }else gunBus=master;
+   // Procedural noise remains as a fallback and for non-gun effects.
    // Cache one varied broadband sample for short gun and explosion impulses.
    // All sounds are generated locally, with no downloaded audio assets.
    const len=Math.ceil(ctx.sampleRate*1.35);
@@ -34,7 +56,48 @@
    }
   }catch{}
   if(ctx?.state==='suspended')ctx.resume().catch(()=>{});
+  if(ctx&&recordedGunfire)loadGunAssets();
   return ctx?.state==='running';
+ }
+ function loadGunAssets(){
+   if(gunAssetsPromise||!ctx||typeof fetch!=='function')return gunAssetsPromise;
+   const entries=[
+     ...GUN_FILES.mg.map((url,i)=>({url,group:'mg',index:i})),
+     ...GUN_FILES.cannon.map((url,i)=>({url,group:'cannon',index:i})),
+     {url:GUN_FILES.mgTail,group:'mgTail'},
+     {url:GUN_FILES.cannonTail,group:'cannonTail'}
+   ];
+   gunAssetsPromise=Promise.all(entries.map(async ({url,group,index})=>{
+     try{
+       const response=await fetch(url,{cache:'force-cache'});
+       if(!response.ok)throw Error('audio '+response.status);
+       const buffer=await ctx.decodeAudioData(await response.arrayBuffer());
+       if(group==='mg'||group==='cannon')gunBuffers[group][index]=buffer;
+       else gunBuffers[group]=buffer;
+     }catch(_){
+       // Keep the legacy synthetic fallback for offline/unsupported browsers.
+     }
+   }));
+   return gunAssetsPromise;
+ }
+ function playRecorded(buffer,volume,rate=1,delay=0,maxDuration=Infinity){
+   if(!ctx||!master||!buffer||muted)return false;
+   const at=ctx.currentTime+delay;
+   const src=ctx.createBufferSource(),gain=ctx.createGain(),toneFilter=ctx.createBiquadFilter();
+   src.buffer=buffer;
+   src.playbackRate.value=rate;
+   toneFilter.type='highpass';toneFilter.frequency.value=85;
+   gain.gain.setValueAtTime(.001,at);
+   gain.gain.linearRampToValueAtTime(volume,at+.003);
+   // Trim overlapping individual reports: each shot has an impactful attack
+   // and body, while the natural outdoor reverberation plays after the burst.
+   const duration=Math.min(buffer.duration/rate,maxDuration);
+   gain.gain.setValueAtTime(volume,at+Math.max(.005,duration-.035));
+   gain.gain.linearRampToValueAtTime(.001,at+duration);
+   src.connect(toneFilter);toneFilter.connect(gain);gain.connect(gunBus||master);
+   src.start(at,0,Math.min(buffer.duration,duration*rate));
+   src.stop(at+duration+.005);
+   return true;
  }
  function tone(freq,to,duration,volume=0.08,type='triangle',delay=0){
   if(muted||!ctx||ctx.state!=='running'||!master)return;
@@ -68,25 +131,40 @@
   const offset=offsetRange?((at*5.913)%offsetRange):0;
   src.start(at,offset,len);
  }
- function gunCrack(heavy=false,rear=false){
-  const now=ctx.currentTime;
-  // Avoid overlapping dozens of full-volume impulses during automatic fire.
-  if(now-lastFire<(heavy?.095:rear?.077:.052))return;
-  lastFire=now;
-  // No pitched laser tone. A short broadband muzzle report with a dark
-  // low-mid pressure pulse and fast mechanical tail for machine-gun bursts.
-  const cut=heavy?430:rear?690:580;
-  const vol=heavy?.18:rear?.11:.155;
-  noise(heavy?.15:.105,vol,0,
-    {filter:'lowpass',frequency:cut,toFrequency:heavy?135:rear?210:175,q:.48});
-  noise(.026,heavy?.083:rear?.056:.079,0,
-    {filter:'highpass',frequency:heavy?850:1150,q:.44});
-  noise(heavy?.12:.077,heavy?.072:.043,.013,
-    {filter:'bandpass',frequency:heavy?290:rear?445:360,q:.63});
-  if(heavy){
-    // A low, very brief cannon recoil bloom instead of a high square-wave.
-    tone(86,49,.13,.078,'sine');
-  }
+ function gunCrack(heavy=false,rear=false,options={}){
+   const now=ctx.currentTime;
+   const interval=heavy?.092:rear?.077:.051;
+   if(now-lastFire<interval)return;
+   lastFire=now;
+   const key=heavy?'cannon':'mg';
+   const available=gunBuffers[key].filter(Boolean);
+   const enemy=options.player===false;
+   if(recordedGunfire&&available.length){
+     const b=available[(gunShotIndex++)%available.length];
+     const playbackRate=heavy?.90+(gunShotIndex%3)*.018:
+       rear?1.08+(gunShotIndex%3)*.017:.96+(gunShotIndex%3)*.02;
+     const gain=(heavy?.59:rear?.29:.46)*(enemy?.68:1);
+     playRecorded(b,gain,playbackRate,0,heavy?.32:.235);
+     return;
+   }
+   // Offline/first-shot fallback. Later shots use recorded firearm reports.
+   noise(heavy?.16:.11,heavy?.16:.12,0,
+      {filter:'lowpass',frequency:heavy?1100:1450,toFrequency:220,q:.45});
+   noise(.048,heavy?.07:.06,0,
+      {filter:'highpass',frequency:heavy?950:1350,q:.45});
+ }
+ function gunTail(options={}){
+   if(!recordedGunfire||!ctx||muted)return;
+   const now=ctx.currentTime;
+   if(now-lastGunTail<.23)return;
+   lastGunTail=now;
+   const heavy=options.role==='heavy';
+   const buffer=gunBuffers[heavy?'cannonTail':'mgTail'];
+   if(buffer){
+     // Natural field reflections after the final round provide size and
+     // menace without stacking a reverb tail on every 50-ms gunshot.
+     playRecorded(buffer,(heavy?.28:.22)*(options.player===false?.62:1),1,.065);
+   }
  }
  function bombWhistle(){
   if(!ctx||ctx.state!=='running'||muted||!master)return;
@@ -139,13 +217,15 @@
   noise(.21,.055,.23,{filter:'highpass',frequency:780,q:.6});
   tone(68,36,.51,.10,'sine');
  }
- function play(type){
+ function play(type,options={}){
   if(muted)return;
   unlock();
   if(!ctx||ctx.state!=='running')return;
   const now=ctx.currentTime;
   if(type==='shot'||type==='cannon'||type==='rearShot'){
-    gunCrack(type==='cannon',type==='rearShot');
+    gunCrack(type==='cannon',type==='rearShot',options);
+  }else if(type==='gunTail'){
+    gunTail(options);
   }else if(type==='bombDrop'){
     bombWhistle();
   }else if(type==='bombImpact'){
@@ -204,5 +284,8 @@
  }
  for(const button of buttons)button.addEventListener('click',()=>{if(muted){setMuted(false);unlock();play('medal');}else setMuted(true);});
  sync();
- window.WingmanAudio={unlock,play,startEngine,flight,stopEngine,setMuted,get muted(){return muted;}};
+ window.WingmanAudio={unlock,play,startEngine,flight,stopEngine,setMuted,
+   get muted(){return muted;},
+   get recordedGunfireReady(){return gunBuffers.mg.filter(Boolean).length>0&&gunBuffers.cannon.filter(Boolean).length>0;}
+ };
 })();

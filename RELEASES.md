@@ -13,6 +13,7 @@ branches. Never commit ongoing work to a snapshot branch.
 | v0.2.0 | G2 | `releases/g2-weapons` | `7c0c89a20ae6fc7384ff770a5f1b6ecfd52dfa40` | Tracers, bombs, explosions, smaller gunsight |
 | v0.2.1 | G2.1 | `releases/g2-1-audio` | `7714357c2f1c525c21659d01a6bbb2afd5be3883` | Improved bombs, gun audio and bomb whistles |
 | v0.2.2 | G2.2 | `releases/g2-2-stable` | This checkpoint's branch head | Smaller dark crosshair and WWII bombs; physical AI dive recovery; distinct gun, metal-hit and crash sounds; in-game version display |
+| v0.2.3 | G2.3 | `releases/g2-3-recorded-guns` | This checkpoint's branch head | CC0 field-recorded automatic gunfire and heavy cannon reports, outdoor reflections, shot variation, dynamic compression; legacy synthetic comparison remains accessible |
 
 ## Rollback procedure
 

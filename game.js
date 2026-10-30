@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.2.2',GAME_PHASE='G2.2'; // stable release identifier
+  const GAME_VERSION='v0.2.3',GAME_PHASE='G2.3'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -86,8 +86,8 @@
       if(audio&&audio.state==='suspended')audio.resume().catch(()=>{});
     }catch(_){}
   }
-  function sound(type){
-    if(window.WingmanAudio){window.WingmanAudio.play(type);return;}
+  function sound(type,options){
+    if(window.WingmanAudio){window.WingmanAudio.play(type,options);return;}
     if(!audio||audio.state!=='running')return;
     try{
       const t=audio.currentTime,osc=audio.createOscillator(),gain=audio.createGain();
@@ -613,7 +613,7 @@ function plane(type,id,x,y,angle){
       owner:p.id,damage:p.d.damage,life:p.d.gunLife,age:0});
     emit(p.x+dx*(p.d.radius+3),p.y+dy*(p.d.radius+3),2,'#fff0a3',7);
     p.muzzleFlash=.12;
-    sound(p.role==='heavy'?'cannon':'shot');
+    sound(p.role==='heavy'?'cannon':'shot',{player:p.id===0});
   }
   function emit(x,y,count,color,power,kind=''){
     for(let i=0;i<count&&state.sparks.length<100;i++){
@@ -1113,7 +1113,7 @@ function plane(type,id,x,y,angle){
               owner:p.id,damage:4.5,life:1.0,age:0,rearGun:true,
               tracer:p.rearTracerCount%3===0
             });
-            sound('rearShot');
+            sound('rearShot',{player:p.id===0});
             p.turretFlash=.12;
           }
         }
@@ -1134,7 +1134,10 @@ function plane(type,id,x,y,angle){
       p.shotTimer-=dt;
       if(p.shotTimer<=0){
         shoot(p);p.burstLeft--;p.shotTimer+=p.d.interval;
-        if(p.burstLeft===0)p.gunCooldown=p.d.cooldown;
+        if(p.burstLeft===0){
+          p.gunCooldown=p.d.cooldown;
+          sound('gunTail',{role:p.role,player:p.id===0});
+        }
       }
     }else p.gunCooldown=Math.max(0,p.gunCooldown-dt);
     p.smokeTimer-=dt;
