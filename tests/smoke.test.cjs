@@ -380,6 +380,18 @@ test('Heavy fighter shield reduces damage while active',()=>{
  assert.ok(p.armourTime>0);
  assert.equal(p.specialCooldown,20);
 });
+test('G3A.3 fighter pursues close target even when pointing away instead of orbiting',()=>{
+ const game=launch();game.listeners.get('start:click')();
+ const [player,fighter]=game.internals.state.fliers;
+ fighter.type='bf109';fighter.role='fighter';fighter.d=game.internals.PLANES.bf109;
+ fighter.x=145;fighter.y=100;fighter.angle=2.35;
+ fighter.vx=-58;fighter.vy=-10;
+ fighter.aiThink=10;fighter.aiMode='attack';fighter.aiRecoveryTime=0;
+ player.x=198;player.y=100;player.vx=0;player.vy=0;player.spawnSafe=0;
+ const turn=game.internals.aiInput(fighter,player);
+ assert.ok(turn<0,'turn toward the nearby target, not away on a forward lap');
+ assert.equal(fighter.aiMode,'attack','fighter stays in combat after close crossing');
+});
 test('G3A.2 near-ceiling fighter keeps chasing instead of bobbing in ground-recovery mode',()=>{
  const game=launch();game.listeners.get('start:click')();
  const [player,fighter]=game.internals.state.fliers;

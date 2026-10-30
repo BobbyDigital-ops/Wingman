@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v0.3.2',GAME_PHASE='G3A.2'; // stable release identifier
+  const GAME_VERSION='v0.3.3',GAME_PHASE='G3A.3'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -1064,7 +1064,10 @@ function plane(type,id,x,y,angle){
     if(p.role==='bomber')ty=Math.min(ty,H-99);
     else if(p.role==='heavy')ty=Math.min(ty,H-74);
     const facing=Math.abs(angleDiff(targetAngle,p.angle));
-    if(p.role==='fighter'&&p.aiMode==='attack'&&range<65&&facing>1){tx=p.x+p.vx*.65;ty=clamp(p.y-35,45,H-30);}
+    // G3A.3: never steer a fighter away from the opponent just because it
+    // crossed close behind the nose. The old 'continue forward' override
+    // caused repeated screen laps instead of turning to re-engage.
+    // Real flight inertia still limits how quickly a fighter can turn.
     const wrapDx=wrappedDelta(p.x,tx);
     const goal=Math.atan2(ty-p.y,wrapDx);
     const error=angleDiff(goal,p.angle);
