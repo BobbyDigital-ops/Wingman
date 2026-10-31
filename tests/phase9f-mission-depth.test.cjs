@@ -80,7 +80,7 @@ test('Debrief contains real per-sortie statistics before the reward step',()=>{
  for(const field of ['damageDealt','damageTaken','reinforcements','alliesLost','shots','hits','secondsElapsed'])
   assert.ok(career.includes(field),'missing saved '+field);
  assert.match(ui,/outcomeStep==='reward'/);
- assert.match(ui,/data-action="review-rewards"/);
+ assert.match(ui,/confirmButton\('CONTINUE · CHOOSE REWARD ›','review-rewards'/);
  assert.match(ui,/wm-v9f-sortie-stats/);
  assert.match(ui,/AIRCRAFT BUILD/);
  assert.match(ui,/if\(v==='back-to-ladder'\)/);
