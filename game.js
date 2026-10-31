@@ -138,6 +138,29 @@ function plane(type,id,x,y,angle){
     w.elapsed+=dt;
     w.current=w.base*(1+.16*Math.sin(w.elapsed*1.1)+.07*Math.sin(w.elapsed*2.7));
   }
+  function drawCampaignWeather(){
+    if(state.mode!=='campaign'||state.phase!=='playing')return;
+    const hazard=state.campaignEncounter?.hazard;
+    if(hazard!=='fog'&&hazard!=='glare')return;
+    g.save();
+    // These effects deliberately remain soft; they are atmospheric, not a
+    // blindfold. AI and human retain the same physical handling.
+    if(hazard==='fog'){
+      g.fillStyle='rgba(220,232,232,.13)';
+      g.fillRect(0,0,W,H);
+      const fog=g.createLinearGradient(0,H*.40,0,H);
+      fog.addColorStop(0,'rgba(225,233,229,0)');
+      fog.addColorStop(1,'rgba(204,222,220,.16)');
+      g.fillStyle=fog;g.fillRect(0,0,W,H);
+    }else if(hazard==='glare'){
+      const light=g.createRadialGradient(W*.82,H*.05,2,W*.82,H*.05,W*.64);
+      light.addColorStop(0,'rgba(255,231,174,.29)');
+      light.addColorStop(.48,'rgba(244,219,164,.09)');
+      light.addColorStop(1,'rgba(244,219,164,0)');
+      g.fillStyle=light;g.fillRect(0,0,W,H);
+    }
+    g.restore();
+  }
   function drawWind(){
     const w=state.wind;if(!w?.active)return;
     g.save();g.strokeStyle='#e7edf2a0';g.lineWidth=.65;
@@ -277,6 +300,12 @@ function plane(type,id,x,y,angle){
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.trails=[];state.blasts=[];state.visualClock=0;
     state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
+    // Phase 9C: a disclosed campaign crosswind uses the SAME force for
+    // aircraft and projectiles on both teams. All existing arcade wind remains.
+    if(state.mode==='campaign'&&state.campaignEncounter?.hazard==='crosswind'){
+      const sign=(Number(state.campaignEncounter.rank)+Number(state.campaignEncounter.lane||0))%2?1:-1;
+      state.wind={active:true,base:sign*13,current:sign*13,elapsed:0};
+    }
     if(state.mode==='challenge'&&state.challenge==='crosswind')
       state.wind={active:true,base:state.round%2===0?-16:16,current:state.round%2===0?-16:16,elapsed:0};
     state.time=state.mode==='survival'?70:state.mode==='challenge'?CHALLENGES[state.challenge].time:
@@ -289,7 +318,7 @@ function plane(type,id,x,y,angle){
     state.banner=state.mode==='challenge'?CHALLENGES[state.challenge].name+' — GO':
       state.recordMode==='survival'?'SURVIVAL WAVE '+state.round:
       state.campaignEncounter?.finalBoss?'FINAL SCRAMBLE — TWO ESCORTS':
-      state.mode==='campaign'?(state.campaignEncounter?.mission||'RIVAL INTERCEPT')+' • '+callsign:
+      state.mode==='campaign'?(state.campaignEncounter?.mission||'RIVAL INTERCEPT')+' • '+callsign+(state.campaignEncounter?.hazardLabel?' • '+state.campaignEncounter.hazardLabel:''):
       state.wind.active?(state.wind.base>0?'CROSSWIND →':'← CROSSWIND'):'ROUND '+state.round;
     state.bannerTime=state.campaignEncounter?.finalBoss?4:1.5;
     controls.left=false;controls.right=false;controls.boost=false;
@@ -2081,6 +2110,7 @@ function plane(type,id,x,y,angle){
     const bgWidth=W*bgZoom;
     g.drawImage(scene,(W-bgWidth)*.5,-state.cameraY,bgWidth,WORLD_H);
     drawWind();
+    drawCampaignWeather();
     g.save();g.translate(0,-state.cameraY);
     for(const t of state.trails){
       const fade=1-t.age/t.life;
