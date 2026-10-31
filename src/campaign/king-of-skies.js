@@ -183,8 +183,11 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
    }
  }
  enc.lane=lane;enc.risk=risk;enc.objective=objective;enc.nodeType=kind;
+ // Regional elites earn premium rewards regardless of route: the extra fight is mandatory.
+ enc.eliteEncounter=kind==='elite';
  enc.region=regionForRank(rank);
  enc.mission=final?'FINAL SQUADRON':
+   kind==='elite'?(rank===4?'CHANNEL ACE': 'CONTINENTAL ACE')+(lane===2?' · WINGMEN':''):
    objective==='escort'?'BOMBER ESCORT':
    objective==='intercept'?'BOMBER INTERCEPTION':
    objective==='recon'?'RECONNAISSANCE RUN':
@@ -192,6 +195,7 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
    objective==='outnumbered'?'OUTNUMBERED PATROL':
    lane===1?'ACE DUEL':'SCOUT PATROL';
  enc.briefing=final?'Defeat both escorts and the named final ace before time expires.':
+   kind==='elite'?'A veteran squadron guards this region. Expect sharper tactics, committed manoeuvres and no easy escape.':
    objective==='escort'?'Protect your bomber until relief arrives, or defeat both attackers.':
    objective==='intercept'?'Destroy the enemy bomber before it escapes into cloud cover.':
    objective==='recon'?'Protect the reconnaissance aircraft: survive until the photographs are complete, or destroy the pursuer.':
@@ -206,11 +210,13 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
    objective==='ace-hunt'?Math.max(60,87-rank*3):
    objective==='outnumbered'?Math.max(97,126-rank*3):115;
  enc.escortType=objective==='escort'?(run.faction==='Allies'?'bomber':'he111'):null;
- enc.aiRank=n(Math.ceil(rank*8/MAX_RANK)+(lane===2?2:lane===1?1:0),1,8);
+ enc.aiRank=n(Math.ceil(rank*8/MAX_RANK)+(lane===2?2:lane===1?1:0)+(kind==='elite'?1:0),1,8);
  enc.difficulty=enc.aiRank<=2?'rookie':enc.aiRank<=4?'standard':'ace';
- enc.suppliesAward=final?3:lane+1;
- enc.rewardTier=lane;
+ enc.suppliesAward=final?3:kind==='elite'?Math.max(2,lane+1):lane+1;
+ enc.rewardTier=kind==='elite'?2:lane;
  enc.threat=threatRating(enc);
+ // Hazards are declared in mission data; never randomly bias one player.
+ enc.hazard=rank>=9&&lane===2?'crosswind':rank>=5&&lane===0?'haze':rank===8?'crosswind':null;
  return enc;
 }
 function threatRating(enc){
@@ -220,7 +226,7 @@ function threatRating(enc){
    enc.objective==='outnumbered'?10:enc.objective==='final'?17:
    enc.objective==='intercept'?5:enc.objective==='recon'?-13:0;
  return Math.max(10,Math.min(100,Math.round(9+rank*8.5+
-   Math.max(0,opponents-1)*13+task+(enc.timeLimit<75&&enc.objective!=='recon'?7:0))));
+   Math.max(0,opponents-1)*13+task+(enc.eliteEncounter?8:0)+(enc.timeLimit<75&&enc.objective!=='recon'?7:0))));
 }
 function offerReward(run,encounter){
  normalizeRun(run);
@@ -229,7 +235,7 @@ function offerReward(run,encounter){
  const available=UPGRADES.filter(u=>!run.effects.includes(u.id)||!u.mods);
  const premium=ELITE_UPGRADES.filter(u=>u.mods&&!run.effects.includes(u.id));
  const offers=[];
- if(lane===2)offers.push(premium.length?pick(premium,seed>>>2).id:'ace-war-chest');
+ if(lane===2||encounter?.eliteEncounter)offers.push(premium.length?pick(premium,seed>>>2).id:'ace-war-chest');
  const target=lane===0?2:3;
  for(let i=0;i<target*3&&offers.length<target;i++){
   const pool=available.filter(u=>!offers.includes(u.id));
@@ -238,7 +244,7 @@ function offerReward(run,encounter){
  }
  // Low risk still guarantees a useful choice; in 1/4 of easy sorties
  // the workshop uncovers a repairable mechanical problem on claiming it.
- const setback=lane===0&&seed%4===0?pick(SETBACKS,seed>>>5).id:null;
+ const setback=lane===0&&!encounter?.eliteEncounter&&seed%4===0?pick(SETBACKS,seed>>>5).id:null;
  return {rank:run.rank,encounterId:encounter?.id||'',risk:encounter?.risk||'LOW',
   offers,setback,claimed:false};
 }
