@@ -752,7 +752,11 @@ function plane(type,id,x,y,angle){
     if(p.id===0&&state.session)state.session.damageTaken+=incoming;
     if(state.campaignMetrics){
       if(p.id===0)state.campaignMetrics.damageTaken+=incoming;
-      if(owner===0&&p.team===1){state.campaignMetrics.damageDealt+=incoming;state.campaignMetrics.hits++;}
+      if(owner===0&&p.team===1){
+        state.campaignMetrics.damageDealt+=incoming;
+        // Accuracy counts actual gun strikes, not bomb splash or ground hits.
+        if(cause==='GUN')state.campaignMetrics.hits++;
+      }
     }
     const absorbed=Math.min(p.armour,remaining);
     p.armour-=absorbed;remaining-=absorbed;
