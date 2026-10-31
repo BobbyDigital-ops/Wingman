@@ -1528,7 +1528,10 @@ function plane(type,id,x,y,angle){
       }
       b.x+=(b.vx+state.wind.current*.18)*dt;b.y+=b.vy*dt;b.life-=dt;b.age=(b.age||0)+dt;
       const shooter=state.fliers.find(q=>q.id===b.owner);
-      const targets=state.fliers.filter(p=>p.id!==b.owner&&p.alive&&(!(state.teams||state.mode==='campaign')||p.team!==shooter?.team));
+      const targets=state.fliers.filter(p=>p.id!==b.owner&&p.alive&&
+        (state.recordMode==='triple'&&state.mode!=='campaign'?
+          (b.owner===0?p.id>0:p.id===0):
+          (!(state.teams||state.mode==='campaign')||p.team!==shooter?.team)));
       // Neither a gun muzzle nor a bomber can inflict disguised impact damage
       // by touching another airframe: rounds must leave the collision envelope.
       let struck=false;
