@@ -1,7 +1,7 @@
 /* Road to Ace — self-contained single-player campaign, saved locally. */
 (()=>{
 'use strict';
-const STORE='wingman-road-to-ace-v1',MAX_RANK=8;
+const STORE='wingman-road-to-ace-v1',MAX_RANK=12;
 const PILOT_SKILLS=[['reverse','180° REVERSE'],['roll','BARREL ROLL'],['smoke','SMOKESCREEN'],['harden','HARDEN'],['deadeye','DEADEYE'],['cut','ENGINE CUT'],['dive','EMERGENCY DIVE']];
 
 const AXIS=['bf109','bf110','he111'],ALLIES=['fighter','heavy','bomber'];
@@ -50,11 +50,11 @@ if(data?.run&&campaign){
  campaign.normalizeRun(data.run);
  // Migrate current v0.7 missions once without resetting rank, lives,
  // earned effects, service history or a pending post-sortie reward.
- if(!data.run.pendingReward&&(data.run.campaignSchema!==8||
+ if(!data.run.pendingReward&&(data.run.campaignSchema!==9||
    !Array.isArray(data.run.choices)||data.run.choices.length!==3||
    data.run.choices.some(c=>!c?.objective))){
    data.run.choices=makeChoices(data.run);
-   data.run.campaignSchema=8;
+   data.run.campaignSchema=9;
  }
  if(data.run.pendingReward)view='outcome';
  save();
@@ -68,7 +68,7 @@ function save(){try{localStorage.setItem(STORE,JSON.stringify(data));}catch{}}
   {id:'iron-will',title:'IRON WILL',desc:'Survive a run after losing a life',glyph:'◆'},
   {id:'wingman-legend',title:'WINGMAN LEGEND',desc:'Defeat the final three-aircraft squadron',glyph:'♛'}
  ];
- const rankTitle=rank=>rank>=8?'LEGENDARY ACE':rank>=6?'ACE COMMANDER':rank>=4?'FLIGHT LEADER':rank>=2?'FLYING OFFICER':'ROOKIE';
+ const rankTitle=rank=>rank>=12?'LEGENDARY ACE':rank>=9?'ACE COMMANDER':rank>=5?'FLIGHT LEADER':rank>=3?'FLYING OFFICER':'ROOKIE';
  const medal=code=>{
   data.medals||=[];if(data.medals.includes(code))return false;
   data.medals.push(code);return true;
@@ -299,7 +299,7 @@ function makeChoices(run){
   return [first,second];
  };
  return [0,1,2].map(i=>{
-  // Rank eight is always a three-plane finale: two escorts launch first,
+  // Rank twelve is always a three-plane finale: two escorts launch first,
   // then the SAME named final ace enters, whatever approach the player picks.
   const final=run.rank===MAX_RANK;
   const p=final?(nemesis||shuffled[(run.seed+13)%shuffled.length]):picked[i];
@@ -391,7 +391,7 @@ function startRun(aircraftId){
  const allowed=data.profile.faction==='Allies'?ALLIES:AXIS;
  if(!allowed.includes(aircraftId))return;
  data.run={faction:data.profile.faction,aircraft:aircraftId,airframe:null,rank:1,
-  lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null,campaignSchema:8};
+  lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null,campaignSchema:9};
  campaign?.normalizeRun(data.run);
  data.run.choices=makeChoices(data.run);save();view='ladder';render();
 }
@@ -400,6 +400,29 @@ let pendingAircraft=null;
 function fight(index){
  if(!data?.run||active||data.run.pendingReward||!data.run.choices?.[index])return;
  pendingChoice=index;pendingAircraft=data.profile.plane;view='sortie';render();
+}
+function resolveCampaignEvent(index,optionId){
+ const run=data?.run;
+ if(!run||active||run.pendingReward||!Array.isArray(run.choices))return null;
+ if(!Number.isInteger(index)||index<0||index>2)return null;
+ const enc=run.choices[index];
+ if(!enc?.isNonCombat||enc.rank!==run.rank)return null;
+ const result=campaign?.resolveEvent?.(run,enc,optionId);
+ if(!result)return null;
+ const atRank=run.rank;
+ run.rank=Math.min(MAX_RANK+1,run.rank+1);
+ run.visits=(run.visits||0)+1;
+ data.best=Math.max(data.best||1,Math.min(MAX_RANK,run.rank));
+ archiveService({won:true,kind:'event',rank:atRank,rival:enc.label,
+  mission:enc.mission,kills:0,grade:'—',risk:'EVENT',result:'EVENT COMPLETED'});
+ data.lastOutcome={won:true,kind:'event',rank:atRank,mission:enc.mission,
+  label:enc.label,kills:0,grade:'—',description:result.description};
+ if(run.rank>MAX_RANK)return null; // Final rung is a mandatory combat boss.
+ run.choices=makeChoices(run);
+ run.campaignSchema=9;
+ save();
+ if(showing){view='ladder';render();}
+ return result;
 }
 function launchSortie(type){
  const run=data?.run;if(!run||run.pendingReward||pendingChoice===null||active)return;
@@ -439,7 +462,7 @@ function finishEncounter(won,encounter,summary={}){
   if(run.rank>MAX_RANK){
    data.completed++;
    data.lastCompleted={pilot:data.profile.name,aircraft:run.aircraft,
-    nemesis:rival.label,streak:data.bestStreak,missions:data.service?.length+1||8,
+    nemesis:rival.label,streak:data.bestStreak,missions:data.service?.length+1||12,
     medals:data.medals.slice(),rank:MAX_RANK};
    data.run=null;
   }
@@ -460,7 +483,7 @@ function finishEncounter(won,encounter,summary={}){
   kills,grade,threat:rival.threat??null,risk:rival.risk||'LOW',
   remainingSeconds:Math.max(0,Number(summary.remainingSeconds??0)||0),
   result:won?'VICTORY':'SHOT DOWN'});
- if(data.run){run.visits++;run.choices=makeChoices(run);run.campaignSchema=8;}
+ if(data.run){run.visits++;run.choices=makeChoices(run);run.campaignSchema=9;}
  save();active=null;
  view='outcome';showing=true;screen.hidden=false;result.classList.add('hidden');
  const promotion=won&&rankTitle(Math.min(MAX_RANK,atRank+1))!==previousTitle?
@@ -522,7 +545,7 @@ function ladder(run){
   }).join('');
   rows.push('<section class="route-tier '+status+'" '+(current?'id="active-rung"':'')+'><div class="route-rank">'+(rank===MAX_RANK?'♛ FINAL SQUADRON · 1v3':'RANK '+rank)+(current?' • CHOOSE A BRANCH':'')+'</div><div class="route-fork" aria-hidden="true"><span></span><span></span><span></span></div><div class="route-three">'+options+'</div><div class="route-join" aria-hidden="true"><span></span><span></span><span></span></div></section>');
  }
- return '<div class="ladder-scroll campaign-tree career-route-map" role="region" aria-label="Eight rank branching career map with three routes per rank" tabindex="0"><div class="tree-spine route-spine">'+rows.join('')+'</div></div>';
+ return '<div class="ladder-scroll campaign-tree career-route-map" role="region" aria-label="Twelve rung mixed encounter campaign map with three routes per rung" tabindex="0"><div class="tree-spine route-spine">'+rows.join('')+'</div></div>';
 }
 function characterPicker(){
  if(!data?.profile)return '';
@@ -677,9 +700,9 @@ nav.addEventListener('click',()=>show(data?'ladder':'select'));licenceBtn.addEve
 document.getElementById('career-open-mobile')?.addEventListener('click',()=>show(data?'ladder':'select'));
 function claimReward(id){
  if(!data?.run||!campaign?.claim(data.run,id))return false;
- if(data.run.campaignSchema!==8){
+ if(data.run.campaignSchema!==9){
    data.run.choices=makeChoices(data.run);
-   data.run.campaignSchema=8;
+   data.run.campaignSchema=9;
  }
  save();
  if(showing){view='ladder';render();}
@@ -696,5 +719,5 @@ function restartCampaign(){
   selectFaction=data.profile?.faction||'Allies';candidates=generateCandidates();
   save();view='select';render();return true;
  }
- window.WingmanCareer={claimReward,repairAirframe,suspendLegacyScreen:()=>{pendingChoice=null;pendingAircraft=null;showing=false;screen.hidden=true;},restartCampaign,restartRun:()=>{active=null;pendingChoice=null;pendingAircraft=null;startRun(data?.profile?.plane);},finishEncounter,open:show,cancelEncounter:()=>{active=null;}};
+ window.WingmanCareer={claimReward,repairAirframe,resolveCampaignEvent,suspendLegacyScreen:()=>{pendingChoice=null;pendingAircraft=null;showing=false;screen.hidden=true;},restartCampaign,restartRun:()=>{active=null;pendingChoice=null;pendingAircraft=null;startRun(data?.profile?.plane);},finishEncounter,open:show,cancelEncounter:()=>{active=null;}};
 })();
