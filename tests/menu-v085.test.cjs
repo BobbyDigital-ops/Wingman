@@ -25,7 +25,7 @@ function ui(){
 }
 test('selecting a branch node shows only that mission and one opponent dossier',()=>{
  const t=ui();t.window.WingmanLiveUI.go('career');
- assert.equal((t.stage.innerHTML.match(/class="route-map-row /g)||[]).length,8);
+ assert.equal((t.stage.innerHTML.match(/class="route-map-row /g)||[]).length,12);
  t.click({choice:'2'});
  assert.match(t.stage.innerHTML,/wm-v13-sortie/);
  assert.equal((t.stage.innerHTML.match(/class="wm-v085-sortie-brief"/g)||[]).length,1);
