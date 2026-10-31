@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "test:unit": "node --test tests/smoke.test.cjs tests/balance.test.cjs tests/pilot-personality.test.cjs tests/arcade-records.test.cjs tests/campaign-v070.test.cjs tests/campaign-v080.test.cjs tests/menu-v081.test.cjs tests/profile-v082.test.cjs tests/menu-v083.test.cjs",
+    "test:unit": "node --test tests/smoke.test.cjs tests/balance.test.cjs tests/pilot-personality.test.cjs tests/arcade-records.test.cjs tests/campaign-v070.test.cjs tests/campaign-v080.test.cjs tests/menu-v081.test.cjs tests/profile-v082.test.cjs tests/menu-v083.test.cjs tests/menu-v084.test.cjs",
     "test:browser": "playwright test",
     "balance:tournament": "node tests/balance-tournament.cjs --reps=2 --seconds=75",
     "campaign:benchmark": "node tests/campaign-difficulty-v080.cjs"
