@@ -1,0 +1,26 @@
+/* v0.9.5: readable Slay-the-Spire-style route graph.
+   Nodes and SVG share one authoritative 100px row geometry. */
+.wm-v13-campaign .wm-v095-spire-map{height:1200px!important;min-height:1200px!important;position:relative!important}
+.wm-v095-spire-map .route-map-row{height:100px!important;min-height:100px!important;position:relative!important}
+.wm-v095-spire-map .route-map-nodes{position:absolute!important;inset:29px 0 0!important}
+.wm-v095-spire-map .route-map-node{width:46px!important;height:46px!important;z-index:3}
+.wm-v095-spire-map .map-connections{height:1200px!important;width:100%!important;position:absolute!important;inset:0!important;overflow:hidden!important;pointer-events:none!important}
+.wm-v095-spire-map .map-connections path{fill:none!important;stroke-width:2.2!important;stroke:#8b7856!important;stroke-dasharray:3 3;opacity:.38;vector-effect:non-scaling-stroke}
+.wm-v095-spire-map .map-connections path.is-open{stroke:#9d6531!important;stroke-width:3.4!important;stroke-dasharray:none!important;opacity:1!important}
+.wm-v095-spire-map .map-connections path.is-travelled{stroke:#416747!important;stroke-width:4.4!important;stroke-dasharray:none!important;opacity:1!important}
+.wm-v095-spire-map .route-map-node.is-skipped{background:#6c6555!important;opacity:.25!important;filter:grayscale(.9)}
+.wm-v095-spire-map .route-map-node.is-skipped .node-symbol{color:#cabd98}
+.wm-v095-spire-map .route-map-node.is-complete{opacity:1!important;background:linear-gradient(#416b4b,#1f4a39)!important;border-color:#edd19d!important}
+.wm-v095-spire-map .route-map-node.is-available{background:linear-gradient(#56412b,#30251b)!important;border:3px solid #d6ac66!important;box-shadow:0 0 0 3px #e9c77944,0 0 16px #c09b58bb!important;cursor:pointer}
+.wm-v095-spire-map .route-map-node.is-available:hover,.wm-v095-spire-map .route-map-node.is-available:focus-visible{box-shadow:0 0 0 5px #fbd89a70,0 0 24px #dbbb6c!important;transform:translateX(-50%) scale(1.08)}
+.wm-v095-spire-map .route-map-node.is-locked{opacity:.25!important;filter:grayscale(1);pointer-events:none!important}
+.wm-v095-spire-map .route-map-node.is-future{opacity:.74!important}
+.wm-v095-spire-map .route-map-node small{min-width:95px!important;text-align:center!important;max-width:140px!important;text-shadow:0 1px 2px #332319!important}
+.wm-v095-route-prompt{align-self:center;margin-left:auto;margin-right:auto;display:flex;align-items:center;justify-content:center;padding:7px 16px;font:900 clamp(13px,1.6vw,21px) 'Barlow Condensed',Impact,sans-serif;letter-spacing:.06em;color:#f1d49b}
+.wm-v095-spire-map .route-map-row.is-current .route-map-rank{font-weight:900;color:#5d3521!important;font-size:13px!important}
+@media(max-height:560px) and (orientation:landscape){
+ .wm-v13-campaign .wm-v095-spire-map{height:1200px!important;min-height:1200px!important}
+ .wm-v095-spire-map .route-map-nodes{inset:29px 0 0!important}
+ .wm-v095-spire-map .route-map-node{height:43px!important;width:43px!important}
+ .wm-v095-spire-map .route-map-row{height:100px!important;min-height:100px!important}
+}
