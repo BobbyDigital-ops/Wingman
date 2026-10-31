@@ -205,6 +205,7 @@ function plane(type,id,x,y,angle){
       plane(state.selected,0,W*.22,H*.45,-.14),
       plane(state.enemyType,1,W*.78,H*.52,Math.PI+.15)
     ];
+    state.humanIdleSeconds=0;
     state.campaignElapsed=0;state.campaignBackupSerial=0;
     state.campaignMetrics=state.mode==='campaign'?{shots:0,hits:0,kills:0,damageDealt:0,damageTaken:0,backupArrivals:0}:null;
     state.campaignWaves=state.mode==='campaign'?
@@ -498,7 +499,12 @@ function plane(type,id,x,y,angle){
     if(!p||!p.alive||p.gunCooldown>0||p.burstLeft>0||p.rollTime>0||state.phase!=='playing'||state.paused)return;
     p.burstLeft=p.d.burst;p.shotTimer=0;
   }
-  function opponents(p){return state.fliers.filter(other=>other.alive&&other.id!==p.id&&(!(state.teams||state.mode==='campaign')||other.team!==p.team));}
+  function opponents(p){return state.fliers.filter(other=>{
+    if(!other.alive||other.queued||other.id===p.id)return false;
+    if(state.recordMode==='triple'&&state.mode!=='campaign')
+      return p.id===0?other.id>0:other.id===0;
+    return !(state.teams||state.mode==='campaign')||other.team!==p.team;
+  });}
   // Career-only tactical reserve. Call one wingman early (45 charge) or
   // save for two (100 charge). Either deployment lasts 30 seconds.
   // Exactly one call per sortie; charging happens with flying time and
@@ -604,14 +610,16 @@ function plane(type,id,x,y,angle){
     }
     if(!state.teams||targets.length<2)return targets.sort((a,b)=>combatDistance(p,a)-combatDistance(p,b))[0];
     if(state.recordMode==='teams'){
-      // 2v2 wingmen know friend from foe and cover different targets.
-      // Neither enemy is hard-locked: after a casualty the surviving target
-      // remains a legitimate opponent and the whole battle is still playable.
       const ally=state.fliers.find(q=>q.team===p.team&&q.id!==p.id&&q.alive);
-      const human=state.fliers[0],ourWing=state.fliers[2];
-      if(p.team===1){
-        const assigned=(p.id===1?human:ourWing);
-        if(assigned?.alive&&targets.includes(assigned))return assigned;
+      const human=state.fliers[0];
+      if(p.team===1&&human?.alive&&targets.includes(human)){
+        // Keep the human under pressure. AI may protect its wingman, but
+        // both hostile pilots cannot spend the entire fight ignoring you.
+        const wing=targets.find(q=>q.team===0&&q.id!==0&&q.alive);
+        const humanRange=combatDistance(p,human);
+        if(!wing||p.id===1||humanRange<Math.max(155,combatDistance(p,wing)*1.4)||
+          (state.humanIdleSeconds||0)>5)return human;
+        return wing;
       }
       if(p.team===0&&ally){
         const threat=targets.slice().sort((a,b)=>combatDistance(a,ally)-combatDistance(b,ally))[0];
@@ -1605,6 +1613,8 @@ function plane(type,id,x,y,angle){
       if((state.mode==='survival'||state.mode==='challenge')&&state.time<=0){endRound(1);return;}
       const user=state.fliers[0];
       window.WingmanAudio?.flight(user?.speed||0,(user?.health||0)/(user?.d?.hull||1));
+      state.humanIdleSeconds=controls.left||controls.right||controls.boost?0:
+        Math.min(30,(state.humanIdleSeconds||0)+dt);
       if(user.alive)updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);
       for(const p of state.fliers.slice(1)){
         if(p.alive){const target=nearestEnemy(p);const steer=target?aiInput(p,target):0;updatePlane(p,dt,steer,p.aiBoost);}
