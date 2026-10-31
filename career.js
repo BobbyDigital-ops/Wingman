@@ -48,13 +48,21 @@ let data=load(),active=null,showing=false,view='ladder';
 const campaign=window.WingmanCampaign;
 if(data?.run&&campaign){
  campaign.normalizeRun(data.run);
+ // Keep the pilot's old progress and route history when upgrading saves.
+ if(!Number.isInteger(data.run.lastLane)&&data.run.rank>1){
+   const previous=[...(data.service||[])].reverse().find(e=>e.rank===data.run.rank-1);
+   data.run.lastLane=previous?.risk==='LOW'?0:previous?.risk==='HIGH'?2:
+     previous?.risk==='MEDIUM'?1:1;
+ }
+ if(data.run.rank===1)data.run.lastLane=null;
+ data.run.allowedLanes=campaign.reachableLanes(data.run.lastLane,data.run.rank);
  // Migrate current v0.7 missions once without resetting rank, lives,
  // earned effects, service history or a pending post-sortie reward.
- if(!data.run.pendingReward&&(data.run.campaignSchema!==9||
+ if(!data.run.pendingReward&&(data.run.campaignSchema!==10||
    !Array.isArray(data.run.choices)||data.run.choices.length!==3||
    data.run.choices.some(c=>!c?.objective))){
    data.run.choices=makeChoices(data.run);
-   data.run.campaignSchema=9;
+   data.run.campaignSchema=10;
  }
  if(data.run.pendingReward)view='outcome';
  save();
@@ -391,14 +399,15 @@ function startRun(aircraftId){
  const allowed=data.profile.faction==='Allies'?ALLIES:AXIS;
  if(!allowed.includes(aircraftId))return;
  data.run={faction:data.profile.faction,aircraft:aircraftId,airframe:null,rank:1,
-  lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null,campaignSchema:9};
+  lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null,campaignSchema:10,lastLane:null,allowedLanes:[0,1,2]};
  campaign?.normalizeRun(data.run);
  data.run.choices=makeChoices(data.run);save();view='ladder';render();
 }
 let pendingChoice=null;
 let pendingAircraft=null;
 function fight(index){
- if(!data?.run||active||data.run.pendingReward||!data.run.choices?.[index])return;
+ if(!data?.run||active||data.run.pendingReward||!data.run.choices?.[index]||
+    !campaign?.reachableLanes(data.run.lastLane,data.run.rank).includes(index))return;
  pendingChoice=index;pendingAircraft=data.profile.plane;view='sortie';render();
 }
 function resolveCampaignEvent(index,optionId){
@@ -406,11 +415,14 @@ function resolveCampaignEvent(index,optionId){
  if(!run||active||run.pendingReward||!Array.isArray(run.choices))return null;
  if(!Number.isInteger(index)||index<0||index>2)return null;
  const enc=run.choices[index];
- if(!enc?.isNonCombat||enc.rank!==run.rank)return null;
+ if(!enc?.isNonCombat||enc.rank!==run.rank||
+   !campaign.reachableLanes(run.lastLane,run.rank).includes(index))return null;
  const result=campaign?.resolveEvent?.(run,enc,optionId);
  if(!result)return null;
  const atRank=run.rank;
+ run.lastLane=index;
  run.rank=Math.min(MAX_RANK+1,run.rank+1);
+ run.allowedLanes=campaign.reachableLanes(run.lastLane,run.rank);
  run.visits=(run.visits||0)+1;
  data.best=Math.max(data.best||1,Math.min(MAX_RANK,run.rank));
  archiveService({won:true,kind:'event',rank:atRank,rival:enc.label,
@@ -419,7 +431,7 @@ function resolveCampaignEvent(index,optionId){
   label:enc.label,kills:0,grade:'—',description:result.description};
  if(run.rank>MAX_RANK)return null; // Final rung is a mandatory combat boss.
  run.choices=makeChoices(run);
- run.campaignSchema=9;
+ run.campaignSchema=10;
  save();
  if(showing){view='ladder';render();}
  return result;
@@ -427,7 +439,8 @@ function resolveCampaignEvent(index,optionId){
 function launchSortie(type){
  const run=data?.run;if(!run||run.pendingReward||pendingChoice===null||active)return;
  if(!(run.faction==='Allies'?ALLIES:AXIS).includes(type))return;
- const choice=run.choices[pendingChoice];if(!choice)return;
+ const choice=run.choices[pendingChoice];if(!choice||
+   !campaign.reachableLanes(run.lastLane,run.rank).includes(pendingChoice)||choice.isNonCombat)return;
  const lead=byId[choice.id],scaled=lead?window.WingmanPilotAI?.level(lead,run.rank):null;
  if(scaled){choice.attributes=scaled.attributes;choice.signature=scaled.signature;choice.archetype=scaled.archetype;choice.personality=scaled.tactic;}
  choice.playerAptitude=campaign?.sortieBonuses(run,type,type===data.profile.plane)||
@@ -451,7 +464,9 @@ function finishEncounter(won,encounter,summary={}){
  if(won){
   data.wins++;data.kills+=kills;record.wins++;
   data.streak++;data.bestStreak=Math.max(data.bestStreak,data.streak);
+  run.lastLane=rival.lane;
   run.rank++;
+  run.allowedLanes=campaign.reachableLanes(run.lastLane,run.rank);
   data.best=Math.max(data.best,Math.min(MAX_RANK,run.rank));
   if(data.wins===1)award('first-blood');
   if(data.streak>=3)award('triple-ace');
@@ -468,7 +483,7 @@ function finishEncounter(won,encounter,summary={}){
   }
  }else{
   data.losses++;record.losses++;data.streak=0;
-  run.lives--;run.rank=Math.max(1,run.rank-1);
+  run.lives--; // Defeat costs a life; never advances or rewinds the route.
   if(run.lives<=0)data.run=null;
  }
  if(data.run)campaign?.settle(run,rival,won,Number(summary.integrity??1));
@@ -483,7 +498,7 @@ function finishEncounter(won,encounter,summary={}){
   kills,grade,threat:rival.threat??null,risk:rival.risk||'LOW',
   remainingSeconds:Math.max(0,Number(summary.remainingSeconds??0)||0),
   result:won?'VICTORY':'SHOT DOWN'});
- if(data.run){run.visits++;run.choices=makeChoices(run);run.campaignSchema=9;}
+ if(data.run){run.visits++;if(won){run.choices=makeChoices(run);run.campaignSchema=10;}}
  save();active=null;
  view='outcome';showing=true;screen.hidden=false;result.classList.add('hidden');
  const promotion=won&&rankTitle(Math.min(MAX_RANK,atRank+1))!==previousTitle?
@@ -700,9 +715,9 @@ nav.addEventListener('click',()=>show(data?'ladder':'select'));licenceBtn.addEve
 document.getElementById('career-open-mobile')?.addEventListener('click',()=>show(data?'ladder':'select'));
 function claimReward(id){
  if(!data?.run||!campaign?.claim(data.run,id))return false;
- if(data.run.campaignSchema!==9){
+ if(data.run.campaignSchema!==10){
    data.run.choices=makeChoices(data.run);
-   data.run.campaignSchema=9;
+   data.run.campaignSchema=10;
  }
  save();
  if(showing){view='ladder';render();}
