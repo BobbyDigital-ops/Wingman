@@ -15,31 +15,31 @@ function mission(rank,lane,faction='Allies'){
  const rival=enemy[lane];
  const run=C.normalizeRun({rank,seed:1471,visits:rank,faction});
  const q={id:rival.id,label:rival.name,rank,types:[rival.plane],opponents:[profile(rival)],
-  finalBoss:rank===8,wingmen:[],mission:'DOGFIGHT',attributes:rival.attributes};
+  finalBoss:rank===12,wingmen:[],mission:'DOGFIGHT',attributes:rival.attributes};
  return {run,enc:C.decorateEncounter(q,run,lane,{pool:enemy,profile})};
 }
-test('24 deterministic branching encounters across all eight ranks',()=>{
+test('36 deterministic branching options across twelve mixed rungs',()=>{
  const kinds=new Set(),risks=new Set();
- for(let rank=1;rank<=8;rank++)for(let lane=0;lane<3;lane++){
+ for(let rank=1;rank<=12;rank++)for(let lane=0;lane<3;lane++){
   const {enc}=mission(rank,lane);
   assert.equal(enc.rank,rank);
-  assert.ok(['LOW','MEDIUM','HIGH'].includes(enc.risk));
-  assert.ok(enc.aiRank>=rank&&enc.aiRank<=8);
-  assert.ok(enc.timeLimit>=49);
-  assert.ok(enc.types.length>=1&&enc.types.length<=3);
-  assert.equal(enc.suppliesAward,rank===8?3:lane+1);
-  assert.equal(enc.objective==='final',rank===8);
-  kinds.add(enc.objective);risks.add(enc.risk);
+  assert.equal(enc.nodeType,C.nodeTypeFor(rank,lane));
+  if(enc.isNonCombat){assert.equal(enc.risk,'EVENT');assert.equal(enc.types.length,0);}
+  else{assert.ok(['LOW','MEDIUM','HIGH'].includes(enc.risk));
+   assert.ok(enc.aiRank>=1&&enc.aiRank<=8);assert.ok(enc.timeLimit>=49);
+   assert.ok(enc.types.length>=1&&enc.types.length<=3);risks.add(enc.risk);}
+  assert.equal(enc.objective==='final',rank===12);
+  kinds.add(enc.objective);
  }
  assert.deepEqual([...risks].sort(),['HIGH','LOW','MEDIUM']);
- for(const name of ['duel','intercept','recon','ace-hunt','outnumbered','escort','final'])assert.ok(kinds.has(name));
+ for(const name of ['duel','intercept','recon','ace-hunt','outnumbered','escort','final','event'])assert.ok(kinds.has(name),name);
 });
-test('real bomber interception and escort compositions exist for both factions',()=>{
+test('real bomber intercept and escort are supported for both factions',()=>{
  for(const faction of ['Allies','Axis']){
-  const b=mission(4,0,faction).enc;
+  const b=mission(6,0,faction).enc;
   assert.equal(b.objective,'intercept');
   assert.equal(b.types[0],faction==='Allies'?'he111':'bomber');
-  const e=mission(4,1,faction).enc;
+  const e=mission(7,1,faction).enc;
   assert.equal(e.objective,'escort');
   assert.equal(e.types.length,2);
   assert.equal(e.escortType,faction==='Allies'?'bomber':'he111');
