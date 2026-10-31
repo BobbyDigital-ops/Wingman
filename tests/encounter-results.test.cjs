@@ -25,7 +25,7 @@ test('Hangar dice records the exact die, win or loss, resources and persistent h
  }
 });
 test('Every event type provides an auditable after-action outcome',()=>{
- for(const [rank,lane,action] of [[2,0,'patch'],[2,2,'scout'],[3,1,'help'],
+ for(const [rank,lane,action] of [[2,0,'patch'],[2,2,'scout'],[7,2,'help'],
    [5,0,'service'],[5,2,'safe']]){
   const {run,enc}=encounter(rank,lane,6);
   const outcome=C.resolveEvent(run,enc,action);
