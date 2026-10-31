@@ -205,13 +205,18 @@ function plane(type,id,x,y,angle){
       plane(state.selected,0,W*.22,H*.45,-.14),
       plane(state.enemyType,1,W*.78,H*.52,Math.PI+.15)
     ];
+    state.campaignElapsed=0;state.campaignBackupSerial=0;
+    state.campaignWaves=state.mode==='campaign'?
+      (state.campaignEncounter?.reinforcements||[]).map(w=>({...w})):[];
     if(state.mode==='campaign'&&state.campaignEncounter){
       const encounter=state.campaignEncounter;
       state.fliers=[plane(state.selected,0,W*.22,H*.45,-.14)];
       const starts=[[.78,.52,Math.PI+.15],[.68,.36,Math.PI+.28],[.86,.42,Math.PI+.08]];
       encounter.types.slice(0,3).forEach((type,index)=>{
         const [x,y,angle]=starts[index],foe=plane(type,index+1,W*x,H*y,angle);
-        foe.team=1;state.fliers.push(foe);
+        foe.team=1;
+        if(encounter.objective==='intel-hunt'&&index===encounter.priorityTargetIndex){foe.priorityCarrier=true;}
+        state.fliers.push(foe);
       });
       state.fliers[0].team=0;
       state.bossCountdown=encounter.finalBoss?20:0;
@@ -339,8 +344,9 @@ function plane(type,id,x,y,angle){
     state.enemyType=encounter.types[0];
     state.campaignEncounter=encounter;
     state.scores=[0,0];state.round=1;state.kills=0;
-    state.mode='campaign';state.recordMode='campaign';state.participants=encounter.types.length+1;
-    state.teams=encounter.types.length>1||encounter.objective==='escort';
+    state.mode='campaign';state.recordMode='campaign';
+    state.participants=encounter.types.length+1+(encounter.reinforcements?.length?1:0);
+    state.teams=encounter.types.length>1||encounter.objective==='escort'||!!encounter.reinforcements?.length;
     state.difficulty=encounter.difficulty||'standard';
     state.arena=encounter.arena||0;
     ui.menu.classList.add('hidden');ui.result.classList.add('hidden');
@@ -464,7 +470,8 @@ function plane(type,id,x,y,angle){
     if(state.phase!=='playing')return;
     if(state.mode==='campaign'){
       if(p.id===0||p.escortProtected)endRound(1);
-      else if(!bossWaiting()&&opponents(state.fliers[0]).every(q=>!q.alive))endRound(0);
+      else if(p.priorityCarrier&&state.fliers[0]?.alive)endRound(0);
+      else if(!bossWaiting()&&!campaignBackupPending()&&opponents(state.fliers[0]).every(q=>!q.alive))endRound(0);
       return;
     }
     if(state.recordMode==='survival'){endRound(p.id===0?1:0);return;}
@@ -553,8 +560,40 @@ function plane(type,id,x,y,angle){
     state.banner='THE LEGEND ARRIVES — '+(boss.aiName?.match(/"([^"]+)"/)?.[1]||'FINAL ACE').toUpperCase();
     state.bannerTime=4;sound('boss');
   }
+  function campaignBackupPending(){
+    return state.mode==='campaign'&&Array.isArray(state.campaignWaves)&&state.campaignWaves.length>0;
+  }
+  function summonCampaignBackup(dt){
+    if(state.mode!=='campaign'||state.phase!=='playing'||!campaignBackupPending())return;
+    state.campaignElapsed=(state.campaignElapsed||0)+dt;
+    const living=state.fliers.filter(q=>q.team===1&&q.alive).length;
+    const next=state.campaignWaves[0];
+    if(!next||(state.campaignElapsed<next.at&&living>0))return;
+    const slots=Math.max(0,3-living),count=Math.min(slots,next.count);
+    if(!count)return;
+    for(let n=0;n<count;n++){
+      const id=200+state.campaignBackupSerial;
+      state.campaignBackupSerial++;
+      const role=next.type&&PLANES[next.type]?next.type:state.enemyType;
+      const p=plane(role,id,W*(n%2?.76:.84),SKY_EXTRA+H*(n%2?.32:.57),Math.PI+.1);
+      p.team=1;p.spawnSafe=1.4;
+      assignCampaignAI(p,state.campaignEncounter,10+n);
+      p.aiName='INCOMING REINFORCEMENT '+state.campaignBackupSerial;
+      p.aiSkillLevel=clamp((p.aiSkillLevel||0)+.08,0,1);
+      state.fliers.push(p);
+    }
+    next.count-=count;
+    if(next.count<=0)state.campaignWaves.shift();
+    state.banner='ENEMY BACKUP — '+count+' FIGHTER'+(count===1?'':'S')+' INBOUND';
+    state.bannerTime=3.0;sound('boss');
+  }
   function nearestEnemy(p){
     const targets=opponents(p);
+    // Enemy interceptors in an escort mission prioritise the bomber.
+    if(state.mode==='campaign'&&state.campaignEncounter?.objective==='escort'&&p.team===1){
+      const bomber=targets.find(q=>q.escortProtected&&q.alive);
+      if(bomber)return bomber;
+    }
     if(!state.teams||targets.length<2)return targets.sort((a,b)=>combatDistance(p,a)-combatDistance(p,b))[0];
     if(state.recordMode==='teams'){
       // 2v2 wingmen know friend from foe and cover different targets.
@@ -1140,6 +1179,12 @@ function plane(type,id,x,y,angle){
       return clamp(angleDiff(heading,p.angle)*2,-1,1);
     }
 
+    if(p.priorityCarrier&&state.mode==='campaign'&&state.campaignEncounter?.objective==='intel-hunt'){
+      p.aiMode='escape';p.aiBoost=false;
+      // Ground and ceiling recovery take priority over escaping the player.
+      const away=Math.atan2(p.y-target.y,wrappedDelta(target.x,p.x));
+      return clamp(angleDiff(away,p.angle)*2.2,-1,1);
+    }
     const behindNose=ahead< -13;
     // A genuine reversal is a committed bank, not a new shortest-path
     // calculation every frame. Prefer the half of the sky with room to turn.
@@ -1538,6 +1583,7 @@ function plane(type,id,x,y,angle){
       state.time-=dt;
       if(state.session)state.session.seconds+=dt;
       summonFinalAce(dt);
+      summonCampaignBackup(dt);
       if((state.mode==='survival'||state.mode==='challenge')&&state.time<=0){endRound(1);return;}
       const user=state.fliers[0];
       window.WingmanAudio?.flight(user?.speed||0,(user?.health||0)/(user?.d?.hull||1));
@@ -1554,8 +1600,11 @@ function plane(type,id,x,y,angle){
           const escort=state.mode==='campaign'&&state.campaignEncounter?.objective==='escort';
           const protectedAlly=escort?state.fliers.find(p=>p.escortProtected):null;
           if(!user.alive||(escort&&!protectedAlly?.alive))endRound(1);
-          else if(!state.fliers.some(q=>q.alive&&q.team===1))endRound(0);
-          else if(state.time<=0)endRound(escort?0:1);
+          else if(state.campaignEncounter?.objective==='intel-hunt'){
+            if(state.time<=0)endRound(1);
+          }
+          else if(!state.fliers.some(q=>q.alive&&q.team===1)&&!campaignBackupPending()&&!bossWaiting())endRound(0);
+          else if(state.time<=0)endRound(escort||state.campaignEncounter?.objective==='recon'?0:1);
         }else{
           if(!user.alive)endRound(1);
           else if(enemies.every(p=>!p.alive))endRound(0);
