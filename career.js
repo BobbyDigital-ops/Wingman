@@ -590,7 +590,7 @@ function render(){
  }
  if(!run){
   panel('READY FOR YOUR FIRST SORTIE',`<div class="career-onboarding"><div class="onboard-step">1 <strong>PILOT CONFIRMED</strong><span>${escape(p.name)} · ${escape(p.faction)}</span></div>
-  <div class="onboard-step">2 <strong>START ROAD TO ACE</strong><span>Eight ranks, three lives, recurring rivals</span></div>
+  <div class="onboard-step">2 <strong>START ROAD TO ACE</strong><span>Twelve encounters, three regions, three lives</span></div>
   <div class="onboard-step">3 <strong>PICK AN AIRCRAFT EACH MISSION</strong><span>Preferred: ${escape(aircraft[p.plane])} · +10% hull, armour and damage</span></div></div>
   <button class="career-primary" data-action="begin-run">START ROAD TO ACE ▶</button>
   <button data-action="character">CHANGE PILOT</button><button data-action="licence">PILOT LICENCE</button>`);
@@ -616,7 +616,7 @@ function render(){
   return;
  }
  panel('ROAD TO ACE',`<div class="career-stats"><span>${escape(p.name)} · ${aircraft[run.aircraft]}</span><span>RANK ${run.rank}/${MAX_RANK}</span><span>${'♥'.repeat(run.lives)}${'♡'.repeat(3-run.lives)}</span></div>
- <p class="career-muted">Choose a mission, then choose a suitable aircraft for that sortie. Rank eight ends against the final three-aircraft squadron.</p>
+ <p class="career-muted">Choose a mission, then choose a suitable aircraft for that sortie. Rung twelve ends against the final three-aircraft squadron.</p>
  ${ladder(run)}<div class="career-bottom-actions"><button data-action="licence">VIEW PILOT LICENCE</button><button data-action="character">CHOOSE CHARACTER</button></div>`);
  const marker=screen.querySelector('#active-rung'),list=screen.querySelector('.ladder-scroll');
   // Only centre the active rank inside the ladder itself. scrollIntoView()
