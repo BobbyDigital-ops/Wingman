@@ -14,7 +14,7 @@ function mission(rank,lane,faction='Allies'){
    ['fighter','heavy','bomber'].includes(p.plane));
  const lead=enemies[(rank+lane)%enemies.length];
  const final=rank===12;
- const raw={rank,id:lead.id,label:lead.name,types:[lead.plane],
+ const raw={rank,id:lead.id,label:lead.name,types:final?[enemies[0].plane,enemies[1].plane,lead.plane]:[lead.plane],
   opponents:final?[profile(enemies[0]),profile(enemies[1]),profile(lead)]:[profile(lead)],
   finalBoss:final,wingmen:[],attributes:lead.attributes};
  const run=C.normalizeRun({faction,rank,visits:0,seed:8120,condition:100,supplies:0,effects:[]});
