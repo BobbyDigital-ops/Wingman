@@ -1,0 +1,78 @@
+/* Wingman Phase 9F — mission intelligence, route restrictions and RAF sortie telemetry. */
+.wm-v13-campaign .route-map-node.is-locked{
+ opacity:.34!important;filter:grayscale(.82);pointer-events:none!important;
+ background:linear-gradient(#28333b,#1a2329)!important;border:1px solid #66737b!important;
+}
+.wm-v13-campaign .route-map-node.is-locked .node-symbol{color:#b6bbb3!important}
+.wm-v13-campaign .route-map-node.is-locked small{color:#cbd2ce!important}
+.wm-v9f-mission-goal{
+ display:flex;align-items:baseline;flex-wrap:wrap;gap:7px 12px;
+ padding:clamp(6px,.9vw,11px);margin:3px 0;
+ border:1px solid #b29261;border-left:4px solid #ab5737;
+ background:linear-gradient(90deg,#e9d2a0,#e5cca0);color:#263741;
+}
+.wm-v9f-mission-goal strong{
+ color:#744527;font:900 clamp(10px,1vw,13px) 'Barlow Condensed',Impact,sans-serif;letter-spacing:.1em;
+}
+.wm-v9f-mission-goal span{color:#253b45;font:900 clamp(13px,1.36vw,19px)/1.08 'Barlow Condensed',Impact,sans-serif}
+.wm-v9f-mission-forces{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.wm-v9f-mission-forces>div{
+ min-width:0;display:flex;flex-direction:column;gap:3px;
+ padding:6px 7px;background:#17333f;color:#f7e4c4;border-top:2px solid #c7a06a;
+}
+.wm-v9f-mission-forces small{
+ font:800 clamp(9px,.85vw,11px)/1.05 'Barlow Condensed',Impact,sans-serif;
+ letter-spacing:.07em;color:#d4b77d;
+}
+.wm-v9f-mission-forces strong{
+ font:900 clamp(14px,1.6vw,21px) 'Barlow Condensed',Impact,sans-serif;
+ color:#f8e9c7;
+}
+.wm-v9f-wave-brief{
+ padding:3px 8px;border-left:4px solid #aa4e36;
+ background:#52372b18;color:#753e29!important;
+ font:900 clamp(10px,1vw,14px)/1.2 'Barlow Condensed',Impact,sans-serif;
+ letter-spacing:.04em;margin:2px 0!important;
+}
+.wm-v13-campaign .route-map-rank{line-height:1.08}
+.wg-v7-debrief .wg-v7-debrief-choice{overflow-y:auto!important;min-height:0!important;scrollbar-width:thin}
+.wm-v9f-sortie-stats{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;
+ margin:8px 0;padding:0;min-width:0;
+}
+.wm-v9f-sortie-stats>div{
+ min-width:0;display:flex;flex-direction:column;gap:3px;
+ border:1px solid #b79a6e;background:#f0deb4a8;padding:clamp(7px,.8vw,11px);
+}
+.wm-v9f-sortie-stats small{
+ color:#745231;font:900 clamp(10px,.85vw,12px) 'Barlow Condensed',Impact,sans-serif;
+ letter-spacing:.11em;
+}
+.wm-v9f-sortie-stats strong{
+ color:#263d47;font:900 clamp(18px,1.9vw,26px) 'Barlow Condensed',Impact,sans-serif;
+ line-height:1;
+}
+.wm-v9f-sortie-note{
+ margin:5px 0 9px!important;color:#68513a!important;
+ font:700 clamp(11px,1.1vw,15px)/1.25 Barlow,Arial,sans-serif;
+}
+.wg-v7-debrief .wg-v7-debrief-choice .btn{min-height:39px}
+@media(max-height:530px) and (orientation:landscape){
+ .wm-v085-sortie-details{gap:3px!important}
+ .wm-v9f-mission-goal{padding:4px 7px;gap:4px}
+ .wm-v9f-mission-goal strong{font-size:9px}
+ .wm-v9f-mission-goal span{font-size:12px}
+ .wm-v9f-mission-forces>div{padding:4px 5px;gap:1px}
+ .wm-v9f-mission-forces small{font-size:9px}
+ .wm-v9f-mission-forces strong{font-size:12px}
+ .wm-v9f-wave-brief{font-size:10px;padding:2px 5px}
+ .wm-v9f-sortie-stats{gap:4px;margin:4px 0}
+ .wm-v9f-sortie-stats>div{padding:4px}
+ .wm-v9f-sortie-stats small{font-size:9px}
+ .wm-v9f-sortie-stats strong{font-size:15px}
+ .wm-v9f-sortie-note{font-size:10px;line-height:1.1}
+}
+@media(max-width:680px) and (orientation:portrait){
+ .wm-v9f-mission-forces{grid-template-columns:1fr}
+ .wm-v9f-sortie-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
