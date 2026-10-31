@@ -31,7 +31,7 @@ const api=()=>P.WingmanUIBridge;
 const campaignRules=P.WingmanCampaign;
 const perkById=id=>[...(campaignRules?.UPGRADES||[]),...(campaignRules?.ELITE_UPGRADES||[]),...(campaignRules?.SETBACKS||[])].find(p=>p.id===id);
 const confirmButton=(label,action,cl='red')=>'<button type="button" class="btn '+cl+'" data-action="'+action+'">'+label+'</button>';
-const rankTitles=['FIRST SORTIE','ROOKIE','REGULAR','EXPERIENCED','VETERAN','ELITE','ACE FLIGHT','FINAL ACE'];
+const rankTitles=['FIRST SORTIE','THE CHANNEL','FIRST CONTACT','CHANNEL ACE','CONTINENTAL FRONT','ENEMY TERRITORY','THE PUSH','REGIONAL ACE','FINAL APPROACH','NO MAN\'S SKY','LAST CHANCE','THE FINAL ACE'];
 function pById(id){return roster.find(p=>p.id===id)}
 function rivalFor(c){const current=pById(c.id);if(current)return current;const n=Number(String(c.id).replace('pilot-',''));const faction=['bf109','bf110','he111'].includes(c.types?.[0])?'Axis':'Allies';const candidates=roster.filter(p=>p.faction===faction&&p.gender!=='female');const base=candidates[(Number.isFinite(n)?n:0)%candidates.length];return base?{...base,name:c.label||base.name}:null;}
 function player(){const saved=playerSave();return pById(saved?.profile?.rosterId)||null}
@@ -188,13 +188,19 @@ function pilots(){
 function career(){
  const saved=playerSave();
  if(!saved?.profile||saved.awaitingPilotSelection)return `<section class="frame career-screen v4-career">${header('KING OF THE SKIES','CHOOSE YOUR PILOT')}<div class="inner career-intro-layout"><div class="career-hangar-art"></div><div class="career-block"><h2>YOUR FIRST SORTIE</h2><p>Choose your pilot to begin.</p>${confirmButton('CHOOSE PILOT →','to-pilots')}</div></div></section>`;
- if(!saved.run)return `<section class="frame career-screen v4-career">${header('KING OF THE SKIES','READY FOR DUTY')}<div class="inner career-intro-layout"><div class="career-hangar-art"></div><div class="career-block"><h2>${esc(saved.profile.name)}</h2><p>Eight ranks, three lives and rivals who remember you.</p>${confirmButton('START CAMPAIGN →','begin-career')}</div></div></section>`;
+ if(!saved.run)return `<section class="frame career-screen v4-career">${header('KING OF THE SKIES','READY FOR DUTY')}<div class="inner career-intro-layout"><div class="career-hangar-art"></div><div class="career-block"><h2>${esc(saved.profile.name)}</h2><p>Twelve encounters across three regions: combat, choices and the final ace.</p>${confirmButton('START CAMPAIGN →','begin-career')}</div></div></section>`;
  if(saved.run.pendingReward)return outcome();
  const run=saved.run,choices=run.choices||[],selected=choices[S.choice]||choices[0],p=player(),played=Math.max(0,(saved.wins||0)+(saved.losses||0)),rate=played?Math.round((saved.wins||0)/played*100):0;
- const campaignRanks=Array.from({length:8},(_,i)=>8-i);
+ const campaignRanks=Array.from({length:12},(_,i)=>12-i);
  const currentRank=run.rank||1;
- const laneX=[17,50,83],mapRows=Array.from({length:8},(_,i)=>8-i);
- const encounterMeta=mission=>{
+ const laneX=[17,50,83],mapRows=Array.from({length:12},(_,i)=>12-i);
+ const encounterMeta=(mission,kind)=>{
+  if(kind==='supply')return {icon:'✚',name:'FIELD SUPPLIES'};
+  if(kind==='intel')return {icon:'◈',name:'INTELLIGENCE'};
+  if(kind==='shop')return {icon:'⚒',name:'QUARTERMASTER'};
+  if(kind==='dice')return {icon:'⚄',name:'HANGAR DICE'};
+  if(kind==='event')return {icon:'☕',name:'MESS HALL'};
+  if(kind==='elite')return {icon:'♛',name:'ELITE SQUADRON'};
   const key=String(mission||'').toUpperCase();
   if(key.includes('FINAL'))return {icon:'★',name:'FINAL ACE'};
   if(key.includes('ESCORT'))return {icon:'✦',name:'BOMBER ESCORT'};
@@ -209,11 +215,11 @@ function career(){
   return {icon:'✈',name:'INTERCEPTION'};
  };
  const ladder=mapRows.map((rank,idx)=>{
-  const final=rank===8,now=rank===currentRank,passed=rank<currentRank;
+  const final=rank===12,now=rank===currentRank,passed=rank<currentRank;
 
   return '<div class="route-map-row '+(now?'is-current':passed?'is-cleared':'is-ahead')+'" data-map-rank="'+rank+'"><span class="route-map-rank">RANK '+rank+' · '+esc(rankTitles[rank-1])+'</span><div class="route-map-nodes">'+laneX.map((x,lane)=>{
    if(final&&!now&&lane!==1)return '';
-   const actual=now?choices[lane]:null,meta=now?encounterMeta(actual?.mission):final?{icon:'★',name:'FINAL ACE'}:passed?{icon:'✓',name:'CLEARED'}:{icon:'?',name:'UNREVEALED'};
+   const actual=now?choices[lane]:null,meta=now?encounterMeta(actual?.mission,actual?.nodeType):final?{icon:'★',name:'FINAL ACE'}:passed?{icon:'✓',name:'CLEARED'}:{icon:'?',name:'UNREVEALED'};
    const chosen=now&&lane===Math.min(S.choice,2),state=now?'is-available':passed?'is-complete':'is-future';
    const label=now?(meta.name+' · '+(actual?.label||'CHOOSE A RIVAL')+' · '+(actual?.risk||'')+' RISK'):meta.name;
    const tag=now&&actual?'button':'span',attrs=now&&actual?' type="button" data-choice="'+lane+'" aria-pressed="'+(chosen?'true':'false')+'"':'';
@@ -221,17 +227,24 @@ function career(){
   }).join('')+'</div></div>';
  }).join('');
  const mapEdges=mapRows.slice(0,-1).map((rank,row)=>{
-  const sources=rank===8?[1]:[0,1,2];
+  const sources=rank===12?[1]:[0,1,2];
   return sources.map(lane=>{
-   const destinations=rank===8?[0,1,2]:lane===0?(row%2===0?[0,1]:[0]):lane===1?(row%2===0?[1,2]:[0,1]):(row%2===0?[2]:[1,2]);
+   const destinations=rank===12?[0,1,2]:lane===0?(row%2===0?[0,1]:[0]):lane===1?(row%2===0?[1,2]:[0,1]):(row%2===0?[2]:[1,2]);
    return destinations.map(dest=>'<path d="M '+laneX[lane]+' '+(48+row*105)+' L '+laneX[dest]+' '+(48+(row+1)*105)+'" />').join('');
   }).join('');
  }).join('');
- const connectedLadder='<div class="campaign-map-canvas"><svg class="map-connections" viewBox="0 0 100 840" preserveAspectRatio="none" aria-hidden="true">'+mapEdges+'</svg>'+ladder+'</div>';
- const rival=selected?rivalFor(selected):null;
+ const connectedLadder='<div class="campaign-map-canvas"><svg class="map-connections" viewBox="0 0 100 1260" preserveAspectRatio="none" aria-hidden="true">'+mapEdges+'</svg>'+ladder+'</div>';
+ const rival=selected&&!selected.isNonCombat?rivalFor(selected):null;
  const prior=selected?(saved.records?.[selected.id]||{}):{};
  const fought=(prior.wins||0)+(prior.losses||0);
- const selectedSortie=selected?
+ const eventDossier=selected?.isNonCombat?
+  '<article class="wm-v085-sortie-brief wm-v09-event-dossier" aria-label="Non-combat campaign encounter">'+
+    '<div class="wm-v09-event-seal"><span>'+encounterMeta(selected.mission,selected.nodeType).icon+'</span><strong>'+esc(selected.label)+'</strong><small>'+esc(selected.region||'AIRFIELD SUPPORT')+'</small></div>'+
+    '<div class="wm-v085-sortie-details"><div class="wm-v085-sortie-overline">NON-COMBAT ENCOUNTER · RANK '+currentRank+'</div>'+
+    '<h2>'+esc(selected.mission)+'</h2><p class="wm-v085-sortie-description">'+esc(selected.briefing)+'</p>'+
+    '<div class="wm-v09-event-options">'+(selected.eventOptions||[]).map(opt=>'<button type="button" class="wm-v09-event-button" data-event-option="'+esc(opt.id)+'"><strong>'+esc(opt.name)+'</strong><small>'+esc(opt.detail)+'</small></button>').join('')+'</div>'+
+    '<small class="wm-v085-sortie-history">CHOOSE AN ACTION TO ADVANCE · RETURN TO THE CHART TO CHANGE ROUTES</small></div></article>':null;
+ const selectedSortie=eventDossier || (selected?
   '<article class="wm-v085-sortie-brief" aria-label="Selected campaign mission">'+
    '<div class="wm-v085-sortie-portrait">'+(rival?atlas(rival):'<span class="wm-v085-no-photo">✈</span>')+
     '<span>ENEMY DOSSIER</span></div>'+
@@ -250,19 +263,19 @@ function career(){
     '<small class="wm-v085-sortie-history">'+(fought?'RIVAL RECORD · '+(prior.wins||0)+' WINS / '+(prior.losses||0)+' LOSSES':'FIRST ENCOUNTER')+
     ' · TO CHOOSE ANOTHER MISSION, RETURN TO THE CHART</small>'+
    '</div></article>':
-  '<div class="wm-v085-sortie-empty">NO MISSION SELECTED · RETURN TO THE OPERATIONS CHART</div>';
- return `<section class="frame career-screen campaign-rework wm-v13-campaign ${S.campaignPanel==='sortie'?'wm-v13-sortie':'wm-v13-ladder'}">${header('KING OF THE SKIES','RANK '+currentRank+' / 8 · '+run.lives+' LIVES')}
- <div class="wm-v13-campaign-status"><span>RANK <b>${currentRank} / 8</b></span><span>${run.lives} LIVES REMAINING</span><span>AIRCRAFT ${Math.round(run.condition??100)}%</span><span>${run.supplies||0} REPAIR SUPPLIES</span></div>
+  '<div class="wm-v085-sortie-empty">NO MISSION SELECTED · RETURN TO THE OPERATIONS CHART</div>');
+ return `<section class="frame career-screen campaign-rework wm-v13-campaign ${S.campaignPanel==='sortie'?'wm-v13-sortie':'wm-v13-ladder'}">${header('KING OF THE SKIES','RANK '+currentRank+' / 12 · '+run.lives+' LIVES')}
+ <div class="wm-v13-campaign-status"><span>RANK <b>${currentRank} / 12</b></span><span>${run.lives} LIVES REMAINING</span><span>AIRCRAFT ${Math.round(run.condition??100)}%</span><span>${run.supplies||0} REPAIR SUPPLIES</span></div>
  <div class="campaign-rework-content"><div class="campaign-main">
  <div class="campaign-ladder-head"><strong>ROAD TO ACE</strong><span>BRANCHING ROUTES · CLIMB TO THE FINAL ACE</span></div>
- <div class="campaign-map-legend"><span>✈ INTERCEPT</span><span>◈ RECON</span><span>♠ ACE HUNT</span><span>✦ ESCORT</span><span>⚔ OUTNUMBERED</span><span>★ FINALE</span></div><div class="campaign-ladder-scroll" data-rank="${currentRank}" aria-label="Branching eight-rank campaign map">${connectedLadder}</div>
+ <div class="campaign-map-legend"><span>✈ INTERCEPT</span><span>◈ RECON</span><span>♠ ACE HUNT</span><span>✦ ESCORT</span><span>⚔ OUTNUMBERED</span><span>★ FINALE</span></div><div class="campaign-ladder-scroll" data-rank="${currentRank}" aria-label="Twelve rung branching campaign map">${connectedLadder}</div>
  <div class="campaign-rivals-title"><strong>YOUR SELECTED SORTIE</strong><small>ONE MISSION · ORDERS CONFIRMED</small></div>
  <div class="campaign-rivals wm-v085-single-sortie">${selectedSortie}</div>
  </div>
  <aside class="campaign-service-side"><div class="service-card">
  <div class="service-card-head"><span>${p?.faction==='Axis'?'LUFTWAFFE':'ROYAL AIR FORCE'}</span><small>ACTIVE CAMPAIGN · LIVE SERVICE RECORD</small></div>
  <div class="service-identity"><div class="service-picture">${atlas(p)}</div><div><small>PILOT / CALLSIGN</small><strong>${esc(saved.profile.name)}</strong><span>${esc(p?.archetype||'AVIATOR')} · ${esc(saved.profile.skill||'ROLL').toUpperCase()}</span></div></div>
- <div class="service-progress"><strong>RANK ${currentRank} / 8</strong><span>${'♥'.repeat(run.lives)}${'♡'.repeat(Math.max(0,3-run.lives))}</span></div>
+ <div class="service-progress"><strong>RANK ${currentRank} / 12</strong><span>${'♥'.repeat(run.lives)}${'♡'.repeat(Math.max(0,3-run.lives))}</span></div>
  <div class="service-stat-grid"><div><strong>${saved.wins||0}</strong><small>CAREER WINS</small></div><div><strong>${saved.losses||0}</strong><small>LOSSES</small></div><div><strong>${saved.kills||0}</strong><small>CONFIRMED KILLS</small></div><div><strong>${rate}%</strong><small>WIN RATE</small></div></div>
  <p class="service-specialism">PREFERRED AIRCRAFT <b>${esc(PLANES[TYPES.indexOf(saved.profile.plane)]?.[0]||'FIGHTER')}</b><span>★ +10% HULL · ARMOUR · GUN DAMAGE</span></p>
  <div class="wg-v7-run-ledger"><div><small>AIRCRAFT CONDITION</small><strong>${Math.round(run.condition??100)}%</strong></div><div><small>REPAIR SUPPLIES</small><strong>${run.supplies||0}/12</strong></div>
@@ -277,7 +290,7 @@ function career(){
  <button type="button" class="wm-v13-tab ${S.campaignPanel==='ladder'?'active':''}" data-action="campaign-map">⌖ VIEW FULL LADDER</button>
  ${S.campaignPanel==='ladder'?
  '<button type="button" class="wm-v13-tab wm-v13-tab-gold" data-action="campaign-sortie">CHOOSE NEXT SORTIE ›</button>':
- '<button type="button" class="wm-v13-tab wm-v13-tab-gold" data-action="career-aircraft">SELECT AIRCRAFT ›</button>'}
+ '<button type="button" class="wm-v13-tab wm-v13-tab-gold" data-action="'+(selected?.isNonCombat?'campaign-map':'career-aircraft')+'">'+(selected?.isNonCombat?'CHANGE ROUTE ›':'SELECT AIRCRAFT ›')+'</button>'}
  </div></section>`;
 }
 function records(){
@@ -454,7 +467,7 @@ function action(v){
  if(v==='sound'){S.sound=!S.sound;api()?.toggleSound?.();return show()}
  if(v==='confirm-pilot'){const p=roster[S.pilotIndex];if(!p)return;const status=api()?.choosePilot?.(p.id);if(status===false)return;S.faction=p.faction;S.plane=Math.max(0,TYPES.indexOf(p.plane));S.career=false;S.screen='home';S.back=[];return show()}
  if(v==='begin-career')return beginCareer();
- if(v==='career-aircraft'){if(!playerSave()?.run)return;S.career=true;S.launchError='';S.faction=playerSave().profile.faction;S.plane=TYPES.indexOf(playerSave().profile.plane);return go('aircraft')}
+ if(v==='career-aircraft'){if(!playerSave()?.run||playerSave().run.choices?.[S.choice]?.isNonCombat)return;S.career=true;S.launchError='';S.faction=playerSave().profile.faction;S.plane=TYPES.indexOf(playerSave().profile.plane);return go('aircraft')}
  if(v==='launch-arcade'){const ok=api()?.startArcade?.({mode:OPS[S.op][3],aircraft:TYPES[S.plane],opponent:S.opponent,difficulty:S.difficulty,arena:S.theatre});if(ok){S.launchError='';api()?.hide?.()}else{S.launchError='UNABLE TO LAUNCH · TRY AGAIN';show()}return}
  if(v==='launch-career'){const ok=api()?.startCareer?.(S.choice,TYPES[S.plane]);if(ok){S.launchError='';S.career=false;api()?.hide?.()}else{S.launchError='UNABLE TO START SORTIE · TRY AGAIN';show()}return}
  if(v==='career-continue'){if(playerSave()?.run?.pendingReward)return show();api()?.continueCareer?.();S.lastResult=null;S.campaignPanel='ladder';S.screen='career';S.back=[];return show()}
@@ -467,6 +480,7 @@ function action(v){
 document.addEventListener('click',e=>{
  const el=e.target.closest('button');if(!el)return;
  if(el.dataset.go){S.career=false;return go(el.dataset.go)}
+ if(el.dataset.eventOption){const result=api()?.resolveCampaignEvent?.(S.choice,el.dataset.eventOption);if(result){S.campaignPanel='ladder';S.choice=0;S.screen='career';S.lastEventSummary=result;show();}return;}
  if(el.dataset.reward){
    if(api()?.claimCampaignReward?.(el.dataset.reward)){
      S.screen='career';S.lastCareer=false;S.lastResult=null;S.back=[];show();
