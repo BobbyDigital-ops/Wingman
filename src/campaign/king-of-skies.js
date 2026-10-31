@@ -184,6 +184,7 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
  }
  enc.lane=lane;enc.risk=risk;enc.objective=objective;enc.nodeType=kind;
  enc.region=regionForRank(rank);
+ enc.elite=kind==='elite';enc.boss=kind==='boss';
  enc.mission=final?'FINAL SQUADRON':
    objective==='escort'?'BOMBER ESCORT':
    objective==='intercept'?'BOMBER INTERCEPTION':
@@ -206,7 +207,11 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
    objective==='ace-hunt'?Math.max(60,87-rank*3):
    objective==='outnumbered'?Math.max(97,126-rank*3):115;
  enc.escortType=objective==='escort'?(run.faction==='Allies'?'bomber':'he111'):null;
- enc.aiRank=n(Math.ceil(rank*8/MAX_RANK)+(lane===2?2:lane===1?1:0),1,8);
+ // The engine's proven AI scale remains 1–8; translate twelve campaign rungs
+ // into it, with a readable elite spike and a fully skilled final ace.
+ // No artificial hull, armour or weapon multiplier is added to opponents.
+ enc.aiRank=kind==='boss'?8:n(Math.ceil(rank*8/MAX_RANK)+
+   (lane===2?2:lane===1?1:0)+(kind==='elite'?1:0),1,8);
  enc.difficulty=enc.aiRank<=2?'rookie':enc.aiRank<=4?'standard':'ace';
  enc.suppliesAward=final?3:lane+1;
  enc.rewardTier=lane;
