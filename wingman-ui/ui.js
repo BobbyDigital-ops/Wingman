@@ -60,7 +60,7 @@ function profiles(){
   '<span class="wm-v13-profile-photo">'+(pilot?atlas(pilot):'<span class="wm-v13-empty-portrait">+</span>')+'</span>'+
   '<strong>'+esc(existing?p.name:'NEW PILOT')+'</strong>'+
   '<span class="wm-v13-profile-meta">'+(existing?esc(p.faction==='Axis'?'LUFTWAFFE':'ROYAL AIR FORCE')+
-  ' · '+(p.rank?'RANK '+p.rank+' / 8':'READY FOR DUTY'):'CREATE AN INDEPENDENT CAREER')+'</span>'+
+  ' · '+(p.rank?'RANK '+p.rank+' / 12':'READY FOR DUTY'):'CREATE AN INDEPENDENT CAREER')+'</span>'+
   '<em>'+(existing?'SELECT SERVICE RECORD ›':'ENLIST NEW PILOT ›')+'</em></button>';
  }).join('');
  return '<section class="frame wm-v13-profiles">'+
@@ -72,7 +72,7 @@ function profiles(){
 }
 function home(){
  const saved=playerSave(),p=player(),rank=saved?.run?.rank||1;
- const careerDetail=saved?.run?'CONTINUE · RANK '+rank+' / 8':'EIGHT RANKS · ONE LEGEND';
+ const careerDetail=saved?.run?'CONTINUE · RANK '+rank+' / 12':'TWELVE ENCOUNTERS · ONE LEGEND';
  return '<section class="frame wm-v12-home">'+
    '<div class="wm-v12-home-content">'+
    '<div class="wm-v12-home-intro"><span class="wm-v12-kicker">RAF FIGHTER COMMAND · OPERATIONS ROOM · 1940</span>'+
@@ -301,7 +301,7 @@ function records(){
  allTimeKills=(saved?.kills||0)+flights.reduce((n,r)=>n+(Number(r.kills)||0),0),
  pilotFlights=p?flights.filter(r=>r.pilotId===p.id):[],pilotWins=pilotFlights.filter(r=>r.won).length,
  pilotKills=pilotFlights.reduce((n,r)=>n+(Number(r.kills)||0),0),
- service=[['ALL-TIME VICTORIES',totalWins],['DEFEATS',totalLosses],['CONFIRMED KILLS',allTimeKills],['TOTAL SORTIES',totalArcade+(saved?.wins||0)+(saved?.losses||0)],['BEST CAMPAIGN RANK',(saved?.best||0)+'/8'],['COMPLETED CAMPAIGNS',saved?.completed||0]];
+ service=[['ALL-TIME VICTORIES',totalWins],['DEFEATS',totalLosses],['CONFIRMED KILLS',allTimeKills],['TOTAL SORTIES',totalArcade+(saved?.wins||0)+(saved?.losses||0)],['BEST CAMPAIGN RANK',(saved?.best||0)+'/12'],['COMPLETED CAMPAIGNS',saved?.completed||0]];
  return `<section class="frame licence-screen">${header('PILOT LICENCE','ALL OPERATIONS · PERSONNEL RECORD')}
  <div class="licence-card">
  <div class="licence-title"><span>${p?.faction==='Axis'?'LUFTWAFFE · FLIEGERAUSWEIS':'ROYAL AIR FORCE · AIRCREW LICENCE'}</span><b>IDENTITY &amp; SERVICE BOOK</b></div>
