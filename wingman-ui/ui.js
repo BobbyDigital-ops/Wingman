@@ -16,7 +16,7 @@ const PLANES=[
 const liveSpecs=P.WingmanGame?.aircraftSpecs?.();
 if(liveSpecs)for(let i=0;i<TYPES.length;i++){const p=liveSpecs[TYPES[i]];if(!p)continue;PLANES[i][4]=p.speed;PLANES[i][5]=p.turn;PLANES[i][6]=p.armour;PLANES[i][7]=p.damage;}
 const OPS=[['1 VS 1','Classic dogfight','Head-to-head fighter combat.','duel'],['SURVIVAL','How long can you last?','Increasing waves of enemies.','survival'],['FREE FOR ALL','Every pilot for themselves','Multiple aircraft. One winner.','triple'],['2 VS 2','Team up','Fight with an AI wingman.','teams'],['CHALLENGES','Special operations','Time-limited combat objectives.','challenge']];
-const S={screen:'title',back:[],op:0,plane:0,opponent:'random',faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:0,campaignPanel:'ladder',difficulty:'standard',theatre:'0',sound:true,audioVolume:100,optionTab:'GAMEPLAY',lastResult:null,outcomeStep:'debrief'};
+const S={screen:'title',back:[],op:0,plane:0,opponent:'random',faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:null,campaignPanel:'ladder',difficulty:'standard',theatre:'0',sound:true,audioVolume:100,optionTab:'GAMEPLAY',lastResult:null,outcomeStep:'debrief'};
 const stage=document.querySelector('#stage'),nav=document.querySelector('.nav');
 try{const settings=P.WingmanUIBridge?.getAudioSettings?.();if(settings){S.sound=!settings.muted;S.audioVolume=Math.round(settings.volume*100);}}catch{}
 try{const savedOptions=JSON.parse(localStorage.getItem('wingman-ui-flight-presets-v1')||'null');
@@ -193,9 +193,11 @@ function career(){
  if(saved.run.pendingReward)return outcome();
  const run=saved.run,choices=run.choices||[],currentRank=run.rank||1;
  const allowed=P.WingmanCampaign?.reachableLanes?.(run.lastLane,currentRank)||run.allowedLanes||[0,1,2];
- if(!allowed.includes(S.choice))S.choice=allowed[0];
- const selected=choices[S.choice]||choices[allowed[0]]||choices[0],p=player(),played=Math.max(0,(saved.wins||0)+(saved.losses||0)),rate=played?Math.round((saved.wins||0)/played*100):0;
+ if(S.choice!==null&&!allowed.includes(S.choice))S.choice=null;
+ const selected=Number.isInteger(S.choice)&&allowed.includes(S.choice)?choices[S.choice]:null,p=player(),played=Math.max(0,(saved.wins||0)+(saved.losses||0)),rate=played?Math.round((saved.wins||0)/played*100):0;
  const campaignRanks=Array.from({length:12},(_,i)=>12-i);
+ const history=Array.isArray(run.pathHistory)?run.pathHistory:[];
+ const visitedByRank=new Map(history.map(item=>[item.rank,item]));
  const laneX=[17,50,83],mapRows=Array.from({length:12},(_,i)=>12-i);
  const encounterMeta=(mission,kind)=>{
   if(kind==='supply')return {icon:'✚',name:'FIELD SUPPLIES'};
@@ -218,27 +220,61 @@ function career(){
   if(key.includes('HUNTER'))return {icon:'⌖',name:'HUNTER PATROL'};
   return {icon:'✈',name:'INTERCEPTION'};
  };
- const ladder=mapRows.map((rank,idx)=>{
+ const nodeMetaByType=(kind,rank,lane)=>{
+  const meta={combat:{icon:'✈',name:lane===2?'HIGH-RISK FIGHT':lane===0?'LOW-RISK FIGHT':'AIR COMBAT'},
+   elite:{icon:'♛',name:'ELITE PILOTS'},boss:{icon:'★',name:'FINAL SQUADRON'},
+   supply:{icon:'✚',name:'FIELD REPAIRS'},intel:{icon:'◈',name:'INTELLIGENCE'},
+   dice:{icon:'⚄',name:'DICE GAMBLE'},shop:{icon:'⚒',name:'QUARTERMASTER'},
+   event:{icon:'☕',name:'SQUADRON EVENT'}};
+  return meta[kind]||meta.combat;
+ };
+ const ladder=mapRows.map(rank=>{
   const final=rank===12,now=rank===currentRank,passed=rank<currentRank;
-
-  return '<div class="route-map-row '+(now?'is-current':passed?'is-cleared':'is-ahead')+'" data-map-rank="'+rank+'"><span class="route-map-rank">RANK '+rank+' · '+esc(rankTitles[rank-1])+'</span><div class="route-map-nodes">'+laneX.map((x,lane)=>{
-   if(final&&lane!==1)return ''; // A single boss, not three arbitrary choices.
-   const accessible=now&&allowed.includes(lane);
-   const actual=now?choices[lane]:null,meta=now?(accessible?encounterMeta(actual?.mission,actual?.nodeType):{icon:'×',name:'NO CONNECTING ROUTE'}):final?{icon:'★',name:'FINAL ACE'}:passed?{icon:'✓',name:'CLEARED'}:{icon:'?',name:'UNREVEALED'};
-   const chosen=accessible&&lane===S.choice,state=now?(accessible?'is-available':'is-locked'):passed?'is-complete':'is-future';
-   const label=accessible?(meta.name+' · '+(actual?.label||'RIVAL')+' · '+(actual?.risk||'')+' RISK'):meta.name;
-   const tag=accessible&&actual?'button':'span',attrs=accessible&&actual?' type="button" data-choice="'+lane+'" aria-pressed="'+(chosen?'true':'false')+'"':'';
-   return '<'+tag+' class="route-map-node '+(chosen?'is-chosen ':'')+state+'" style="left:'+x+'%" title="'+esc(label)+'" aria-label="'+esc(label)+'"'+attrs+'><span class="node-symbol">'+meta.icon+'</span><small>'+esc(meta.name)+(actual?' · '+esc(actual.risk)+' RISK':'')+'</small></'+tag+'>';
-  }).join('')+'</div></div>';
+  const visited=visitedByRank.get(rank);
+  return '<div class="route-map-row '+(now?'is-current':passed?'is-cleared':'is-ahead')+
+   '" data-map-rank="'+rank+'"><span class="route-map-rank">RANK '+rank+' · '+esc(rankTitles[rank-1])+'</span>'+
+   '<div class="route-map-nodes">'+laneX.map((x,lane)=>{
+    if(final&&lane!==1)return '';
+    const accessible=now&&allowed.includes(lane);
+    const completed=passed&&visited?.lane===lane;
+    const actual=now?choices[lane]:null;
+    const kind=P.WingmanCampaign?.nodeTypeFor?.(rank,lane)||'combat';
+    const meta=now&&actual?encounterMeta(actual.mission,actual.nodeType):nodeMetaByType(kind,rank,lane);
+    const chosen=accessible&&lane===S.choice;
+    const state=completed?'is-complete':passed?'is-skipped':
+      accessible?'is-available':now?'is-locked':'is-future';
+    const label=actual?.mission||meta.name;
+    const desc=now&&actual?(actual.risk==='EVENT'?'EVENT':actual.risk+' RISK'):'';
+    const tag=accessible&&actual?'button':'span';
+    const attrs=accessible&&actual?' type="button" data-choice="'+lane+'" aria-pressed="'+(chosen?'true':'false')+'"':'';
+    const symbol=completed?'✓':meta.icon;
+    return '<'+tag+' class="route-map-node '+(chosen?'is-chosen ':'')+state+
+      '" style="left:'+x+'%" title="'+esc(label)+'" aria-label="'+esc(label)+(desc?' · '+esc(desc):'')+
+      '"'+attrs+'><span class="node-symbol">'+symbol+'</span><small>'+esc(meta.name)+
+      (desc?' · '+esc(desc):'')+'</small></'+tag+'>';
+   }).join('')+'</div></div>';
  }).join('');
- const mapEdges=mapRows.slice(0,-1).map((rank,row)=>{
+ const mapEdges=Array.from({length:11},(_,index)=>{
+  const rank=index+1;const lowerRow=12-rank,upperRow=lowerRow-1;
+  const visited=visitedByRank.get(rank),nextVisited=visitedByRank.get(rank+1);
   const sources=rank===12?[1]:[0,1,2];
   return sources.map(lane=>{
-   const destinations=rank===12?[0,1,2]:lane===0?[0,1]:lane===1?[0,1,2]:[1,2];
-   return destinations.map(dest=>'<path d="M '+laneX[lane]+' '+(48+row*105)+' L '+laneX[dest]+' '+(48+(row+1)*105)+'" />').join('');
+   const destinations=P.WingmanCampaign?.reachableLanes?.(lane,rank+1)||
+     (lane===0?[0,1]:lane===2?[1,2]:[0,1,2]);
+   return destinations.map(dest=>{
+    const onHistory=visited?.lane===lane&&nextVisited?.lane===dest;
+    const possible=rank===currentRank-1&&visited?.lane===lane&&allowed.includes(dest);
+    const availableNow=rank===currentRank&&allowed.includes(lane);
+    const cls=onHistory?'is-travelled':possible?'is-open':availableNow?'is-open':'is-dormant';
+    const sx=laneX[lane]*10,dx=laneX[dest]*10;
+    const y1=lowerRow*100+52,y2=upperRow*100+52;
+    return '<path class="'+cls+'" d="M '+sx+' '+y1+' C '+sx+' '+(y1-34)+' '+dx+' '+(y2+34)+' '+dx+' '+y2+'" />';
+   }).join('');
   }).join('');
  }).join('');
- const connectedLadder='<div class="campaign-map-canvas"><svg class="map-connections" viewBox="0 0 100 1260" preserveAspectRatio="none" aria-hidden="true">'+mapEdges+'</svg>'+ladder+'</div>';
+ const connectedLadder='<div class="campaign-map-canvas wm-v095-spire-map">'+
+  '<svg class="map-connections" viewBox="0 0 1000 1200" preserveAspectRatio="none" aria-hidden="true">'+mapEdges+'</svg>'+
+  ladder+'</div>';
  const rival=selected&&!selected.isNonCombat?rivalFor(selected):null;
  const prior=selected?(saved.records?.[selected.id]||{}):{};
  const fought=(prior.wins||0)+(prior.losses||0);
@@ -302,7 +338,7 @@ function career(){
  <div class="wm-v13-campaign-bottom">
  <button type="button" class="wm-v13-tab ${S.campaignPanel==='ladder'?'active':''}" data-action="campaign-map">⌖ VIEW FULL LADDER</button>
  ${S.campaignPanel==='ladder'?
- '<button type="button" class="wm-v13-tab wm-v13-tab-gold" data-action="campaign-sortie">CHOOSE NEXT SORTIE ›</button>':
+ '<span class="wm-v095-route-prompt">'+(S.choice===null?'SELECT ONE OF THE CONNECTED NODES ABOVE':'ROUTE SELECTED · REVIEW MISSION')+'</span>':
  '<button type="button" class="wm-v13-tab wm-v13-tab-gold" data-action="'+(selected?.isNonCombat?'campaign-map':'career-aircraft')+'">'+(selected?.isNonCombat?'CHANGE ROUTE ›':'SELECT AIRCRAFT ›')+'</button>'}
  </div></section>`;
 }
@@ -578,7 +614,7 @@ const newMap=stage.querySelector('.campaign-ladder-scroll');
 if(newMap){if(mapMemory&&mapMemory.rank===newMap.dataset.rank)newMap.scrollTop=mapMemory.top;else{const current=newMap.querySelector('.route-map-row.is-current');if(current){const top=current.getBoundingClientRect().top-newMap.getBoundingClientRect().top+newMap.scrollTop;newMap.scrollTop=Math.max(0,Math.min(newMap.scrollHeight-newMap.clientHeight,top-newMap.clientHeight*.65));}}}document.querySelector('.utility-home').hidden=['home','title','profiles'].includes(S.screen);document.querySelector('.utility-settings').hidden=S.screen!=='career';document.querySelector('.career-settings-popup').hidden=true;nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===S.screen?'page':'false'));document.querySelector('#squadron strong').textContent=playerSave()?.profile?.name||'Guest Pilot';stage.querySelectorAll('select[data-setting]').forEach(sel=>sel.value=S[sel.dataset.setting]);stage.scrollTop=0;}
 function go(screen){if(S.screen!==screen){S.back.push(S.screen);S.screen=screen;show()}}
 function back(){S.screen=S.back.pop()||'home';if(S.screen!=='aircraft')S.career=false;show()}
-function beginCareer(){const a=api();if(!a?.beginCareer?.())return;S.choice=0;S.career=false;S.screen='career';show()}
+function beginCareer(){const a=api();if(!a?.beginCareer?.())return;S.choice=null;S.career=false;S.screen='career';show()}
 function action(v){
  if(v==='options-reset'){S.difficulty='standard';S.theatre='0';try{localStorage.setItem('wingman-ui-flight-presets-v1',JSON.stringify({difficulty:S.difficulty,theatre:S.theatre}))}catch{}return show();}
  if(v==='opening-start'){S.screen='profiles';S.back=[];return show();}
@@ -587,15 +623,15 @@ function action(v){
  if(v==='aircraft-build')return go('build');
  if(v==='back-to-ladder'){S.screen='career';S.campaignPanel='ladder';S.back=[];return show()}
  if(v==='review-rewards'){if(!playerSave()?.run?.pendingReward)return;S.outcomeStep='reward';S.screen='outcome';return show();}
- if(v==='continue-event'){S.lastEventSummary=null;S.campaignPanel='ladder';S.choice=0;S.screen='career';S.back=[];return show();}
- if(v==='campaign-map'){S.campaignPanel='ladder';return show();}
- if(v==='campaign-sortie'){S.campaignPanel='sortie';return show();}
+ if(v==='continue-event'){S.lastEventSummary=null;S.campaignPanel='ladder';S.choice=null;S.screen='career';S.back=[];return show();}
+ if(v==='campaign-map'){S.campaignPanel='ladder';S.choice=null;return show();}
+ if(v==='campaign-sortie'){if(S.choice===null){S.campaignPanel='ladder';return show();}S.campaignPanel='sortie';return show();}
  if(v==='campaign-settings'){const panel=document.querySelector('.career-settings-popup');panel.hidden=!panel.hidden;return;}
  if(v==='restart-run'){if(!confirm('Restart King of the Skies? Select a pilot again and return to rank 1. Lifetime service statistics and medals are kept.'))return;const ok=api()?.restartCampaign?.();if(!ok)return;S.choice=0;S.career=false;S.page=0;S.pilotFilter=playerSave()?.profile?.faction||'Allies';const current=roster.findIndex(p=>p.id===playerSave()?.profile?.rosterId);S.pilotIndex=Math.max(0,current);S.screen='pilots';S.back=['career'];show();return;}
  if(v==='fullscreen'){const d=P.document;(d.fullscreenElement?d.exitFullscreen():d.documentElement.requestFullscreen()).catch(()=>{});return;}
  if(v==='back')return back();
  if(v==='operations'){S.career=false;return go('operations')}
- if(v==='career'){S.career=false;S.campaignPanel='ladder';return go('career')}
+ if(v==='career'){S.career=false;S.campaignPanel='ladder';S.choice=null;return go('career')}
  if(v==='pilots'||v==='to-pilots'){const save=playerSave();S.pilotFilter=save?.profile?.faction||'Allies';const idx=roster.findIndex(p=>p.id===save?.profile?.rosterId);if(idx>=0)S.pilotIndex=idx;S.page=0;return go('pilots')}
  if(v==='aircraft'){S.career=false;return go('aircraft')}
  if(['home','options','records'].includes(v))return go(v);
@@ -603,10 +639,10 @@ function action(v){
  if(v==='sound'){S.sound=!!api()?.toggleSound?.();return show()}
  if(v==='confirm-pilot'){const p=roster[S.pilotIndex];if(!p)return;const status=api()?.choosePilot?.(p.id);if(status===false)return;S.faction=p.faction;S.plane=Math.max(0,TYPES.indexOf(p.plane));S.career=false;S.screen='home';S.back=[];return show()}
  if(v==='begin-career')return beginCareer();
- if(v==='career-aircraft'){if(!playerSave()?.run||playerSave().run.choices?.[S.choice]?.isNonCombat)return;S.career=true;S.launchError='';S.faction=playerSave().profile.faction;S.plane=TYPES.indexOf(playerSave().profile.plane);return go('aircraft')}
+ if(v==='career-aircraft'){if(S.choice===null||!playerSave()?.run||playerSave().run.choices?.[S.choice]?.isNonCombat)return;S.career=true;S.launchError='';S.faction=playerSave().profile.faction;S.plane=TYPES.indexOf(playerSave().profile.plane);return go('aircraft')}
  if(v==='launch-arcade'){const ok=api()?.startArcade?.({mode:OPS[S.op][3],aircraft:TYPES[S.plane],opponent:S.opponent,difficulty:S.difficulty,arena:S.theatre});if(ok){S.launchError='';api()?.hide?.()}else{S.launchError='UNABLE TO LAUNCH · TRY AGAIN';show()}return}
  if(v==='launch-career'){const ok=api()?.startCareer?.(S.choice,TYPES[S.plane]);if(ok){S.launchError='';S.career=false;api()?.hide?.()}else{S.launchError='UNABLE TO START SORTIE · TRY AGAIN';show()}return}
- if(v==='career-continue'){if(playerSave()?.run?.pendingReward)return show();api()?.continueCareer?.();S.lastResult=null;S.campaignPanel='ladder';S.screen='career';S.back=[];return show()}
+ if(v==='career-continue'){if(playerSave()?.run?.pendingReward)return show();api()?.continueCareer?.();S.lastResult=null;S.choice=null;S.campaignPanel='ladder';S.screen='career';S.back=[];return show()}
  if(v==='repair-airframe'){if(api()?.repairCampaignAircraft?.())show();return;}
  if(v==='fly-again'){api()?.rematch?.();return}
  if(v==='change-aircraft'){api()?.changeAircraft?.();S.screen='aircraft';S.career=false;S.back=[];return show()}
@@ -616,10 +652,10 @@ function action(v){
 document.addEventListener('click',e=>{
  const el=e.target.closest('button');if(!el)return;
  if(el.dataset.go){S.career=false;return go(el.dataset.go)}
- if(el.dataset.eventOption){const result=api()?.resolveCampaignEvent?.(S.choice,el.dataset.eventOption);if(result){S.campaignPanel='ladder';S.choice=0;S.lastEventSummary=result;S.screen='event-result';S.back=[];show();}return;}
+ if(el.dataset.eventOption){const result=api()?.resolveCampaignEvent?.(S.choice,el.dataset.eventOption);if(result){S.campaignPanel='ladder';S.choice=null;S.lastEventSummary=result;S.screen='event-result';S.back=[];show();}return;}
  if(el.dataset.reward){
    if(api()?.claimCampaignReward?.(el.dataset.reward)){
-     S.outcomeStep='debrief';S.screen='career';S.lastCareer=false;S.lastResult=null;S.back=[];show();
+     S.outcomeStep='debrief';S.campaignPanel='ladder';S.choice=null;S.screen='career';S.lastCareer=false;S.lastResult=null;S.back=[];show();
    }
    return;
  }
