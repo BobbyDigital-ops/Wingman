@@ -22,11 +22,11 @@ test('all 40 defined pilots have stable combat identities and individual attribu
   assert.ok(p.aggression>=.2&&p.aggression<=.98);
  }
 });
-test('the same pilot grows each stat monotonically from rank one to eight without changing their identity',()=>{
+test('pilot attributes grow through all twelve rungs without changing their identity',()=>{
  const w=init();
  for(const pilot of w.WingmanRoster){
   let previous=w.WingmanPilotAI.level(pilot,1);
-  for(let rank=2;rank<=8;rank++){
+  for(let rank=2;rank<=12;rank++){
    const next=w.WingmanPilotAI.level(pilot,rank);
    for(const k of ['manoeuvrability','gunnery','engine']){
     assert.ok(next.attributes[k]>=previous.attributes[k],pilot.name+' '+k+' dropped on rank '+rank);
@@ -40,6 +40,17 @@ test('the same pilot grows each stat monotonically from rank one to eight withou
    assert.ok(next.lead>=previous.lead);
    previous=next;
   }
+ }
+});
+test('the last four rungs remain meaningful: no premature rank-eight cap',()=>{
+ const w=init();
+ for(const p of w.WingmanRoster){
+  const eight=w.WingmanPilotAI.level(p,8),final=w.WingmanPilotAI.level(p,12);
+  assert.equal(final.rank,12);
+  assert.ok(final.lead>eight.lead);
+  assert.ok(final.reaction<eight.reaction);
+  assert.ok(final.attributes.gunnery>=eight.attributes.gunnery);
+  assert.equal(final.signature,eight.signature);
  }
 });
 test('same rank never erases a pilot’s signature strengths; three personality contrasts remain',()=>{
