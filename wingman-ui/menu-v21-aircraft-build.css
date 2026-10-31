@@ -1,0 +1,60 @@
+/* Phase 9F: aircraft build and effective stats. Original plane assets are used. */
+#stage>.wm-v9f-build{display:flex!important;flex-direction:column!important;height:100%!important;min-height:0!important;overflow:hidden!important;background:linear-gradient(110deg,#0c2732ed,#1e3641d8),url('./v11-art/hangar.webp') center/cover no-repeat!important;color:#f0ddbe!important}
+.wm-v9f-build .section-header{flex:none!important}
+.wm-v9f-build-workspace{width:min(1280px,100%);margin:auto;flex:1;min-height:0;min-width:0;display:grid;grid-template-columns:minmax(170px,.72fr) minmax(0,1.28fr);gap:clamp(8px,2vw,22px);padding:clamp(7px,1.7vh,18px) clamp(9px,3vw,38px)}
+.wm-v9f-build-picture{border:6px solid #594731;outline:1px solid #c0a173;outline-offset:-4px;background:linear-gradient(155deg,#102f3ec9,#081b29f2),url('./v11-art/hangar.webp') center/cover;box-shadow:inset 0 0 22px #0008,0 10px 23px #0009;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(5px,1vh,12px);min-width:0;min-height:0;padding:clamp(6px,1.3vw,17px)}
+.wm-v9f-build-picture>small,.wm-v9f-build-preferred{color:#e1bc7e!important;font:900 clamp(10px,1vw,13px) 'Barlow Condensed',Impact,sans-serif;letter-spacing:.12em;text-align:center}
+.wm-v9f-build-picture h2{font:900 clamp(23px,3vw,42px)/1 'Barlow Condensed',Impact,sans-serif!important;color:#f4e5c3!important;text-align:center;margin:0!important}
+.wm-v9f-build-plate{display:flex;align-items:center;justify-content:center;min-width:0;min-height:60px;flex:1;width:100%;font-size:60px;color:#d2b77d}
+.wm-v9f-build-plate img{width:100%;height:100%;max-height:235px;object-fit:contain;filter:drop-shadow(0 8px 9px #000b)}
+.wm-v9f-build-picture p{margin:0!important;width:100%;display:flex;justify-content:space-between;gap:8px;color:#d9ccad!important;font:800 clamp(10px,1vw,15px) 'Barlow Condensed',Impact,sans-serif;border-top:1px solid #a88b65;padding-top:6px}
+.wm-v9f-build-picture p strong{font-size:1.25em;color:#f3dbab}
+.wm-v9f-build-paper{display:flex;flex-direction:column;min-height:0;min-width:0;overflow-y:auto;padding:clamp(9px,1.8vw,24px);border:8px solid #634c33;outline:1px solid #c7a370;outline-offset:-5px;background:linear-gradient(145deg,#f1e0b8,#d5bd91);color:#302c23;box-shadow:inset 0 0 29px #78603b51,0 14px 25px #0008;scrollbar-width:thin}
+.wm-v9f-build-subtitle{font:900 clamp(13px,1.5vw,21px) 'Barlow Condensed',Impact,sans-serif;letter-spacing:.09em;color:#2c3d43;border-bottom:3px double #977a50;padding-bottom:5px}
+.wm-v9f-build-paper p{color:#5d4d36!important;font:600 clamp(11px,1.1vw,14px)/1.25 Barlow,Arial,sans-serif;margin:6px 0 9px!important}
+.wm-v9f-build-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.wm-v9f-build-stat{min-width:0;display:grid;grid-template-columns:1fr auto;gap:3px;padding:clamp(7px,.9vw,11px);border:1px solid #a58a61;background:#e8d2a4}
+.wm-v9f-build-stat small{grid-column:1/-1;color:#795637;font:900 clamp(10px,1vw,13px) 'Barlow Condensed',Impact,sans-serif;letter-spacing:.09em}
+.wm-v9f-build-stat strong{color:#243942;white-space:nowrap;font:900 clamp(15px,1.8vw,25px)/1 'Barlow Condensed',Impact,sans-serif}
+.wm-v9f-build-stat strong span{color:#92704d}
+.wm-v9f-build-stat em{font:900 clamp(14px,1.5vw,20px) 'Barlow Condensed',Impact,sans-serif;font-style:normal;color:#77634b}
+.wm-v9f-build-stat em.is-positive{color:#2d7846}
+.wm-v9f-build-stat em.is-negative{color:#a23c31}
+.wm-v9f-build-paper h3{color:#30404a!important;font:900 clamp(15px,1.6vw,21px) 'Barlow Condensed',Impact,sans-serif!important;margin:12px 0 6px!important;padding-top:6px;border-top:1px solid #a38b62}
+.wm-v9f-build-upgrades{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-bottom:10px}
+.wm-v9f-build-upgrade{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-left:4px solid #d1af76;background:#17313e;color:#f3e5c7}
+.wm-v9f-build-upgrade.is-setback{border-color:#bc5c48}
+.wm-v9f-build-upgrade span{color:#d6b77a;font:900 10px 'Barlow Condensed',Impact,sans-serif;letter-spacing:.11em}
+.wm-v9f-build-upgrade strong{font:900 clamp(13px,1.5vw,19px) 'Barlow Condensed',Impact,sans-serif}
+.wm-v9f-build-upgrade small{color:#e0d7c8;font:600 clamp(10px,.9vw,12px) Barlow,Arial,sans-serif}
+.wm-v9f-build-paper .btn{margin-top:auto;flex:none;min-height:40px;background:linear-gradient(#cc6946,#9d3d2a)!important;color:#ffefd6!important}
+@media(max-height:535px) and (orientation:landscape){
+ .wm-v9f-build-workspace{padding:4px 8px;gap:6px}
+ .wm-v9f-build-picture{gap:4px;border-width:4px;padding:5px}
+ .wm-v9f-build-picture>small{font-size:9px}
+ .wm-v9f-build-picture h2{font-size:22px!important}
+ .wm-v9f-build-plate{min-height:38px}
+ .wm-v9f-build-plate img{max-height:98px}
+ .wm-v9f-build-picture p{font-size:10px;padding-top:3px}
+ .wm-v9f-build-paper{border-width:5px;padding:7px 9px}
+ .wm-v9f-build-subtitle{font-size:13px}
+ .wm-v9f-build-paper p{font-size:10px;margin:3px 0 6px!important}
+ .wm-v9f-build-stats{gap:4px}
+ .wm-v9f-build-stat{padding:5px}
+ .wm-v9f-build-stat small{font-size:9px}
+ .wm-v9f-build-stat strong{font-size:16px}
+ .wm-v9f-build-stat em{font-size:13px}
+ .wm-v9f-build-paper h3{margin:6px 0 3px!important;font-size:14px!important}
+ .wm-v9f-build-upgrades{gap:4px;margin-bottom:5px}
+ .wm-v9f-build-upgrade{padding:4px 6px}
+ .wm-v9f-build-upgrade span{font-size:9px}
+ .wm-v9f-build-upgrade strong{font-size:12px}
+ .wm-v9f-build-upgrade small{font-size:10px}
+ .wm-v9f-build-paper .btn{min-height:32px}
+}
+@media(max-width:680px) and (orientation:portrait){
+ .wm-v9f-build-workspace{grid-template-columns:1fr;grid-template-rows:minmax(130px,24vh) minmax(0,1fr)}
+ .wm-v9f-build-picture{min-height:130px}
+ .wm-v9f-build-plate img{max-height:80px}
+ .wm-v9f-build-paper{overflow:auto}
+}
