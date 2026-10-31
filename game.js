@@ -947,7 +947,11 @@ function plane(type,id,x,y,angle){
     p.aiArchetype=personality?.archetype||raw.archetype||'Balanced';
     p.aiRank=rank;p.aiStyle=personality?.style||raw.personality||AI_STYLES[hash%AI_STYLES.length];
     p.aiPersonality=personality||null;
-    p.aiSkillLevel=(rank-1)/11;p.aiMistake=0;
+    p.aiSkillLevel=clamp((rank-1)/11+
+      (encounter.lane===2?.28:encounter.lane===1?.14:0)+
+      (encounter.eliteEncounter?.12:0),0,1);
+    p.aiManeuver='PATROL';p.aiManeuverTimer=0;p.aiManeuverCooldown=3;
+    p.aiMistake=0;
     p.attributes=pilotAttributes(personality?.attributes||raw.attributes||encounter.attributes);
     p.pilotSkill=personality?.signature||raw.signature||encounter.signature||'roll';
     p.aiThink=0;
@@ -1102,6 +1106,11 @@ function plane(type,id,x,y,angle){
       p.aiEscapeSign=p.y>WORLD_H*.66?-1:p.y<WORLD_H*.30?1:(dy>=0?-1:1);
     }
 
+    if(p.priorityCarrier&&state.mode==='campaign'&&state.campaignEncounter?.objective==='intel-hunt'){
+      p.aiMode='escape';p.aiBoost=false;
+      const away=Math.atan2(p.y-target.y,wrappedDelta(target.x,p.x));
+      return clamp(angleDiff(away,p.angle)*2.25,-1,1);
+    }
     // Ground avoidance is bounded by actual descent and available turning
     // space. The previous 2.5-second projection activated as high as y=60
     // and repeatedly hijacked pursuit with an artificial upward orbit.
@@ -1180,6 +1189,25 @@ function plane(type,id,x,y,angle){
       ty+=(firingSolution.y-ty)*weight;
     }
     if(rankAI){
+      // Preset manoeuvre doctrine: committed high yo-yo in pursuit and a
+      // lag turn on a tight crossing. Normal inertia/ground limits still apply.
+      p.aiManeuverTimer=Math.max(0,(p.aiManeuverTimer||0)-STEP);
+      p.aiManeuverCooldown=Math.max(0,(p.aiManeuverCooldown||0)-STEP);
+      if(p.aiMode==='evade')p.aiManeuver='BREAK TURN';
+      else if(talent>.30&&p.aiMode==='intercept'&&range>105&&
+          p.y>WORLD_H*.35&&p.aiManeuverCooldown<=0){
+        p.aiManeuver='HIGH YO-YO';p.aiManeuverTimer=.95;
+        p.aiManeuverCooldown=5.1;
+      }else if(talent>.45&&p.aiMode==='attack'&&range<65&&
+          p.aiManeuverCooldown<=0){
+        p.aiManeuver='LAG PURSUIT';p.aiManeuverTimer=.65;
+        p.aiManeuverCooldown=4.1;
+      }
+      if(p.aiManeuverTimer>0&&p.aiManeuver==='HIGH YO-YO')
+        ty=clamp(ty-(27+talent*14),85,WORLD_H-155);
+      if(p.aiManeuverTimer>0&&p.aiManeuver==='LAG PURSUIT'){
+        tx-=targetNoseX*18;ty-=targetNoseY*18;
+      }
       if(style==='duellist'&&range>45&&p.aiMode==='intercept')ty-=12;
       if(style==='interceptor'&&range>90)ty-=15;
       if(style==='sniper'&&p.aiMode==='attack')tx+=target.vx*.06;
@@ -1311,11 +1339,11 @@ function plane(type,id,x,y,angle){
         const along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle);
         const lateral=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
         const range=Math.hypot(dx,dy);
-        return along< -11&&range<135&&lateral<Math.min(55,range*.62);
+        return along< -11&&range<158&&lateral<Math.min(62,range*.66);
       }).sort((a,b)=>combatDistance(p,a)-combatDistance(p,b));
       if(threats.length){
-        p.rearShots=3;p.rearShotTime=0;p.rearTarget=threats[0].id;
-        p.rearCooldown=2.70;
+        p.rearShots=4;p.rearShotTime=0;p.rearTarget=threats[0].id;
+        p.rearCooldown=2.30;
       }
     }
     if(p.role==='bomber'&&p.rearShots>0){
@@ -1327,11 +1355,11 @@ function plane(type,id,x,y,angle){
           const range=Math.hypot(dx,dy);
           const along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle);
           const lateral=Math.abs(-dx*Math.sin(p.angle)+dy*Math.cos(p.angle));
-          if(along< -9&&range<145&&lateral<Math.min(60,range*.67)){
+          if(along< -9&&range<167&&lateral<Math.min(67,range*.71)){
             // Lead the target using relative airspeed and preserve real bullet
-            // collisions. Four 4.5-damage rounds still deter a pursuer without dominating dogfights,
-            // but never match the fighter's 10 x 11 primary gun damage.
-            const speed=221;
+            // collisions. Four precise 3.5-damage rounds now genuinely deter a fighter sitting astern,
+            // but still deal far less damage than a fighter's main gun burst.
+            const speed=236;
             const lead=clamp(range/speed,.05,.78);
             const muzzleX=p.x-Math.cos(p.angle)*(p.d.radius+4);
             const muzzleY=p.y-Math.sin(p.angle)*(p.d.radius+4);
@@ -1344,7 +1372,7 @@ function plane(type,id,x,y,angle){
               x:muzzleX,y:muzzleY,
               vx:Math.cos(aim)*speed+p.vx*.32,
               vy:Math.sin(aim)*speed+p.vy*.32,
-              owner:p.id,damage:2.9,life:1.0,age:0,rearGun:true,
+              owner:p.id,damage:3.5,life:1.08,age:0,rearGun:true,
               tracer:p.rearTracerCount%3===0
             });
             sound('rearShot',{player:p.id===0});
