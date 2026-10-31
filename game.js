@@ -28,10 +28,10 @@
   const HEAVY_ROLL_DODGE=.17;
   const PLANES={
     fighter:{name:'SUPERMARINE SPITFIRE',speed:82,turn:3.15,hull:130,armour:40,radius:5.5,burst:10,interval:.055,cooldown:1.5,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#d5d9b5',shade:'#5c756d',accent:'#db8a51',special:'REVERSE'},
-    heavy:{name:'BRISTOL BEAUFIGHTER',speed:75,turn:1.98,hull:160,armour:78,radius:8,burst:7,interval:.17,cooldown:2.20,damage:16,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
+    heavy:{name:'BRISTOL BEAUFIGHTER',speed:83,turn:2.42,hull:160,armour:78,radius:8,burst:7,interval:.17,cooldown:2.20,damage:16,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#bd765c',shade:'#673f42',accent:'#f4c47e',special:'ARMOUR'},
     bomber:{name:'AVRO LANCASTER',speed:75,turn:1.72,hull:162,armour:98,radius:6.9,burst:4,interval:.30,cooldown:2.85,damage:10,bulletSpeed:158,gunLife:1.22,specialCd:10,color:'#c8b087',shade:'#807359',accent:'#e7dbaf',special:'CLIMB'},
     bf109:{name:'MESSERSCHMITT BF 109E · EMIL',class:'fighter',nation:'Germany',speed:87,turn:3.02,hull:125,armour:42,radius:5.5,burst:10,interval:.064,cooldown:1.40,damage:11,bulletSpeed:194,gunLife:1.28,specialCd:8,color:'#afb89d',shade:'#647a74',accent:'#ecd06c',special:'REVERSE'},
-    bf110:{name:'MESSERSCHMITT BF 110 · ZERSTÖRER',class:'heavy',nation:'Germany',speed:78,turn:1.91,hull:160,armour:75,radius:8,burst:8,interval:.17,cooldown:2.27,damage:17,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
+    bf110:{name:'MESSERSCHMITT BF 110 · ZERSTÖRER',class:'heavy',nation:'Germany',speed:85,turn:2.35,hull:160,armour:75,radius:8,burst:8,interval:.17,cooldown:2.27,damage:17,bulletSpeed:180,gunLife:1.25,specialCd:20,color:'#b1b7a4',shade:'#53676a',accent:'#e5c77b',special:'ARMOUR'},
     he111:{name:'HEINKEL HE 111',class:'bomber',nation:'Germany',speed:77,turn:1.75,hull:158,armour:92,radius:6.6,burst:4,interval:.32,cooldown:2.82,damage:10,bulletSpeed:162,gunLife:1.22,specialCd:10,color:'#a5ae9d',shade:'#576b61',accent:'#b4baca',special:'CLIMB'}
   };
   const state={
@@ -861,8 +861,8 @@ function plane(type,id,x,y,angle){
     const boostGain=p.boosting?(p.type==='fighter'?1.75:1.40):1;
     const wanted=p.d.speed*engine*(p.engineCutTime>0?.42:1)*(p.diveTime>0?1.15:1)*power*(.87+.13*p.energy/100)*boostGain*(p.climbAssist>0?1.16:1)*(1-p.flightRisk*.28);
     // Airspeed gained in a dive carries through a level-out, then fades.
-    const drag=p.role==='fighter'?1.08:p.role==='heavy'?.93:.79;
-    const accel=p.role==='fighter'?1.10:p.role==='heavy'?.89:.72;
+    const drag=p.role==='fighter'?1.08:p.role==='heavy'?1.00:.79;
+    const accel=p.role==='fighter'?1.10:p.role==='heavy'?1.00:.72;
     const recovery=(1-climb*.70-dive*.55);
     const diveCoast=p.speed>p.d.speed*engine*1.05 && p.engineCutTime<=0 && !p.boosting ? (p.type==='bf109'?.39:.55) : 1;
     p.speed+=(wanted-p.speed)*Math.min(1,dt*(p.speed>wanted?drag*diveCoast:accel)*skill.accel*recovery);
