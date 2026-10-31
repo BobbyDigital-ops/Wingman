@@ -312,6 +312,7 @@ function aircraftBuild(){
  if(!run||!saved?.profile)return career();
  const type=run.aircraft||saved.profile.plane,preferred=type===saved.profile.plane;
  const name=PLANES[TYPES.indexOf(type)]?.[0]||type.toUpperCase();
+ const artRef=photo('aircraft-art-'+Math.max(0,TYPES.indexOf(type)));
  const base=P.WingmanGame?.aircraftSpecs?.()?.[type]||{};
  const bonus=P.WingmanCampaign?.sortieBonuses?.(run,type,preferred)||{};
  const metrics=[['SPEED','speed'],['HANDLING','turn'],['HULL STRENGTH','hull'],['ARMOUR','armour'],['GUN DAMAGE','damage']];
@@ -335,7 +336,7 @@ function aircraftBuild(){
    header('AIRCRAFT BUILD','KING OF THE SKIES · LIVE PERFORMANCE & MODIFICATIONS')+
    '<div class="wm-v9f-build-workspace">'+
     '<aside class="wm-v9f-build-picture"><small>ACTIVE CAMPAIGN AIRFRAME</small>'+
-       '<h2>'+esc(name)+'</h2><div class="wm-v9f-build-plate">✈</div>'+
+       '<h2>'+esc(name)+'</h2><div class="wm-v9f-build-plate">'+(artRef?'<img src="'+esc(artRef)+'" alt="'+esc(name)+'"/>':'✈')+'</div>'+
        '<p>AIRCRAFT CONDITION <strong>'+Math.round(run.condition??100)+'%</strong></p>'+
        '<p>FIELD SUPPLIES <strong>'+esc(run.supplies||0)+' / 12</strong></p>'+
        (preferred?'<span class="wm-v9f-build-preferred">★ PREFERRED AIRCRAFT · +10% HULL / ARMOUR / GUN DAMAGE</span>':'')+
