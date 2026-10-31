@@ -277,6 +277,11 @@ function plane(type,id,x,y,angle){
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.trails=[];state.blasts=[];state.visualClock=0;
     state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
+    // Phase 9C: declared weather is symmetric: both teams fly through the same air.
+    if(state.mode==='campaign'&&state.campaignEncounter?.hazard==='crosswind'){
+      const gust=state.campaignEncounter.lane===2?-15:15;
+      state.wind={active:true,base:gust,current:gust,elapsed:0};
+    }
     if(state.mode==='challenge'&&state.challenge==='crosswind')
       state.wind={active:true,base:state.round%2===0?-16:16,current:state.round%2===0?-16:16,elapsed:0};
     state.time=state.mode==='survival'?70:state.mode==='challenge'?CHALLENGES[state.challenge].time:
@@ -291,6 +296,8 @@ function plane(type,id,x,y,angle){
       state.campaignEncounter?.finalBoss?'FINAL SCRAMBLE — TWO ESCORTS':
       state.mode==='campaign'?(state.campaignEncounter?.mission||'RIVAL INTERCEPT')+' • '+callsign:
       state.wind.active?(state.wind.base>0?'CROSSWIND →':'← CROSSWIND'):'ROUND '+state.round;
+    if(state.mode==='campaign'&&state.campaignEncounter?.hazard)
+      state.banner+=' · '+(state.campaignEncounter.hazard==='crosswind'?'CROSSWIND':'COASTAL HAZE');
     state.bannerTime=state.campaignEncounter?.finalBoss?4:1.5;
     controls.left=false;controls.right=false;controls.boost=false;
   }
@@ -2081,6 +2088,10 @@ function plane(type,id,x,y,angle){
     const bgWidth=W*bgZoom;
     g.drawImage(scene,(W-bgWidth)*.5,-state.cameraY,bgWidth,WORLD_H);
     drawWind();
+    // Light haze affects visibility for both pilots, never hit detection.
+    if(state.mode==='campaign'&&state.campaignEncounter?.hazard==='haze'){
+      g.save();g.fillStyle='rgba(190,205,203,.16)';g.fillRect(0,0,W,H);g.restore();
+    }
     g.save();g.translate(0,-state.cameraY);
     for(const t of state.trails){
       const fade=1-t.age/t.life;
