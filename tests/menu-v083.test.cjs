@@ -63,10 +63,10 @@ test('options cockpit, functional tabs and persistent difficulty/theatre',()=>{
  assert.equal(t.window.WingmanLiveUI.state.difficulty,'standard');
  assert.equal(t.window.WingmanLiveUI.state.theatre,'0');
 });
-test('live eight-rank campaign ladder, selected mission and pilot remain intact',()=>{
+test('live twelve-rung campaign ladder, selected mission and pilot remain intact',()=>{
  const t=harness();t.window.WingmanLiveUI.go('career');
  assert.match(t.stage.innerHTML,/wm-v13-campaign/);
- assert.equal((t.stage.innerHTML.match(/class="route-map-row /g)||[]).length,8);
+ assert.equal((t.stage.innerHTML.match(/class="route-map-row /g)||[]).length,12);
  assert.match(t.stage.innerHTML,/campaign-ladder-scroll/);
  assert.match(t.stage.innerHTML,/Test Pilot/);
  t.click({choice:'1'});
