@@ -26,7 +26,7 @@ function careerHarness(){
   click:dataset=>events['career-screen:click']({target:{closest:()=>({dataset})}})};
 }
 test('twelve campaign rungs finish with a boss and preserve the permanent service record',()=>{
- const t=careerHarness(),lanes=[0,0,1,0,0,0,0,0,0,1,0,0];
+ const t=careerHarness(),lanes=[0,0,1,0,0,0,0,0,0,1,0,1];
  let fights=0,events=0;
  for(let rung=1;rung<=12;rung++){
   const saved=t.readSave(),run=saved.run;assert.equal(run?.rank,rung);
