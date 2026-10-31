@@ -6,7 +6,7 @@
 (()=>{'use strict';
   const profiles={
     fighter:{yaw:.66,rollResponse:7.9,flightTurn:2.35,velocityResponse:3.35},
-    heavy:{yaw:.60,rollResponse:5.0,flightTurn:1.40,velocityResponse:2.45},
+    heavy:{yaw:.63,rollResponse:6.4,flightTurn:1.77,velocityResponse:2.85},
     bomber:{yaw:.64,rollResponse:3.5,flightTurn:1.12,velocityResponse:2.15}
   };
   const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
@@ -34,7 +34,7 @@
     // Gradual vector coupling produces real inertial slip (around 15–25°),
     // rather than a nose-locked velocity vector. The capped angular rate
     // prevents instant movement reversal even during aggressive inputs.
-    const coupling=scripted?14:(p.role==='fighter'?4.3:p.role==='heavy'?3.5:2.9);
+    const coupling=scripted?14:(p.role==='fighter'?4.3:p.role==='heavy'?3.85:2.9);
     const maxRate=scripted?8.8:cfg.flightTurn;
     const direction=current+clamp(discrepancy*coupling*dt,-maxRate*dt,maxRate*dt);
     const speedTarget=Number.isFinite(p.speed)?Math.max(0,p.speed):magnitude;
