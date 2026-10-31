@@ -336,9 +336,18 @@ function options(){
   '<p>SPACE — FIRE WEAPONS</p><p>E — AIRCRAFT ABILITY</p><p>Q — PILOT SKILL</p>'+
   '<p>On mobile, use the in-flight touch controls. Existing bindings are unchanged.</p></div>';
  }else if(selected==='AUDIO'){
+  const levels=api()?.getAudioLevels?.()||{master:100,engine:80,guns:90,effects:80};
+  const channels=[['master','MASTER VOLUME'],['engine','AIRCRAFT ENGINES'],['guns','WEAPONS'],['effects','EXPLOSIONS & EFFECTS']];
   area='<div class="wm-v14-instructions"><strong>WIRELESS / SOUND</strong>'+
-  '<p>Adjust the existing game audio without changing weapon or engine effects.</p></div>'+
-  confirmButton('SOUND '+(S.sound?'ON':'OFF'),'sound','navy');
+   '<p>Adjust each sound channel. Your settings are saved for future flights.</p></div>'+
+   '<div class="wm-v09-audio-controls">'+channels.map(([key,label])=>{
+    const value=Math.max(0,Math.min(100,Number(levels[key]??100)));
+    return '<label class="wm-v09-audio-slider" for="wm-audio-'+key+'"><span>'+label+'</span>'+
+     '<input type="range" id="wm-audio-'+key+'" data-audio-setting="'+key+
+      '" min="0" max="100" step="5" value="'+value+'" aria-label="'+label+'">'+
+     '<output for="wm-audio-'+key+'" id="wm-audio-value-'+key+'">'+value+'%</output></label>';
+   }).join('')+'</div>'+
+   confirmButton('SOUND '+(S.sound?'ON':'OFF'),'sound','navy');
  }else{
   area='<div class="wm-v14-instructions"><strong>DISPLAY & FLIGHT VIEW</strong>'+
   '<p>Use fullscreen for an uninterrupted view of the battlefield.</p>'+
@@ -503,6 +512,14 @@ document.addEventListener('click',e=>{
  if(el.dataset.page){S.page=Math.max(0,Math.min(3,S.page+Number(el.dataset.page)));return show()}
  if(el.dataset.pilot){S.pilotIndex=roster.findIndex(p=>p.id===el.dataset.pilot);return show()}
  if(el.dataset.choice!=null){S.lastEventSummary=null;S.choice=Number(el.dataset.choice);if(S.screen==='career')S.campaignPanel='sortie';return show()}
+});
+document.addEventListener('input',e=>{
+ if(!e.target?.matches?.('input[data-audio-setting]'))return;
+ const name=e.target.dataset.audioSetting,value=Number(e.target.value);
+ if(api()?.setAudioLevel?.(name,value)){
+   const output=document.querySelector('#wm-audio-value-'+name);
+   if(output)output.textContent=Math.max(0,Math.min(100,Math.round(value)))+'%';
+ }
 });
 document.addEventListener('change',e=>{
  if(!e.target.matches('select[data-setting]'))return;
