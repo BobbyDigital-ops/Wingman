@@ -15,34 +15,45 @@ function mission(rank,lane,faction='Allies'){
  const rival=enemy[lane];
  const run=C.normalizeRun({rank,seed:1471,visits:rank,faction});
  const q={id:rival.id,label:rival.name,rank,types:[rival.plane],opponents:[profile(rival)],
-  finalBoss:rank===8,wingmen:[],mission:'DOGFIGHT',attributes:rival.attributes};
+  finalBoss:rank===12,wingmen:[],mission:'DOGFIGHT',attributes:rival.attributes};
  return {run,enc:C.decorateEncounter(q,run,lane,{pool:enemy,profile})};
 }
-test('24 deterministic branching encounters across all eight ranks',()=>{
- const kinds=new Set(),risks=new Set();
- for(let rank=1;rank<=8;rank++)for(let lane=0;lane<3;lane++){
+test('36 deterministic routes span twelve rungs, including mixed ground encounters',()=>{
+ const combat=new Set(),events=new Set(),risks=new Set();
+ for(let rank=1;rank<=12;rank++)for(let lane=0;lane<3;lane++){
   const {enc}=mission(rank,lane);
   assert.equal(enc.rank,rank);
-  assert.ok(['LOW','MEDIUM','HIGH'].includes(enc.risk));
-  assert.ok(enc.aiRank>=rank&&enc.aiRank<=8);
-  assert.ok(enc.timeLimit>=49);
-  assert.ok(enc.types.length>=1&&enc.types.length<=3);
-  assert.equal(enc.suppliesAward,rank===8?3:lane+1);
-  assert.equal(enc.objective==='final',rank===8);
-  kinds.add(enc.objective);risks.add(enc.risk);
+  assert.equal(enc.nodeType,C.nodeTypeFor(rank,lane));
+  assert.equal(enc.region,C.REGIONS[Math.floor((rank-1)/4)]);
+  if(enc.isNonCombat){
+   assert.equal(enc.types.length,0);
+   assert.equal(enc.risk,'EVENT');
+   assert.equal(enc.objective,'event');
+   assert.ok(enc.eventOptions.length>=2);
+   events.add(enc.nodeType);
+  }else{
+   assert.ok(['LOW','MEDIUM','HIGH'].includes(enc.risk));
+   assert.ok(enc.aiRank>=1&&enc.aiRank<=8);
+   assert.ok(enc.timeLimit>=49);
+   assert.ok(enc.types.length>=1&&enc.types.length<=3);
+   assert.equal(enc.suppliesAward,rank===12?3:lane+1);
+   assert.equal(enc.objective==='final',rank===12);
+   combat.add(enc.objective);risks.add(enc.risk);
+  }
  }
  assert.deepEqual([...risks].sort(),['HIGH','LOW','MEDIUM']);
- for(const name of ['duel','intercept','recon','ace-hunt','outnumbered','escort','final'])assert.ok(kinds.has(name));
+ for(const name of ['duel','intercept','recon','ace-hunt','outnumbered','escort','final'])assert.ok(combat.has(name),name);
+ for(const name of ['supply','intel','event','shop','dice'])assert.ok(events.has(name),name);
 });
-test('real bomber interception and escort compositions exist for both factions',()=>{
+test('bomber interception and escort compositions work for both factions',()=>{
  for(const faction of ['Allies','Axis']){
-  const b=mission(4,0,faction).enc;
-  assert.equal(b.objective,'intercept');
-  assert.equal(b.types[0],faction==='Allies'?'he111':'bomber');
-  const e=mission(4,1,faction).enc;
-  assert.equal(e.objective,'escort');
-  assert.equal(e.types.length,2);
-  assert.equal(e.escortType,faction==='Allies'?'bomber':'he111');
+  const bomber=mission(10,0,faction).enc;
+  assert.equal(bomber.objective,'intercept');
+  assert.equal(bomber.types[0],faction==='Allies'?'he111':'bomber');
+  const escort=mission(7,1,faction).enc;
+  assert.equal(escort.objective,'escort');
+  assert.equal(escort.types.length,2);
+  assert.equal(escort.escortType,faction==='Allies'?'bomber':'he111');
  }
 });
 test('old runs migrate without losing rank/lives and rewards are claimed once',()=>{
