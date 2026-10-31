@@ -2088,35 +2088,41 @@ function plane(type,id,x,y,angle){
         g.fillStyle='#14252bbd';g.fillRect(xx,24,.55,2.2);
       }
     }
-    identification(p,false);identification(e,true);
-    // Compact multi-contact roster. Display all currently engaged enemies,
-    // plus up to two friendly aircraft, instead of pretending only one exists.
-    if(state.mode==='campaign'||state.recordMode==='teams'||state.recordMode==='triple'){
-      const hostile=state.fliers.filter(q=>q.id!==0&&q.alive&&
-        (state.mode==='campaign'?q.team===1:state.teams?q.team===1:true)).slice(0,3);
-      const friendly=state.fliers.filter(q=>q.id!==0&&q.alive&&q.team===0).slice(0,3);
-      function contactRows(planes,right){
-        const rowX=right?W-9:9,barWidth=Math.min(65,W*.16);
-        for(const [i,q] of planes.entries()){
-          const y=37+i*12;
-          g.textAlign=right?'right':'left';
-          g.fillStyle=q.priorityCarrier?'#fff4a5':right?'#efad9a':'#c7dda9';
-          g.font='bold 5.8px monospace';
-          const label=q.priorityCarrier?'★ INTEL CARRIER':q.escortProtected?'★ ESCORT BOMBER':
-            q.support?'WINGMAN '+(i+1):short(q);
-          g.fillText(label,rowX,y,Math.min(W*.28,125));
-          const barX=right?rowX-barWidth:rowX;
-          const percent=clamp((q.health+q.armour)/Math.max(1,q.d.hull+q.d.armour),0,1);
-          g.fillStyle='#071b22ad';g.fillRect(barX,y+3,barWidth,2.5);
-          g.fillStyle=right?'#dc967e':'#bcd8a9';
-          g.fillRect(barX,y+3,barWidth*percent,2.5);
-        }
-      }
-      contactRows(friendly,false);contactRows(hostile,true);
+    const squadMode=state.mode==='campaign'||state.recordMode==='teams'||state.recordMode==='triple';
+    identification(p,false);
+    if(!squadMode)identification(e,true);
+    if(squadMode){
+      // Show every aircraft's actual hull + armour status, not a single
+      // misleading hostile card followed by detached names.
+      const hostile=state.fliers.filter(q=>q.id!==0&&
+        (state.mode==='campaign'||state.teams?q.team===1:q.id>0)&&!q.queued).slice(0,3);
+      const friendly=state.fliers.filter(q=>q.id!==0&&q.team===0).slice(0,2);
+      const contact=(q,index,right,offset)=>{
+        const y=offset+index*16,edge=right?W-9:9;
+        const label=q.priorityCarrier?'★ INTEL':q.escortProtected?'★ BOMBER':
+          (right?'ENEMY '+(index+1):'ALLY '+(index+1))+' · '+short(q);
+        const total=Math.max(1,q.d.hull+q.d.armour);
+        const remaining=clamp((Math.max(0,q.health)+Math.max(0,q.armour))/total,0,1);
+        const barWidth=Math.min(75,W*.225),barX=right?edge-barWidth:edge;
+        g.save();
+        g.textAlign=right?'right':'left';
+        g.fillStyle=q.alive?(right?'#f9d1b3':'#d8e6bd'):'#8c8d86';
+        g.font='bold 6.4px monospace';
+        g.fillText((q.alive?'':'✕ ')+label,edge,y,Math.min(W*.30,121));
+        g.fillStyle='#1b2830';g.fillRect(barX,y+5,barWidth,3.4);
+        g.fillStyle=q.alive?(right?'#e5a081':'#b7d198'):'#606c69';
+        g.fillRect(barX,y+5,barWidth*remaining,3.4);
+        g.fillStyle='#b7ced4';
+        g.fillRect(barX,y+5,barWidth*Math.min(remaining,Math.max(0,q.armour)/total),.85);
+        if(!q.alive){g.strokeStyle='#d4bd9a';g.beginPath();g.moveTo(barX,y+4);g.lineTo(barX+barWidth,y+8);g.stroke();}
+        g.restore();
+      };
+      hostile.forEach((q,i)=>contact(q,i,true,10));
+      friendly.forEach((q,i)=>contact(q,i,false,41));
       if(state.mode==='campaign'&&campaignBackupPending()){
         const planned=state.campaignWaves.reduce((n,w)=>n+w.count,0);
-        g.textAlign='right';g.fillStyle='#e8c78e';g.font='bold 5.6px monospace';
-        g.fillText('INBOUND BACKUP '+planned,W-9,76);
+        g.textAlign='right';g.fillStyle='#f4d49c';g.font='bold 6.2px monospace';
+        g.fillText('BACKUP DUE +'+planned,W-9,64,110);
       }
     }
     // Score painted as unobtrusive typographic overlay.
