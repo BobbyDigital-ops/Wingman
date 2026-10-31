@@ -206,6 +206,7 @@ function plane(type,id,x,y,angle){
       plane(state.enemyType,1,W*.78,H*.52,Math.PI+.15)
     ];
     state.campaignElapsed=0;state.campaignBackupSerial=0;
+    state.campaignMetrics=state.mode==='campaign'?{shots:0,hits:0,kills:0,damageDealt:0,damageTaken:0,backupArrivals:0}:null;
     state.campaignWaves=state.mode==='campaign'?
       (state.campaignEncounter?.reinforcements||[]).map(w=>({...w})):[];
     if(state.mode==='campaign'&&state.campaignEncounter){
@@ -427,10 +428,16 @@ function plane(type,id,x,y,angle){
       const hero=state.fliers[0];
       const integrity=hero?.d?clamp((Math.max(0,hero.health)+Math.max(0,hero.armour))/
         Math.max(1,hero.d.hull+hero.d.armour),0,1):0;
-      const kills=state.fliers.filter(p=>p.team===1&&!p.alive&&!p.queued).length;
+      const metrics=state.campaignMetrics||{};
+      const kills=metrics.kills||0;
       window.WingmanCareer?.finishEncounter?.(won,state.campaignEncounter,{
         integrity,kills,remainingSeconds:Math.max(0,state.time),
-        elapsedSeconds:Math.max(0,(state.campaignEncounter?.timeLimit||120)-state.time)
+        elapsedSeconds:Math.max(0,(state.campaignEncounter?.timeLimit||120)-state.time),
+        shots:metrics.shots||0,hits:metrics.hits||0,
+        damageDealt:Math.round(metrics.damageDealt||0),
+        damageTaken:Math.round(metrics.damageTaken||0),
+        reinforcements:metrics.backupArrivals||0,
+        alliesLost:state.fliers.filter(p=>p.team===0&&p.id!==0&&!p.alive&&!p.departed).length
       });
       return;
     }
@@ -583,6 +590,7 @@ function plane(type,id,x,y,angle){
       state.fliers.push(p);
     }
     next.count-=count;
+    if(state.campaignMetrics)state.campaignMetrics.backupArrivals+=count;
     if(next.count<=0)state.campaignWaves.shift();
     state.banner='ENEMY BACKUP — '+count+' FIGHTER'+(count===1?'':'S')+' INBOUND';
     state.bannerTime=3.0;sound('boss');
@@ -717,6 +725,7 @@ function plane(type,id,x,y,angle){
     if(p.deadeyeTime>0)skill.gun*=1.09;
     p.tracerCount=(p.tracerCount||0)+1;
     if(p.id===0&&state.session)state.session.shots++;
+    if(p.id===0&&state.campaignMetrics)state.campaignMetrics.shots++;
     state.bullets.push({x:p.x+dx*(p.d.radius+2),y:p.y+dy*(p.d.radius+2),
       vx:shotDx*p.d.bulletSpeed*skill.gun+p.vx*.35,
       vy:shotDy*p.d.bulletSpeed*skill.gun+p.vy*.35,
@@ -741,6 +750,10 @@ function plane(type,id,x,y,angle){
     let remaining=amount*(p.armourTime>0?.45:1)*(p.hardenTime>0?.6:1);
     const incoming=Math.min(remaining,Math.max(0,p.armour)+Math.max(0,p.health));
     if(p.id===0&&state.session)state.session.damageTaken+=incoming;
+    if(state.campaignMetrics){
+      if(p.id===0)state.campaignMetrics.damageTaken+=incoming;
+      if(owner===0&&p.team===1){state.campaignMetrics.damageDealt+=incoming;state.campaignMetrics.hits++;}
+    }
     const absorbed=Math.min(p.armour,remaining);
     p.armour-=absorbed;remaining-=absorbed;
     p.health=Math.max(0,p.health-remaining);
@@ -754,6 +767,7 @@ function plane(type,id,x,y,angle){
     // One event per damage instance: shrapnel on hit, structural breakup on kill.
     sound(p.health<=0?'crash':'hit');
     if(p.health<=0){
+      if(state.campaignMetrics&&owner===0&&p.team===1)state.campaignMetrics.kills++;
       p.alive=false;emit(p.x,p.y,28,'#ffc47e',75);emit(p.x,p.y,16,'#625765',35);
       if(state.blasts.length<12)state.blasts.push({x:p.x,y:p.y,r:p.d.radius+8,life:.65,max:.65,large:true});
       if(p.id!==0&&state.mode==='campaign'){
@@ -2061,6 +2075,36 @@ function plane(type,id,x,y,angle){
       }
     }
     identification(p,false);identification(e,true);
+    // Compact multi-contact roster. Display all currently engaged enemies,
+    // plus up to two friendly aircraft, instead of pretending only one exists.
+    if(state.mode==='campaign'||state.recordMode==='teams'||state.recordMode==='triple'){
+      const hostile=state.fliers.filter(q=>q.id!==0&&q.alive&&
+        (state.mode==='campaign'?q.team===1:state.teams?q.team===1:true)).slice(0,3);
+      const friendly=state.fliers.filter(q=>q.id!==0&&q.alive&&q.team===0).slice(0,3);
+      function contactRows(planes,right){
+        const rowX=right?W-9:9,barWidth=Math.min(65,W*.16);
+        for(const [i,q] of planes.entries()){
+          const y=37+i*12;
+          g.textAlign=right?'right':'left';
+          g.fillStyle=q.priorityCarrier?'#fff4a5':right?'#efad9a':'#c7dda9';
+          g.font='bold 5.8px monospace';
+          const label=q.priorityCarrier?'★ INTEL CARRIER':q.escortProtected?'★ ESCORT BOMBER':
+            q.support?'WINGMAN '+(i+1):short(q);
+          g.fillText(label,rowX,y,Math.min(W*.28,125));
+          const barX=right?rowX-barWidth:rowX;
+          const percent=clamp((q.health+q.armour)/Math.max(1,q.d.hull+q.d.armour),0,1);
+          g.fillStyle='#071b22ad';g.fillRect(barX,y+3,barWidth,2.5);
+          g.fillStyle=right?'#dc967e':'#bcd8a9';
+          g.fillRect(barX,y+3,barWidth*percent,2.5);
+        }
+      }
+      contactRows(friendly,false);contactRows(hostile,true);
+      if(state.mode==='campaign'&&campaignBackupPending()){
+        const planned=state.campaignWaves.reduce((n,w)=>n+w.count,0);
+        g.textAlign='right';g.fillStyle='#e8c78e';g.font='bold 5.6px monospace';
+        g.fillText('INBOUND BACKUP '+planned,W-9,76);
+      }
+    }
     // Score painted as unobtrusive typographic overlay.
     const score=state.mode==='campaign'&&state.campaignEncounter?.finalBoss?
       'FINAL • '+(state.bossReinforcementLaunched?'1 v 3':'ESCORTS'):
