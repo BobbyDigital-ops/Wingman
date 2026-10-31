@@ -2,7 +2,7 @@
    Field-recorded machine-gun/cannon layers are cached locally; all other sounds remain procedural.
    Original gun audio provenance: assets/audio/guns/README.md */
 (()=>{'use strict';
- let ctx=null,master=null,motor=null,motorFilter=null,motorGain=null;
+ let ctx=null,master=null,effectsBus=null,engineBus=null,motor=null,motorFilter=null,motorGain=null;
  let muted=false,lastFire=-10,lastHit=-10,lastCrash=-10,lastFlight=0,lastBombWhistle=-10;
  let lastGunTail=-10,gunShotIndex=0,gunBus=null,gunAssetsPromise=null;
  const GUN_FILES={
@@ -14,6 +14,25 @@
  const gunBuffers={mg:[],cannon:[],mgTail:null,cannonTail:null};
  const recordedGunfire=new URLSearchParams(window.location?.search||'').get('guns')!=='synthetic';
  let noiseBuffer=null;
+ const channels=['master','engine','guns','effects'];
+ const levels={master:100,engine:80,guns:90,effects:80};
+ for(const name of channels)try{const value=Number(localStorage.getItem('wingman-audio-volume-'+name));
+   if(localStorage.getItem('wingman-audio-volume-'+name)!==null&&Number.isFinite(value))levels[name]=Math.max(0,Math.min(100,Math.round(value)));
+ }catch{}
+ const levelGain=name=>levels[name]/100;
+ function getLevels(){return {...levels};}
+ function setLevel(name,value){
+   if(!channels.includes(name)||!Number.isFinite(Number(value)))return false;
+   levels[name]=Math.round(Math.max(0,Math.min(100,Number(value))));
+   try{localStorage.setItem('wingman-audio-volume-'+name,String(levels[name]));}catch{}
+   if(!ctx)return true;
+   const t=ctx.currentTime;
+   if(name==='master'&&master)master.gain.setTargetAtTime(muted?0:.42*levelGain('master'),t,.035);
+   if(name==='engine'&&engineBus)engineBus.gain.setTargetAtTime(levelGain('engine'),t,.035);
+   if(name==='guns'&&gunBus&&gunBus!==master)gunBus.gain.setTargetAtTime(levelGain('guns'),t,.035);
+   if(name==='effects'&&effectsBus)effectsBus.gain.setTargetAtTime(levelGain('effects'),t,.035);
+   return true;
+ }
  try{muted=localStorage.getItem('wingman-audio-muted')==='true';}catch{}
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  const buttons=['wm-audio-toggle','wm-audio-toggle-mobile'].map(id=>document.getElementById(id)).filter(Boolean);
@@ -30,8 +49,10 @@
   const AC=window.AudioContext||window.webkitAudioContext;
   if(!ctx&&AC)try{
    ctx=new AC();
-   master=ctx.createGain();master.gain.value=muted?0:.42;
+   master=ctx.createGain();master.gain.value=muted?0:.42*levelGain('master');
    master.connect(ctx.destination);
+   effectsBus=ctx.createGain();effectsBus.gain.value=levelGain('effects');effectsBus.connect(master);
+   engineBus=ctx.createGain();engineBus.gain.value=levelGain('engine');engineBus.connect(master);
    // Gun bus compressor makes each field-recorded report audible on small
    // laptop/phone speakers without clipping when several shots overlap.
    if(ctx.createDynamicsCompressor){
@@ -41,8 +62,8 @@
      compressor.ratio.value=3.4;
      compressor.attack.value=.004;
      compressor.release.value=.19;
-     gunBus=ctx.createGain();gunBus.connect(compressor);compressor.connect(master);
-   }else gunBus=master;
+     gunBus=ctx.createGain();gunBus.gain.value=levelGain('guns');gunBus.connect(compressor);compressor.connect(master);
+   }else {gunBus=ctx.createGain();gunBus.gain.value=levelGain('guns');gunBus.connect(master);}
    // Procedural noise remains as a fallback and for non-gun effects.
    // Cache one varied broadband sample for short gun and explosion impulses.
    // All sounds are generated locally, with no downloaded audio assets.
@@ -109,7 +130,7 @@
   gain.gain.setValueAtTime(.001,at);
   gain.gain.exponentialRampToValueAtTime(Math.max(.002,volume),at+.009);
   gain.gain.exponentialRampToValueAtTime(.001,at+duration);
-  osc.connect(gain);gain.connect(master);osc.start(at);osc.stop(at+duration+.015);
+  osc.connect(gain);gain.connect(effectsBus||master);osc.start(at);osc.stop(at+duration+.015);
  }
  function noise(duration,volume=0.045,delay=0,options={}){
   if(muted||!ctx||ctx.state!=='running'||!master||!noiseBuffer)return;
@@ -126,7 +147,7 @@
   gain.gain.setValueAtTime(.001,at);
   gain.gain.linearRampToValueAtTime(volume,at+.004);
   gain.gain.exponentialRampToValueAtTime(.001,at+len);
-  src.connect(filter);filter.connect(gain);gain.connect(master);
+  src.connect(filter);filter.connect(gain);gain.connect(effectsBus||master);
   const offsetRange=Math.max(0,noiseBuffer.duration-len-.015);
   const offset=offsetRange?((at*5.913)%offsetRange):0;
   src.start(at,offset,len);
@@ -187,7 +208,7 @@
   gain.gain.exponentialRampToValueAtTime(.055,at+.17);
   gain.gain.setValueAtTime(.045,at+.58);
   gain.gain.exponentialRampToValueAtTime(.001,at+duration);
-  osc.connect(filter);filter.connect(gain);gain.connect(master);
+  osc.connect(filter);filter.connect(gain);gain.connect(effectsBus||master);
   osc.start(at);osc.stop(at+duration+.025);
   noise(.9,.020,.21,{filter:'bandpass',frequency:630,q:.5});
  }
@@ -257,7 +278,7 @@
   motorFilter=ctx.createBiquadFilter();motorFilter.type='lowpass';motorFilter.frequency.value=220;
   motorGain=ctx.createGain();motorGain.gain.value=.001;
   motor.frequency.value=75;
-  motor.connect(motorFilter);motorFilter.connect(motorGain);motorGain.connect(master);
+  motor.connect(motorFilter);motorFilter.connect(motorGain);motorGain.connect(engineBus||master);
   motor.start();motorGain.gain.setTargetAtTime(.023,ctx.currentTime,.38);
  }
  function flight(speed,healthRatio=1){
@@ -278,13 +299,13 @@
  function setMuted(value){
   muted=Boolean(value);
   try{localStorage.setItem('wingman-audio-muted',String(muted));}catch{}
-  if(master&&ctx)master.gain.setTargetAtTime(muted?0:.42,ctx.currentTime,.045);
+  if(master&&ctx)master.gain.setTargetAtTime(muted?0:.42*levelGain('master'),ctx.currentTime,.045);
   if(muted)stopEngine();
   sync();
  }
  for(const button of buttons)button.addEventListener('click',()=>{if(muted){setMuted(false);unlock();play('medal');}else setMuted(true);});
  sync();
- window.WingmanAudio={unlock,play,startEngine,flight,stopEngine,setMuted,
+ window.WingmanAudio={unlock,play,startEngine,flight,stopEngine,setMuted,getLevels,setLevel,
    get muted(){return muted;},
    get recordedGunfireReady(){return gunBuffers.mg.filter(Boolean).length>0&&gunBuffers.cannon.filter(Boolean).length>0;}
  };
