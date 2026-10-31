@@ -37,6 +37,23 @@ const NODE_LAYOUT=[
  ['supply','combat','event'],['elite','elite','elite'],['shop','combat','intel'],
  ['combat','event','combat'],['supply','combat','dice'],['boss','boss','boss']
 ];
+// Phase 9C: limited, disclosed, symmetric battlefield conditions. They do not
+// change aircraft stats or allow AI to ignore different flight constraints.
+const HAZARDS=Object.freeze({
+ crosswind:{name:'CHANNEL CROSSWIND',detail:'A sustained crosswind affects both sides equally.'},
+ fog:{name:'SEA MIST',detail:'Low-contrast mist reduces visibility over the battlefield.'},
+ glare:{name:'LOW SUN',detail:'A soft directional glow across the sky; keep your aircraft in view.'}
+});
+function hazardForRank(rank,lane){
+ if(rank===12||rank<5)return null;
+ const progression=[
+  [null,'crosswind',null],[ 'fog',null,null],
+  [null,'crosswind',null], [null,null,'fog'],
+  [null,'glare',null],['crosswind',null,null],
+  [null,'fog',null]
+ ];
+ return progression[rank-5]?.[lane]||null;
+}
 const EVENT_DESCRIPTIONS={
  supply:{mission:'FIELD SUPPLIES',label:'GROUND CREW',briefing:'The engineers have spare parts, fuel and a battered crate of equipment. Make the best of the stop.'},
  intel:{mission:'INTELLIGENCE BRIEFING',label:'OPERATIONS OFFICER',briefing:'Fresh reconnaissance reports reveal enemy activity. Choose how to use the intelligence.'},
@@ -184,6 +201,9 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
  }
  enc.lane=lane;enc.risk=risk;enc.objective=objective;enc.nodeType=kind;
  enc.region=regionForRank(rank);
+ enc.hazard=hazardForRank(rank,lane);
+ enc.hazardLabel=enc.hazard?HAZARDS[enc.hazard].name:null;
+ enc.hazardBriefing=enc.hazard?HAZARDS[enc.hazard].detail:null;
  enc.elite=kind==='elite';enc.boss=kind==='boss';
  enc.mission=final?'FINAL SQUADRON':
    objective==='escort'?'BOMBER ESCORT':
@@ -307,7 +327,7 @@ function settle(run,encounter,won,remaining=1){
  }
  return run;
 }
-const api={MAX_RANK,REGIONS,NODE_LAYOUT,nodeTypeFor,regionForRank,eventOptions,resolveEvent,UPGRADES,ELITE_UPGRADES,SETBACKS,normalizeRun,decorateEncounter,threatRating,sortieGrade,offerReward,claim,repair,sortieBonuses,settle};
+const api={MAX_RANK,REGIONS,NODE_LAYOUT,HAZARDS,hazardForRank,nodeTypeFor,regionForRank,eventOptions,resolveEvent,UPGRADES,ELITE_UPGRADES,SETBACKS,normalizeRun,decorateEncounter,threatRating,sortieGrade,offerReward,claim,repair,sortieBonuses,settle};
 root.WingmanCampaign=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
