@@ -928,7 +928,7 @@ function plane(type,id,x,y,angle){
   // decisions and effective attributes without changing weapons or hull.
   const AI_STYLES=['hunter','duellist','guardian','trickster','sniper','interceptor','survivor','brawler'];
   function assignCampaignAI(p,encounter,offset=0){
-    const rank=clamp(Number(encounter.aiRank||encounter.rank)||1,1,8);
+    const rank=clamp(Number(encounter.rank||encounter.aiRank)||1,1,12);
     const wing=encounter.opponents?.[offset]||(offset>0?encounter.wingman:null);
     const raw=wing||{id:encounter.id,name:encounter.label,plane:encounter.types?.[0]||p.type,
       attributes:encounter.attributes,signature:encounter.signature,
@@ -940,7 +940,7 @@ function plane(type,id,x,y,angle){
     p.aiArchetype=personality?.archetype||raw.archetype||'Balanced';
     p.aiRank=rank;p.aiStyle=personality?.style||raw.personality||AI_STYLES[hash%AI_STYLES.length];
     p.aiPersonality=personality||null;
-    p.aiSkillLevel=(rank-1)/7;p.aiMistake=0;
+    p.aiSkillLevel=(rank-1)/11;p.aiMistake=0;
     p.attributes=pilotAttributes(personality?.attributes||raw.attributes||encounter.attributes);
     p.pilotSkill=personality?.signature||raw.signature||encounter.signature||'roll';
     p.aiThink=0;
