@@ -453,8 +453,9 @@ function finishEncounter(won,encounter,summary={}){
  if(!active||!data?.run)return;
  const run=data.run,rival=active;
  const atRank=run.rank;
- const kills=Math.max(0,Math.min(rival.types?.length||0,
-   Math.floor(Number(summary.kills??rival.types?.length??0)||0)));
+ const potentialKills=rival.totalEnemyThreat||rival.types?.length||0;
+ const kills=Math.max(0,Math.min(potentialKills,
+   Math.floor(Number(summary.kills??potentialKills)||0)));
  const grade=campaign?.sortieGrade?.(won,rival,summary)||(won?'B':'F');
  const previousTitle=rankTitle(atRank);
  const record=data.records[rival.id]||(data.records[rival.id]={wins:0,losses:0});
