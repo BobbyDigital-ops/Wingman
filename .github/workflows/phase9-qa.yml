@@ -1,0 +1,30 @@
+name: Wingman Phase 9 QA
+on:
+  push:
+    branches:
+      - feature/phase9b-campaign-difficulty-qa
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Production engine regression tests
+        run: npm run test:unit
+      - name: Twelve-rung campaign scripted pilot benchmark
+        run: node tests/campaign-difficulty-v090.cjs --aircraft=fighter --ranks=1,4,8,12 --output=phase9b-report.json
+      - name: Save balance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase9b-balance-report
+          path: phase9b-report.json
+          if-no-files-found: ignore
