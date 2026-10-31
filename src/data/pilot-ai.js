@@ -51,11 +51,12 @@
  function level(p,rank){
   const base=identity(p);
   if(!base)return null;
-  const rung=clamp(Math.floor(Number(rank)||1),1,8);
-  const progress=(rung-1)/7;
+  const rung=clamp(Math.floor(Number(rank)||1),1,12);
+  const progress=(rung-1)/11;
   // First rung: -13; final ace: +4; preserve all three relative strengths.
   const offset=-13+17*progress;
-  const attributes=Object.fromEntries(Object.entries(base.attributes).map(([k,v])=>
+  const attributes=p.scaledForRank===rung&&p.attributes?
+    {...p.attributes}:Object.fromEntries(Object.entries(base.attributes).map(([k,v])=>
     [k,Math.round(clamp(v+offset,35,95))]));
   return {...base,rank:rung,progress,attributes,
    reaction:clamp(.90-(progress*.75),.15,.90),
@@ -65,7 +66,7 @@
  }
  function describe(p,rank){
   const x=level(p,rank);
-  return x?x.label+' · '+(x.rank>=7?'ELITE':x.rank>=4?'VETERAN':'ROOKIE'):'UNKNOWN';
+  return x?x.label+' · '+(x.rank>=9?'ELITE':x.rank>=5?'VETERAN':'ROOKIE'):'UNKNOWN';
  }
  window.WingmanPilotAI={identity,level,describe,TACTICS};
 })();
