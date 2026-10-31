@@ -462,7 +462,7 @@ function finishEncounter(won,encounter,summary={}){
   if(run.rank>MAX_RANK){
    data.completed++;
    data.lastCompleted={pilot:data.profile.name,aircraft:run.aircraft,
-    nemesis:rival.label,streak:data.bestStreak,missions:data.service?.length+1||12,
+    nemesis:rival.label,streak:data.bestStreak,missions:(run.visits||0)+1,
     medals:data.medals.slice(),rank:MAX_RANK};
    data.run=null;
   }
