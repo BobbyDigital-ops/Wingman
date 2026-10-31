@@ -295,7 +295,7 @@ function career(){
   <div class="wg-v7-condition-track"><i style="width:${Math.round(run.condition??100)}%"></i></div>
   <div class="wg-v7-perks"><small>ACTIVE UPGRADES & CONSEQUENCES</small>
   ${(run.effects||[]).length?run.effects.map(id=>'<span title="'+esc(perkById(id)?.detail||'')+'">'+esc(perkById(id)?.name||id)+'</span>').join(''):'<span>NONE · WIN SORTIES TO EARN UPGRADES</span>'}</div>
-  ${confirmButton('FIELD REPAIR · 2 SUPPLIES','repair-airframe','navy')}</div>
+  ${confirmButton('FIELD REPAIR · 2 SUPPLIES','repair-airframe','navy')}${confirmButton('VIEW AIRCRAFT BUILD ›','aircraft-build','navy')}</div>
  <div class="service-brief"><small>YOUR CHOSEN MISSION · ${esc(selected?.risk||'LOW')} RISK · EST. THREAT ${selected?.threat??'—'}/100</small><b>${esc(selected?.mission||'DOGFIGHT')}</b><span>${esc(selected?.briefing||'CHOOSE A MISSION')}</span><em>RIVAL ${esc(selected?.label||'UNKNOWN')} · +${selected?.suppliesAward||1} SUPPLIES${selected?.rewardTier===2?' · PREMIUM REWARD AVAILABLE':''}</em></div>
  <div class="service-actions">${confirmButton('SELECT AIRCRAFT →','career-aircraft','red')}${confirmButton('← BACK','back','outline')}</div>
  </div></aside></div>
@@ -306,6 +306,50 @@ function career(){
  '<button type="button" class="wm-v13-tab wm-v13-tab-gold" data-action="'+(selected?.isNonCombat?'campaign-map':'career-aircraft')+'">'+(selected?.isNonCombat?'CHANGE ROUTE ›':'SELECT AIRCRAFT ›')+'</button>'}
  </div></section>`;
 }
+
+function aircraftBuild(){
+ const saved=playerSave(),run=saved?.run;
+ if(!run||!saved?.profile)return career();
+ const type=run.aircraft||saved.profile.plane,preferred=type===saved.profile.plane;
+ const name=PLANES[TYPES.indexOf(type)]?.[0]||type.toUpperCase();
+ const base=P.WingmanGame?.aircraftSpecs?.()?.[type]||{};
+ const bonus=P.WingmanCampaign?.sortieBonuses?.(run,type,preferred)||{};
+ const metrics=[['SPEED','speed'],['HANDLING','turn'],['HULL STRENGTH','hull'],['ARMOUR','armour'],['GUN DAMAGE','damage']];
+ const fmt=(n,key)=>!Number.isFinite(n)?'—':key==='turn'||key==='damage'?n.toFixed(2):n.toFixed(1);
+ const stats=metrics.map(([label,key])=>{
+  const factor=Number(bonus[key]||1),start=Number(base[key]??NaN);
+  const output=Number.isFinite(start)?start*factor:NaN;
+  const change=Math.round((factor-1)*100);
+  return '<div class="wm-v9f-build-stat"><small>'+label+'</small>'+
+    '<strong>'+fmt(start,key)+' <span>→</span> '+fmt(output,key)+'</strong>'+
+    '<em class="'+(change<0?'is-negative':change>0?'is-positive':'')+'">'+(change>0?'+':'')+change+'%</em></div>';
+ }).join('');
+ const upgrades=(run.effects||[]).map(id=>{
+  const perk=perkById(id),negative=Object.values(perk?.mods||{}).some(v=>v<0);
+  return '<div class="wm-v9f-build-upgrade '+(negative?'is-setback':'')+'"><span>'+
+    (negative?'CURRENT PENALTY':perk?.elite?'PREMIUM MODIFICATION':'INSTALLED MODIFICATION')+
+    '</span><strong>'+esc(perk?.name||id)+'</strong>'+
+    '<small>'+esc(perk?.detail||'Active during the current campaign')+'</small></div>';
+ }).join('')||'<p>No modifications installed yet. Claim a sortie reward or visit the quartermaster.</p>';
+ return '<section class="frame wm-v9f-build">'+
+   header('AIRCRAFT BUILD','KING OF THE SKIES · LIVE PERFORMANCE & MODIFICATIONS')+
+   '<div class="wm-v9f-build-workspace">'+
+    '<aside class="wm-v9f-build-picture"><small>ACTIVE CAMPAIGN AIRFRAME</small>'+
+       '<h2>'+esc(name)+'</h2><div class="wm-v9f-build-plate">✈</div>'+
+       '<p>AIRCRAFT CONDITION <strong>'+Math.round(run.condition??100)+'%</strong></p>'+
+       '<p>FIELD SUPPLIES <strong>'+esc(run.supplies||0)+' / 12</strong></p>'+
+       (preferred?'<span class="wm-v9f-build-preferred">★ PREFERRED AIRCRAFT · +10% HULL / ARMOUR / GUN DAMAGE</span>':'')+
+    '</aside>'+
+    '<article class="wm-v9f-build-paper"><div class="wm-v9f-build-subtitle">EFFECTIVE AIRCRAFT PERFORMANCE</div>'+
+      '<p>Left = base specification; right = current campaign performance including upgrades, condition and pilot preference.</p>'+
+      '<div class="wm-v9f-build-stats">'+stats+'</div>'+
+      '<h3>INSTALLED EQUIPMENT & PENALTIES</h3>'+
+      '<div class="wm-v9f-build-upgrades">'+upgrades+'</div>'+
+      confirmButton('← BACK TO CAMPAIGN LADDER','back-to-ladder','red')+
+    '</article>'+
+   '</div></section>';
+}
+
 function records(){
  const saved=playerSave(),p=player(),arc=arcadeSave()||{},flights=Array.isArray(arc.records)?arc.records:[],
  totalArcade=Number(arc.total)||0,arcadeWins=Number(arc.wins)||0,arcadeLosses=Number(arc.losses)||0,
@@ -527,7 +571,7 @@ function eventResult(){
  '</section>';
 }
 
-function show(){const views={title,profiles,home,operations,aircraft,pilots,career,records,options,outcome,'event-result':eventResult};const oldMap=stage.querySelector('.campaign-ladder-scroll');const mapMemory=oldMap?.closest?.('.wm-v13-ladder')?{rank:oldMap.dataset.rank,top:oldMap.scrollTop}:null;
+function show(){const views={title,profiles,home,operations,aircraft,pilots,career,build:aircraftBuild,records,options,outcome,'event-result':eventResult};const oldMap=stage.querySelector('.campaign-ladder-scroll');const mapMemory=oldMap?.closest?.('.wm-v13-ladder')?{rank:oldMap.dataset.rank,top:oldMap.scrollTop}:null;
 stage.innerHTML=(views[S.screen]||home)();
 const newMap=stage.querySelector('.campaign-ladder-scroll');
 if(newMap){if(mapMemory&&mapMemory.rank===newMap.dataset.rank)newMap.scrollTop=mapMemory.top;else{const current=newMap.querySelector('.route-map-row.is-current');if(current){const top=current.getBoundingClientRect().top-newMap.getBoundingClientRect().top+newMap.scrollTop;newMap.scrollTop=Math.max(0,Math.min(newMap.scrollHeight-newMap.clientHeight,top-newMap.clientHeight*.65));}}}document.querySelector('.utility-home').hidden=['home','title','profiles'].includes(S.screen);document.querySelector('.utility-settings').hidden=S.screen!=='career';document.querySelector('.career-settings-popup').hidden=true;nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===S.screen?'page':'false'));document.querySelector('#squadron strong').textContent=playerSave()?.profile?.name||'Guest Pilot';stage.querySelectorAll('select[data-setting]').forEach(sel=>sel.value=S[sel.dataset.setting]);stage.scrollTop=0;}
@@ -539,6 +583,8 @@ function action(v){
  if(v==='opening-start'){S.screen='profiles';S.back=[];return show();}
  if(v==='profile-back'){S.screen='title';S.back=[];return show();}
  if(v==='switch-profile'){S.screen='profiles';S.back=['home'];return show();}
+ if(v==='aircraft-build')return go('build');
+ if(v==='back-to-ladder'){S.screen='career';S.campaignPanel='ladder';S.back=[];return show()}
  if(v==='review-rewards'){if(!playerSave()?.run?.pendingReward)return;S.outcomeStep='reward';S.screen='outcome';return show();}
  if(v==='continue-event'){S.lastEventSummary=null;S.campaignPanel='ladder';S.choice=0;S.screen='career';S.back=[];return show();}
  if(v==='campaign-map'){S.campaignPanel='ladder';return show();}
