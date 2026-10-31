@@ -1,0 +1,48 @@
+/* Wingman Phase 9C / 9D — weather briefing and analog wireless sound controls.
+   Keeps the approved v11 illustrated menu and live controls intact. */
+.wm-v09-hazard-note{
+ display:flex;flex-direction:column;gap:4px;
+ border:1px solid #b8955e;border-left:4px solid #8b6441;
+ background:linear-gradient(90deg,#f0d3a7,#dbc097);
+ padding:7px 10px;color:#51422e;
+}
+.wm-v09-hazard-note strong{
+ font:900 clamp(12px,1.2vw,16px) 'Barlow Condensed',Impact,sans-serif;
+ letter-spacing:.08em;color:#573a23;
+}
+.wm-v09-hazard-note span{
+ font:600 clamp(10px,1vw,13px)/1.3 Barlow,Arial,sans-serif;
+}
+.wm-v09-audio-controls{
+ display:grid;gap:10px;width:100%;
+ padding:12px;border:1px solid #bca77d82;
+ background:linear-gradient(120deg,#172d39dc,#0c202bf0);
+}
+.wm-v09-audio-slider{
+ display:grid;grid-template-columns:minmax(125px,1fr) minmax(120px,1.6fr) 46px;
+ gap:12px;align-items:center;min-width:0;
+ color:#f4e2bb;
+ font:900 clamp(12px,1.15vw,16px) 'Barlow Condensed',Impact,sans-serif;
+}
+.wm-v09-audio-slider input[type=range]{
+ width:100%;min-width:0;accent-color:#d1a966;
+ cursor:pointer;touch-action:pan-x;
+}
+.wm-v09-audio-slider output{
+ color:#f5dca7;text-align:right;letter-spacing:.04em;
+ font:900 15px 'Barlow Condensed',Impact,sans-serif;
+}
+.wm-v09-audio-slider:focus-within{
+ outline:1px solid #d7bf87;outline-offset:4px;
+}
+@media(max-height:530px) and (orientation:landscape){
+ .wm-v09-audio-controls{gap:5px;padding:7px 10px}
+ .wm-v09-audio-slider{grid-template-columns:minmax(110px,1fr) minmax(130px,1.8fr) 37px;gap:7px;font-size:11px}
+ .wm-v09-audio-slider output{font-size:12px}
+ .wm-v09-hazard-note{padding:4px 7px;gap:2px}
+ .wm-v09-hazard-note strong{font-size:11px}
+ .wm-v09-hazard-note span{font-size:10px}
+}
+@media(max-width:560px){
+ .wm-v09-audio-slider{grid-template-columns:minmax(80px,1fr) minmax(95px,1.3fr) 35px;gap:5px}
+}
