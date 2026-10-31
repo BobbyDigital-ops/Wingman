@@ -15,6 +15,22 @@
 - 12-rung AI benchmark script now excludes non-combat nodes and reports breakdown by region and risk.
 - Combat physics, original pilot and aircraft art, input handling and existing menu flow unchanged.
 
+## Targeted real-engine combat sample (scripted pilot)
+Production `game.js` and the real physics/AI modules were exercised with two deterministic attempts at each selected mission. These values are **not human win rates**, and the sample is too small for statistical confidence.
+
+| Rung | Encounter | Scripted pilot wins / 2 | Avg remaining integrity | Ground crashes |
+|---|---|---:|---:|---:|
+| 1 | Standard duel | 2 | 94% | 0 |
+| 2 | Medium duel | 2 | 87% | 0 |
+| 4 | High-risk elite, 1v2 | 2 | 8% | 0 |
+| 6 | Low-risk interception | 2 | 34% | 0 |
+| 8 | High-risk elite, 1v2 | 0 | 0% | 0 |
+| 9 | Medium duel | 2 | 42% | 0 |
+| 11 | Medium escort | 0 | 4% | 0 |
+| 12 | Final 1v3 boss | 0 | 0% | 0 |
+
+The QA engine's escort/interception/recon/ace-timer/aircraft-bonus/friendly-fire objective checks all passed, and it recorded no ground crashes. These are useful regression and difficulty signals, not evidence that the campaign is fully balanced for a human player.
+
 ## Phase 9C — initial environmental variety
 - Selected late-campaign high-risk sorties have declared crosswinds.
 - Selected missions include a subtle visual coastal-haze modifier.
@@ -35,7 +51,7 @@
 - Older rank-8 campaign, pilot and smoke tests revised for the 12-rung format.
 - A test workflow runs unit tests and the 12-rung AI benchmark on development-branch pushes, when GitHub Actions is available.
 - Landscape sizing and keyboard focus styling refined for audio controls.
-- Full unit-suite results, automated browser screenshots, Android physical-device testing, measured player difficulty and real-store release certification have not yet been independently confirmed.
+- Full Node test-suite results, automated browser screenshots, Android physical-device testing, measured player difficulty and real-store release certification have not yet been independently confirmed.
 
 ## Suggested quick user tests
 1. Start/continue a campaign; check the twelve-rung map and take a supply/intel node, confirming the next rung and stored reward.
