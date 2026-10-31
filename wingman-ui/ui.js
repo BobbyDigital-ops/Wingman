@@ -16,8 +16,9 @@ const PLANES=[
 const liveSpecs=P.WingmanGame?.aircraftSpecs?.();
 if(liveSpecs)for(let i=0;i<TYPES.length;i++){const p=liveSpecs[TYPES[i]];if(!p)continue;PLANES[i][4]=p.speed;PLANES[i][5]=p.turn;PLANES[i][6]=p.armour;PLANES[i][7]=p.damage;}
 const OPS=[['1 VS 1','Classic dogfight','Head-to-head fighter combat.','duel'],['SURVIVAL','How long can you last?','Increasing waves of enemies.','survival'],['FREE FOR ALL','Every pilot for themselves','Multiple aircraft. One winner.','triple'],['2 VS 2','Team up','Fight with an AI wingman.','teams'],['CHALLENGES','Special operations','Time-limited combat objectives.','challenge']];
-const S={screen:'title',back:[],op:0,plane:0,opponent:'random',faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:0,campaignPanel:'ladder',difficulty:'standard',theatre:'0',sound:true,optionTab:'GAMEPLAY',lastResult:null};
+const S={screen:'title',back:[],op:0,plane:0,opponent:'random',faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:0,campaignPanel:'ladder',difficulty:'standard',theatre:'0',sound:true,audioVolume:100,optionTab:'GAMEPLAY',lastResult:null};
 const stage=document.querySelector('#stage'),nav=document.querySelector('.nav');
+try{const settings=P.WingmanUIBridge?.getAudioSettings?.();if(settings){S.sound=!settings.muted;S.audioVolume=Math.round(settings.volume*100);}}catch{}
 try{const savedOptions=JSON.parse(localStorage.getItem('wingman-ui-flight-presets-v1')||'null');
  if(savedOptions&&['rookie','standard','ace'].includes(savedOptions.difficulty))S.difficulty=savedOptions.difficulty;
  if(savedOptions&&['0','1','2','3'].includes(savedOptions.theatre))S.theatre=savedOptions.theatre;
@@ -336,13 +337,15 @@ function options(){
   '<p>On mobile, use the in-flight touch controls. Existing bindings are unchanged.</p></div>';
  }else if(selected==='AUDIO'){
   area='<div class="wm-v14-instructions"><strong>WIRELESS / SOUND</strong>'+
-  '<p>Adjust the existing game audio without changing weapon or engine effects.</p></div>'+
-  confirmButton('SOUND '+(S.sound?'ON':'OFF'),'sound','navy');
+  '<p>Adjust volume without changing engine, weapons or hit sounds.</p></div>'+
+  '<button type="button" class="btn navy wm-v9-audio-mute" data-action="sound">SOUND '+(S.sound?'ON':'OFF')+'</button>'+
+  '<div class="wm-v9-volume"><label for="wm-volume">MASTER VOLUME <strong>'+S.audioVolume+'%</strong></label>'+
+  '<input id="wm-volume" type="range" min="0" max="100" step="5" data-audio-volume value="'+S.audioVolume+'" aria-label="Master volume"></div>';
  }else{
   area='<div class="wm-v14-instructions"><strong>DISPLAY & FLIGHT VIEW</strong>'+
   '<p>Use fullscreen for an uninterrupted view of the battlefield.</p>'+
   '<p>The current game rendering, terrain and aircraft sprites are preserved.</p></div>'+
-  confirmButton('⛶ TOGGLE FULLSCREEN','fullscreen','navy');
+  '<button type="button" class="btn navy" data-action="fullscreen">⛶ TOGGLE FULLSCREEN</button>';
  }
  return '<section class="frame options-screen wm-v14-options">'+
   header('AIRCRAFT CONTROLS','RAF MAINTENANCE DEPARTMENT · INSTRUMENTS OFFICE')+
@@ -465,7 +468,7 @@ function action(v){
  if(v==='aircraft'){S.career=false;return go('aircraft')}
  if(['home','options','records'].includes(v))return go(v);
  if(v==='operations-next'){S.career=false;S.launchError='';return go('aircraft')}
- if(v==='sound'){S.sound=!S.sound;api()?.toggleSound?.();return show()}
+ if(v==='sound'){S.sound=!!api()?.toggleSound?.();return show()}
  if(v==='confirm-pilot'){const p=roster[S.pilotIndex];if(!p)return;const status=api()?.choosePilot?.(p.id);if(status===false)return;S.faction=p.faction;S.plane=Math.max(0,TYPES.indexOf(p.plane));S.career=false;S.screen='home';S.back=[];return show()}
  if(v==='begin-career')return beginCareer();
  if(v==='career-aircraft'){if(!playerSave()?.run||playerSave().run.choices?.[S.choice]?.isNonCombat)return;S.career=true;S.launchError='';S.faction=playerSave().profile.faction;S.plane=TYPES.indexOf(playerSave().profile.plane);return go('aircraft')}
@@ -502,6 +505,12 @@ document.addEventListener('click',e=>{
  if(el.dataset.page){S.page=Math.max(0,Math.min(3,S.page+Number(el.dataset.page)));return show()}
  if(el.dataset.pilot){S.pilotIndex=roster.findIndex(p=>p.id===el.dataset.pilot);return show()}
  if(el.dataset.choice!=null){S.lastEventSummary=null;S.choice=Number(el.dataset.choice);if(S.screen==='career')S.campaignPanel='sortie';return show()}
+});
+document.addEventListener('input',e=>{
+ if(!e.target.matches?.('input[data-audio-volume]'))return;
+ const value=Math.max(0,Math.min(100,Number(e.target.value)||0));
+ S.audioVolume=value;api()?.setAudioVolume?.(value/100);
+ const valueLabel=stage.querySelector('.wm-v9-volume strong');if(valueLabel)valueLabel.textContent=value+'%';
 });
 document.addEventListener('change',e=>{
  if(!e.target.matches('select[data-setting]'))return;
