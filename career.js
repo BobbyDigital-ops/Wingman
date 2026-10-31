@@ -282,12 +282,12 @@ function makeChoices(run){
   .filter(x=>x.r&&(x.r.losses||x.r.wins))
   .sort((a,b)=>((b.r.losses||0)*3+(b.r.wins||0))-((a.r.losses||0)*3+(a.r.wins||0)))[0]?.p;
  const picked=[];
- if(nemesis&&run.rank>=4)picked.push(nemesis);
+ if(nemesis&&run.rank>=5)picked.push(nemesis);
  for(const p of shuffled)if(picked.length<3&&!picked.some(q=>q.id===p.id))picked.push(p);
  const fixed=window.WingmanPilotAI;
  const profile=p=>{
   const scaled=fixed?.level(p,run.rank);
-  return {id:p.id,name:p.name,plane:p.plane,
+  return {id:p.id,name:p.name,plane:p.plane,scaledForRank:run.rank,
    attributes:scaled?.attributes||p.attributes,
    signature:scaled?.signature||p.signature||'roll',
    archetype:p.archetype||'Balanced',personality:scaled?.tactic||'duellist'};
