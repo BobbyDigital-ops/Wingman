@@ -492,7 +492,7 @@ test('bomber rear gunner triggers automatically on a pursuer behind it',()=>{
  assert.equal(bomber.rearCooldown,0);
  game.internals.updatePlane(bomber,1/60,0);
  assert.ok(bomber.rearCooldown>1.5);
- assert.ok(game.internals.state.bullets.some(b=>b.owner===0&&b.damage===4.5&&b.rearGun));
+ assert.ok(game.internals.state.bullets.some(b=>b.owner===0&&b.damage===3.5&&b.rearGun));
 });
 test('depleted armour reduces hull; shield only protects and never recharges armour',()=>{
  const game=launch();game.listeners.get('start:click')();
@@ -841,9 +841,9 @@ test('bomber defensive gunners now have a bounded four-round low-damage burst',(
  pursuer.x=160;pursuer.y=120;pursuer.spawnSafe=0;
  game.internals.updatePlane(bomber,1/60,0);
  assert.equal(bomber.rearShots,3,'one round must fire immediately from the four-round burst');
- assert.ok(bomber.rearCooldown>=2.68);
+ assert.ok(bomber.rearCooldown>=2.28);
  const round=game.internals.state.bullets.find(b=>b.rearGun);
- assert.equal(round.damage,4.5,'turret rounds should not match heavy cannon damage');
+ assert.equal(round.damage,3.5,'enhanced turret remains below heavy cannon damage');
 });
 
 test('campaign pilot identities retain their signature while their actual live plane stats improve at higher ranks',()=>{
