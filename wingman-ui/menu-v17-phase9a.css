@@ -1,0 +1,53 @@
+/* Wingman Phase 9A: mixed twelve-rung campaign. Visual additions only. */
+.wm-v13-campaign .wm-v09-event-dossier{
+ grid-template-columns:minmax(95px,.28fr) minmax(0,.72fr)!important;
+ border-color:#64553e!important;
+}
+.wm-v09-event-seal{
+ background:linear-gradient(145deg,#213b47,#102633);
+ border:4px ridge #c3a474;outline:2px solid #705637;
+ box-shadow:inset 0 0 25px #0008,0 7px 17px #0006;
+ color:#e8d1a4;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:10px;text-align:center;padding:12px;
+ min-width:0;
+}
+.wm-v09-event-seal>span{font-size:clamp(47px,5.5vw,86px);line-height:1}
+.wm-v09-event-seal>strong{font:900 clamp(16px,1.7vw,24px) 'Barlow Condensed',Impact,sans-serif;letter-spacing:.06em}
+.wm-v09-event-seal>small{font:800 clamp(10px,.9vw,13px) 'Barlow Condensed',Impact,sans-serif;color:#e2bc7f}
+.wm-v09-event-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:8px}
+.wm-v09-event-button{
+ border:2px solid #8e754e;background:linear-gradient(#264756,#132b36);
+ color:#f9e7c6;padding:clamp(8px,1.1vw,14px);
+ min-height:clamp(65px,9vh,90px);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+ gap:4px;box-shadow:inset 0 1px #fff3,0 4px 12px #0006;text-align:left;cursor:pointer;
+}
+.wm-v09-event-button strong{font:900 clamp(14px,1.5vw,20px) 'Barlow Condensed',Impact,sans-serif;letter-spacing:.04em}
+.wm-v09-event-button small{font:600 clamp(11px,1vw,13px) Barlow,sans-serif;color:#d0d7ca;line-height:1.3}
+.wm-v09-event-button:hover,.wm-v09-event-button:focus-visible{border-color:#f9d28b;background:linear-gradient(#3f6573,#1a3849)}
+.wm-v13-campaign .route-map-node[title*="FIELD SUPPLIES"],
+.wm-v13-campaign .route-map-node[title*="INTELLIGENCE"],
+.wm-v13-campaign .route-map-node[title*="HANGAR DICE"],
+.wm-v13-campaign .route-map-node[title*="QUARTERMASTER"],
+.wm-v13-campaign .route-map-node[title*="MESS HALL"]{
+ background:linear-gradient(#6b583e,#3d3429)!important;
+ border-color:#e0c387!important;
+}
+.wm-v13-campaign .campaign-map-canvas{min-height:1200px!important}
+.wm-v13-campaign .campaign-main .route-map-rank{font-size:clamp(11px,1.4vw,18px)}
+@media(max-height:520px) and (orientation:landscape){
+ .wm-v09-event-seal{gap:4px;padding:5px}
+ .wm-v09-event-seal>span{font-size:clamp(33px,5vw,56px)}
+ .wm-v09-event-seal>strong{font-size:12px}
+ .wm-v09-event-seal>small{font-size:9px}
+ .wm-v09-event-options{gap:5px;margin-top:2px}
+ .wm-v09-event-button{min-height:48px;padding:5px;gap:2px}
+ .wm-v09-event-button strong{font-size:12px}
+ .wm-v09-event-button small{font-size:10px;line-height:1.15}
+ .wm-v13-campaign .wm-v09-event-dossier{grid-template-columns:100px minmax(0,1fr)!important}
+}
+@media(max-width:640px) and (orientation:portrait){
+ .wm-v09-event-options{grid-template-columns:1fr}
+ .wm-v13-campaign .wm-v09-event-dossier{grid-template-columns:1fr!important}
+ .wm-v09-event-seal{min-height:120px}
+}
