@@ -516,6 +516,9 @@ function finishEncounter(won,encounter,summary={}){
  const promotion=won&&rankTitle(Math.min(MAX_RANK,atRank+1))!==previousTitle?
   rankTitle(Math.min(MAX_RANK,atRank+1)):null;
  renderOutcome(won,encounter||rival,earned,promotion);
+ // Guaranteed illustrated debrief even if the native result overlay was
+ // shown and hidden within the same event-loop turn.
+ window.WingmanUIBridge?.notifyCampaignResult?.(data.lastOutcome);
 }
 function panel(title,body){screen.innerHTML=`<div class="career-panel"><div class="career-head"><h2>${title}</h2><button type="button" data-action="close" aria-label="Close career and return to main menu">BACK TO MENU ×</button></div>${body}</div>`;}
 function renderOutcome(won,encounter,earned=[],promotion=null){
