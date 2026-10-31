@@ -228,17 +228,36 @@ function career(){
   }).join('');
  }).join('');
  const connectedLadder='<div class="campaign-map-canvas"><svg class="map-connections" viewBox="0 0 100 840" preserveAspectRatio="none" aria-hidden="true">'+mapEdges+'</svg>'+ladder+'</div>';
- const rivals=choices.map((c,i)=>{
-  const rival=rivalFor(c),stat=saved.records?.[c.id]||{},fought=(stat.wins||0)+(stat.losses||0);
-  return '<button type="button" class="compact-rival '+(i===S.choice?'selected':'')+'" data-choice="'+i+'" aria-pressed="'+(i===S.choice)+'"><span class="compact-rival-photo">'+atlas(rival)+'</span><span class="compact-rival-info"><strong>'+esc(rival?.name||c.label)+'</strong><small>'+esc(c.mission||'DOGFIGHT')+' · '+esc(c.risk||'LOW')+' RISK · '+esc(c.timeLimit||120)+'s</small><span class="compact-rival-description">'+esc(c.briefing||rival?.bio||'Defeat your rival and survive the encounter.')+'</span><em>'+(fought?('W '+(stat.wins||0)+' / L '+(stat.losses||0)):'FIRST ENCOUNTER')+' · THREAT '+(c.threat??'—')+'/100 · +'+(c.suppliesAward||1)+' SUPPLIES'+(c.rewardTier===2?' · ELITE UPGRADE':'')+'</em></span></button>';
- }).join('');
+ const rival=selected?rivalFor(selected):null;
+ const prior=selected?(saved.records?.[selected.id]||{}):{};
+ const fought=(prior.wins||0)+(prior.losses||0);
+ const selectedSortie=selected?
+  '<article class="wm-v085-sortie-brief" aria-label="Selected campaign mission">'+
+   '<div class="wm-v085-sortie-portrait">'+(rival?atlas(rival):'<span class="wm-v085-no-photo">✈</span>')+
+    '<span>ENEMY DOSSIER</span></div>'+
+   '<div class="wm-v085-sortie-details">'+
+    '<div class="wm-v085-sortie-overline">✦ SELECTED FROM OPERATIONAL CHART · RANK '+currentRank+'</div>'+
+    '<h2>'+esc(selected.mission||'COMBAT SORTIE')+'</h2>'+
+    '<div class="wm-v085-sortie-opponent"><small>OPPOSING PILOT</small><strong>'+esc(rival?.name||selected.label||'UNKNOWN RIVAL')+'</strong></div>'+
+    '<p class="wm-v085-sortie-description">'+esc(selected.briefing||rival?.bio||'Complete the assigned mission and return safely.')+'</p>'+
+    '<div class="wm-v085-sortie-metrics">'+
+     '<div><span>DIFFICULTY</span><strong>'+esc(selected.risk||'LOW')+' RISK</strong></div>'+
+     '<div><span>THREAT RATING</span><strong>'+esc(selected.threat??'—')+' / 100</strong></div>'+
+     '<div><span>TIME LIMIT</span><strong>'+esc(selected.timeLimit||120)+' SECONDS</strong></div>'+
+    '</div>'+
+    '<div class="wm-v085-sortie-payoff"><strong>MISSION REWARD</strong><span>+'+esc(selected.suppliesAward||1)+' REPAIR SUPPLIES'+
+    (selected.rewardTier===2?' · ELITE UPGRADE POSSIBLE':'')+'</span></div>'+
+    '<small class="wm-v085-sortie-history">'+(fought?'RIVAL RECORD · '+(prior.wins||0)+' WINS / '+(prior.losses||0)+' LOSSES':'FIRST ENCOUNTER')+
+    ' · TO CHOOSE ANOTHER MISSION, RETURN TO THE CHART</small>'+
+   '</div></article>':
+  '<div class="wm-v085-sortie-empty">NO MISSION SELECTED · RETURN TO THE OPERATIONS CHART</div>';
  return `<section class="frame career-screen campaign-rework wm-v13-campaign ${S.campaignPanel==='sortie'?'wm-v13-sortie':'wm-v13-ladder'}">${header('KING OF THE SKIES','RANK '+currentRank+' / 8 · '+run.lives+' LIVES')}
  <div class="wm-v13-campaign-status"><span>RANK <b>${currentRank} / 8</b></span><span>${run.lives} LIVES REMAINING</span><span>AIRCRAFT ${Math.round(run.condition??100)}%</span><span>${run.supplies||0} REPAIR SUPPLIES</span></div>
  <div class="campaign-rework-content"><div class="campaign-main">
  <div class="campaign-ladder-head"><strong>ROAD TO ACE</strong><span>BRANCHING ROUTES · CLIMB TO THE FINAL ACE</span></div>
  <div class="campaign-map-legend"><span>✈ INTERCEPT</span><span>◈ RECON</span><span>♠ ACE HUNT</span><span>✦ ESCORT</span><span>⚔ OUTNUMBERED</span><span>★ FINALE</span></div><div class="campaign-ladder-scroll" data-rank="${currentRank}" aria-label="Branching eight-rank campaign map">${connectedLadder}</div>
- <div class="campaign-rivals-title"><strong>CHOOSE YOUR NEXT OPPONENT</strong><small>THREE ROUTES · YOUR DECISION</small></div>
- <div class="campaign-rivals">${rivals}</div>
+ <div class="campaign-rivals-title"><strong>YOUR SELECTED SORTIE</strong><small>ONE MISSION · ORDERS CONFIRMED</small></div>
+ <div class="campaign-rivals wm-v085-single-sortie">${selectedSortie}</div>
  </div>
  <aside class="campaign-service-side"><div class="service-card">
  <div class="service-card-head"><span>${p?.faction==='Axis'?'LUFTWAFFE':'ROYAL AIR FORCE'}</span><small>ACTIVE CAMPAIGN · LIVE SERVICE RECORD</small></div>
