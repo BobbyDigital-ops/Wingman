@@ -44,6 +44,8 @@ function beginCareer(){
 }
 function startCareer(index,type){
  const saved=career();if(!saved?.run||saved.run.pendingReward||!Number.isInteger(index)||!saved.run.choices?.[index]||saved.run.choices[index].isNonCombat)return false;
+ const legal=window.WingmanCampaign?.reachableLanes?.(saved.run.lastLane,saved.run.rank)||[0,1,2];
+ if(!legal.includes(index))return false;
  const faction=saved.profile.faction;
  if(!(faction==='Axis'?['bf109','bf110','he111']:['fighter','heavy','bomber']).includes(type))return false;
  openCareer('ladder');
@@ -110,6 +112,12 @@ function mount(){
  sync();
 }
 window.WingmanUIBridge={show,hide,choosePilot,beginCareer,startCareer,startArcade,continueCareer,
+ notifyCampaignResult(outcome){
+  // A synchronous combat result is authoritative; do not rely on a transient
+  // DOM MutationObserver state which can be hidden in the same JS task.
+  resultSeen=true;lastResult='campaign:'+(outcome?.won?'SORTIE WON':'SHOT DOWN');
+  show();broadcast({wmUI:'result',result:outcome?.won?'SORTIE WON':'SHOT DOWN',career:true});
+ },
  listProfileSlots(){return window.WingmanProfileSlots?.slots?.()||[];},
  selectProfileSlot(index){return window.WingmanProfileSlots?.select?.(index)||{ok:false,error:'profile-manager-unavailable'};},
  resolveCampaignEvent(index,optionId){return window.WingmanCareer?.resolveCampaignEvent?.(index,optionId)||null;},
