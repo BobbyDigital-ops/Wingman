@@ -121,6 +121,8 @@ window.WingmanUIBridge={show,hide,choosePilot,beginCareer,startCareer,startArcad
  },
   restartCampaign(){const ok=window.WingmanCareer?.restartCampaign?.();if(ok)show();return !!ok;},
  openLicence(){openCareer('licence');broadcast({wmUI:'career'})},
+ getAudioLevels(){return window.WingmanAudio?.getLevels?.()||{master:100,engine:80,guns:90,effects:80};},
+ setAudioLevel(name,value){return !!window.WingmanAudio?.setLevel?.(name,value);},
  toggleSound(){const el=by('wm-audio-toggle');if(el)el.click()},
  rematch(){if(click('#rematch'))hide()},
  changeAircraft(){if(click('#change-plane'))show()},
