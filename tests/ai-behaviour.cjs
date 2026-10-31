@@ -155,13 +155,14 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
  if(campaignScenarios.length){
   const matches=[];
   for(const enc of campaignScenarios){
+   if(!Array.isArray(enc.types)||enc.types.length===0)throw Error('Campaign benchmark received a noncombat event. Select combat nodes only.');
    const samples=[];
    for(let trial=0;trial<2;trial++){
     let h=2166136261;
-    for(const ch of String(enc.id||enc.objective||'mission')+String(enc.rank||1)+String(enc.lane||0)+trial)
+    for(const ch of String(enc.id||enc.objective||'mission')+String(enc.rank||1)+String(enc.lane||0)+String(enc.playerType||'fighter')+trial)
       h=Math.imul(h^ch.charCodeAt(0),16777619)>>>0;
     seed=h;
-    window.aiQA.mission({...enc,qaDifficulty:'standard'});
+    window.aiQA.mission({...enc,qaDifficulty:enc.qaDifficulty||enc.difficulty||'standard'});
     const start=window.aiQA.state.fliers[0],startingCondition=start.health+start.armour;
     const result=window.aiQA.advance(Math.ceil((enc.timeLimit||120)*60)+2);
     const hero=window.aiQA.state.fliers[0];
@@ -171,10 +172,12 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
       killed:window.aiQA.state.fliers.filter(p=>p.team===1&&!p.alive&&!p.queued).length,
       crashed:window.aiQA.state.fliers.filter(p=>p.damageCause==='GROUND').length});
    }
-   matches.push({rank:enc.rank,lane:enc.lane,objective:enc.objective,risk:enc.risk,
+   matches.push({rank:enc.rank,region:enc.region||null,nodeType:enc.nodeType||'combat',lane:enc.lane,objective:enc.objective,risk:enc.risk,playerType:enc.playerType||'fighter',difficulty:enc.qaDifficulty||enc.difficulty||'standard',
       aiRank:enc.aiRank,threat:enc.threat,opponents:enc.types?.length||0,
       winRate:Math.round(samples.filter(x=>x.win).length/samples.length*100),
       avgIntegrity:+(samples.reduce((n,x)=>n+x.integrity,0)/samples.length).toFixed(2),
+      avgSeconds:+(samples.reduce((n,x)=>n+x.seconds,0)/samples.length).toFixed(1),
+      avgKills:+(samples.reduce((n,x)=>n+x.killed,0)/samples.length).toFixed(2),
       crashes:samples.reduce((n,x)=>n+x.crashed,0),samples});
   }
   summary.campaignBenchmark=matches;
