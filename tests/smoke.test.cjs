@@ -532,7 +532,7 @@ test('campaign rank AI changes tactical decision level without modifying hull or
  game.internals.assignCampaignAI(p,{rank:1,id:'von-test'});
  assert.equal(p.aiRank,1);assert.equal(p.aiSkillLevel,0);
  const style=p.aiStyle;
- game.internals.assignCampaignAI(p,{rank:8,id:'von-test'});
+ game.internals.assignCampaignAI(p,{rank:12,id:'von-test'});
  assert.equal(p.aiSkillLevel,1);assert.equal(p.aiStyle,style);
  assert.equal(p.d.hull,hull);assert.equal(p.d.damage,damage);
 });
