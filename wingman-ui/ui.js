@@ -242,7 +242,7 @@ function career(){
     '<div class="wm-v09-event-seal"><span>'+encounterMeta(selected.mission,selected.nodeType).icon+'</span><strong>'+esc(selected.label)+'</strong><small>'+esc(selected.region||'AIRFIELD SUPPORT')+'</small></div>'+
     '<div class="wm-v085-sortie-details"><div class="wm-v085-sortie-overline">NON-COMBAT ENCOUNTER · RANK '+currentRank+'</div>'+
     '<h2>'+esc(selected.mission)+'</h2><p class="wm-v085-sortie-description">'+esc(selected.briefing)+'</p>'+
-    '<div class="wm-v09-event-options">'+(selected.eventOptions||[]).map(opt=>'<button type="button" class="wm-v09-event-button" data-event-option="'+esc(opt.id)+'"><strong>'+esc(opt.name)+'</strong><small>'+esc(opt.detail)+'</small></button>').join('')+'</div>'+
+    '<div class="wm-v09-event-options">'+(selected.eventOptions||[]).map(opt=>{const cost=selected.nodeType==='shop'?(opt.id==='service'?2:opt.id==='guns'?3:0):selected.nodeType==='dice'&&opt.id==='roll'?1:0;const blocked=(run.supplies||0)<cost;return '<button type="button" class="wm-v09-event-button" data-event-option="'+esc(opt.id)+'" '+(blocked?'disabled aria-disabled="true"':'')+'><strong>'+esc(opt.name)+'</strong><small>'+esc(opt.detail)+(blocked?' · NOT ENOUGH SUPPLIES':'')+'</small></button>'}).join('')+'</div>'+
     '<small class="wm-v085-sortie-history">CHOOSE AN ACTION TO ADVANCE · RETURN TO THE CHART TO CHANGE ROUTES</small></div></article>':null;
  const selectedSortie=eventDossier || (selected?
   '<article class="wm-v085-sortie-brief" aria-label="Selected campaign mission">'+
@@ -266,6 +266,7 @@ function career(){
   '<div class="wm-v085-sortie-empty">NO MISSION SELECTED · RETURN TO THE OPERATIONS CHART</div>');
  return `<section class="frame career-screen campaign-rework wm-v13-campaign ${S.campaignPanel==='sortie'?'wm-v13-sortie':'wm-v13-ladder'}">${header('KING OF THE SKIES','RANK '+currentRank+' / 12 · '+run.lives+' LIVES')}
  <div class="wm-v13-campaign-status"><span>RANK <b>${currentRank} / 12</b></span><span>${run.lives} LIVES REMAINING</span><span>AIRCRAFT ${Math.round(run.condition??100)}%</span><span>${run.supplies||0} REPAIR SUPPLIES</span></div>
+ ${S.lastEventSummary?'<div class="wm-v09-last-event" role="status"><strong>✓ '+esc(S.lastEventSummary.description||'EVENT COMPLETE')+'</strong><span>'+esc(S.lastEventSummary.mission||'SQUADRON EVENT')+' · SUPPLIES '+(S.lastEventSummary.suppliesDelta>=0?'+':'')+S.lastEventSummary.suppliesDelta+' · CONDITION '+(S.lastEventSummary.conditionDelta>=0?'+':'')+S.lastEventSummary.conditionDelta+'%</span></div>':''}
  <div class="campaign-rework-content"><div class="campaign-main">
  <div class="campaign-ladder-head"><strong>ROAD TO ACE</strong><span>BRANCHING ROUTES · CLIMB TO THE FINAL ACE</span></div>
  <div class="campaign-map-legend"><span>✈ INTERCEPT</span><span>◈ RECON</span><span>♠ ACE HUNT</span><span>✦ ESCORT</span><span>⚔ OUTNUMBERED</span><span>★ FINALE</span></div><div class="campaign-ladder-scroll" data-rank="${currentRank}" aria-label="Twelve rung branching campaign map">${connectedLadder}</div>
@@ -500,7 +501,7 @@ document.addEventListener('click',e=>{
  if(el.dataset.filter){S.pilotFilter=el.dataset.filter;S.page=0;const i=roster.findIndex(p=>p.faction===S.pilotFilter);if(i>=0)S.pilotIndex=i;return show()}
  if(el.dataset.page){S.page=Math.max(0,Math.min(3,S.page+Number(el.dataset.page)));return show()}
  if(el.dataset.pilot){S.pilotIndex=roster.findIndex(p=>p.id===el.dataset.pilot);return show()}
- if(el.dataset.choice!=null){S.choice=Number(el.dataset.choice);if(S.screen==='career')S.campaignPanel='sortie';return show()}
+ if(el.dataset.choice!=null){S.lastEventSummary=null;S.choice=Number(el.dataset.choice);if(S.screen==='career')S.campaignPanel='sortie';return show()}
 });
 document.addEventListener('change',e=>{
  if(!e.target.matches('select[data-setting]'))return;
