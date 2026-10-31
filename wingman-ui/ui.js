@@ -16,7 +16,7 @@ const PLANES=[
 const liveSpecs=P.WingmanGame?.aircraftSpecs?.();
 if(liveSpecs)for(let i=0;i<TYPES.length;i++){const p=liveSpecs[TYPES[i]];if(!p)continue;PLANES[i][4]=p.speed;PLANES[i][5]=p.turn;PLANES[i][6]=p.armour;PLANES[i][7]=p.damage;}
 const OPS=[['1 VS 1','Classic dogfight','Head-to-head fighter combat.','duel'],['SURVIVAL','How long can you last?','Increasing waves of enemies.','survival'],['FREE FOR ALL','Every pilot for themselves','Multiple aircraft. One winner.','triple'],['2 VS 2','Team up','Fight with an AI wingman.','teams'],['CHALLENGES','Special operations','Time-limited combat objectives.','challenge']];
-const S={screen:'title',back:[],op:0,plane:0,opponent:'random',faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:0,campaignPanel:'ladder',difficulty:'standard',theatre:'0',sound:true,audioVolume:100,optionTab:'GAMEPLAY',lastResult:null};
+const S={screen:'title',back:[],op:0,plane:0,opponent:'random',faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:0,campaignPanel:'ladder',difficulty:'standard',theatre:'0',sound:true,audioVolume:100,optionTab:'GAMEPLAY',lastResult:null,outcomeStep:'debrief'};
 const stage=document.querySelector('#stage'),nav=document.querySelector('.nav');
 try{const settings=P.WingmanUIBridge?.getAudioSettings?.();if(settings){S.sound=!settings.muted;S.audioVolume=Math.round(settings.volume*100);}}catch{}
 try{const savedOptions=JSON.parse(localStorage.getItem('wingman-ui-flight-presets-v1')||'null');
@@ -380,12 +380,13 @@ function options(){
 function outcome(){
  const saved=playerSave(),run=saved?.run,pending=run?.pendingReward;
  const isCareer=!!S.lastCareer||!!pending;
+ const showingReward=!!pending&&S.outcomeStep==='reward';
  const report=saved?.lastOutcome||{},title=S.lastResult|| (report.won?'VICTORY':'SORTIE COMPLETE');
  const completed=!run&&!!saved?.lastCompleted?.rank;
  const flightLog=(saved?.service||[]).slice(-3).reverse();
  const rewards=pending?.offers?.map(id=>{
   const perk=perkById(id);if(!perk)return '';
-  return '<button type="button" class="wg-v7-reward-card'+(perk.elite?' wg-v8-elite':'')+'" data-reward="'+esc(id)+'"><span>'+(perk.elite?'ELITE · HIGH-RISK REWARD':'SELECT REWARD')+'</span><strong>'+esc(perk.name)+'</strong><small>'+esc(perk.detail)+'</small></button>';
+  return '<button type="button" class="wg-v7-reward-card'+(perk.elite?' wg-v8-elite':'')+'" data-reward="'+esc(id)+'"><span>'+(perk.elite?'PREMIUM · HIGH RISK / ELITE EARNED':'STANDARD CAMPAIGN REWARD')+'</span><strong>'+esc(perk.name)+'</strong><small>'+esc(perk.detail)+'</small></button>';
  }).join('')||'';
  if(!isCareer){
   const aircraft=PLANES[S.plane]?.[0]||'FIGHTER';
@@ -428,32 +429,51 @@ function outcome(){
    '</section>';
  }
 
- return `<section class="frame career-screen wg-v7-debrief">
-  ${header(pending?'CHOOSE YOUR REWARD':'AFTER ACTION REPORT','KING OF THE SKIES · RAF OPERATIONS DESK')}
-  <div class="wg-v7-debrief-layout">
-   <div class="wg-v7-debrief-banner"><div class="wg-v7-debrief-pilot">${atlas(player())}</div>
-    <small>${esc(saved?.profile?.name||'PILOT')} · RANK ${run?.rank||8}</small>
-    <h2>${esc(pending?'VICTORY — CLAIM YOUR SPOILS':completed?'KING OF THE SKIES — LEGEND':title)}</h2>
-    <p>${esc(report.mission||'COMBAT SORTIE')} · ${esc(report.label||'ENEMY SQUADRON')}</p>
-    <div class="wg-v7-debrief-stats"><span>${saved?.wins||0} VICTORIES</span><span>${saved?.losses||0} LOSSES</span>
-    <span>${run?run.lives+' LIVES LEFT':'RUN FINISHED'}</span><span>SORTIE GRADE ${esc(report.grade||'—')}</span></div>
-    <small>Recent operations</small><div class="wg-v7-debrief-log">${flightLog.map(e=>'<div>'+esc(e.won?'✓':'✕')+' '+esc(e.grade||'—')+' · R'+esc(e.rank)+' · '+esc(e.mission||'DOGFIGHT')+' · '+esc(e.rival||'RIVAL')+'</div>').join('')}</div>
-   </div>
-   <div class="wg-v7-debrief-choice">
-    ${pending?`<span class="wg-v7-overline">${esc(pending.risk)} RISK MISSION · REWARD EARNED</span>
-      <h3>CHOOSE ONE UPGRADE</h3>
-      <p>Upgrades stay with your aircraft for the rest of this campaign. A low-risk sortie may also leave a temporary setback, repairable with supplies.</p>
-      <div class="wg-v7-reward-options">${rewards}</div>
-      ${pending.setback?'<p class="wg-v7-warning">FIELD REPORT: '+esc(perkById(pending.setback)?.name||'MECHANICAL ISSUE')+' — repair to clear the setback.</p>':''}
-      <p class="wg-v7-locked">A reward must be selected before your next sortie.</p>`:`
-      <span class="wg-v7-overline">SORTIE CLOSED · RECORD SAVED</span>
-      <h3>${completed?'CAMPAIGN COMPLETE':run?'READY FOR NEXT SORTIE':'TO THE HANGAR'}</h3>
-      <p>${run?'Supplies '+(run.supplies||0)+' · Aircraft condition '+Math.round(run.condition??100)+'%. Choose your next route or make field repairs.':'Your record and campaign honours have been saved.'}</p>
-      ${confirmButton(run?'RETURN TO CAMPAIGN →':'VIEW PILOT LICENCE →',run?'career-continue':'licence','red')}
-      ${confirmButton('RETURN TO MENU','return-home','outline')}`}
-   </div>
-  </div>
- </section>`;
+
+ const number=(v,suffix='')=>v==null||!Number.isFinite(Number(v))?'—':Math.round(Number(v))+suffix;
+ const accuracy=Number(report.shots)>0?Math.round(100*Number(report.hits||0)/Number(report.shots))+'%':'—';
+ const debriefItems=[
+   ['ENEMY AIRCRAFT DOWN',number(report.kills)],['SHOTS FIRED',number(report.shots)],
+   ['HITS LANDED',number(report.hits)],['GUN ACCURACY',accuracy],
+   ['DAMAGE DEALT',number(report.damageDealt)],['DAMAGE TAKEN',number(report.damageTaken)],
+   ['BACKUP FIGHTERS ARRIVED',number(report.reinforcements)],['ALLIED AIRCRAFT LOST',number(report.alliesLost)],
+   ['SORTIE DURATION',number(report.secondsElapsed,'s')],['AIRFRAME INTEGRITY',report.integrity==null?'—':Math.round(report.integrity*100)+'%']
+ ];
+ const debriefPanel='<span class="wg-v7-overline">FORM 09 · AFTER ACTION REPORT</span>'+
+   '<h3>'+(report.won?'MISSION SUCCESSFUL':'MISSION FAILED')+'</h3>'+
+   '<p>'+esc(report.mission||'COMBAT SORTIE')+' · '+esc(report.label||'ENEMY SQUADRON')+
+   ' · RANK '+esc(report.rank||'—')+' · '+esc(report.grade||'—')+' GRADE</p>'+
+   '<div class="wm-v9f-sortie-stats">'+debriefItems.map(([label,value])=>
+     '<div><small>'+esc(label)+'</small><strong>'+esc(value)+'</strong></div>').join('')+'</div>'+
+   '<p class="wm-v9f-sortie-note">'+(report.won?
+      'Sortie complete. Review your performance before claiming the reward you earned.':
+      run?'One life lost. Your rung is unchanged; retry a connected mission.':
+      'Your run has ended. Your pilot service record is saved.')+'</p>'+
+   (pending?confirmButton('CONTINUE · CHOOSE REWARD ›','review-rewards','red'):
+     confirmButton(run?'RETURN TO CAMPAIGN LADDER ›':'VIEW PILOT LICENCE ›',
+       run?'career-continue':'licence','red'));
+ const rewardPanel='<span class="wg-v7-overline">'+esc(pending?.risk||'')+' RISK · REWARD CLAIM</span>'+
+   '<h3>CHOOSE ONE UPGRADE</h3>'+
+   '<p>Premium (ELITE) modifications are earned from high-risk or regional elite victories. '+
+   'Standard upgrades can be earned on ordinary sorties. Modifications last for this run only.</p>'+
+   '<div class="wg-v7-reward-options">'+rewards+'</div>'+
+   (pending?.setback?'<p class="wg-v7-warning">FIELD REPORT: '+esc(perkById(pending.setback)?.name||'MECHANICAL ISSUE')+' — repair to clear the setback.</p>':'')+
+   '<p class="wg-v7-locked">Select one reward to save your build and return to the ladder.</p>';
+ return '<section class="frame career-screen wg-v7-debrief">'+
+   header(showingReward?'CHOOSE YOUR REWARD':'AFTER ACTION REPORT','KING OF THE SKIES · RAF OPERATIONS DESK')+
+   '<div class="wg-v7-debrief-layout">'+
+    '<div class="wg-v7-debrief-banner"><div class="wg-v7-debrief-pilot">'+atlas(player())+'</div>'+
+     '<small>'+esc(saved?.profile?.name||'PILOT')+' · RANK '+esc(report.rank||run?.rank||12)+'</small>'+
+     '<h2>'+esc(report.won?'VICTORY — SORTIE COMPLETE':completed?'KING OF THE SKIES — LEGEND':'DEFEAT — MISSION FAILED')+'</h2>'+
+     '<p>'+esc(report.mission||'COMBAT SORTIE')+' · '+esc(report.label||'ENEMY SQUADRON')+'</p>'+
+     '<div class="wg-v7-debrief-stats"><span>'+esc(saved?.wins||0)+' CAREER VICTORIES</span><span>'+esc(saved?.losses||0)+' CAREER LOSSES</span>'+
+       '<span>'+(run?run.lives+' LIVES LEFT':'RUN FINISHED')+'</span><span>SORTIE GRADE '+esc(report.grade||'—')+'</span></div>'+
+     '<small>Recent operations</small><div class="wg-v7-debrief-log">'+flightLog.map(e=>
+       '<div>'+esc(e.won?'✓':'✕')+' '+esc(e.grade||'—')+' · R'+esc(e.rank)+' · '+esc(e.mission||'DOGFIGHT')+' · '+esc(e.rival||'RIVAL')+'</div>').join('')+'</div>'+
+    '</div>'+
+    '<div class="wg-v7-debrief-choice">'+(showingReward?rewardPanel:debriefPanel)+'</div>'+
+   '</div></section>';
+
 }
 
 function eventResult(){
@@ -519,6 +539,7 @@ function action(v){
  if(v==='opening-start'){S.screen='profiles';S.back=[];return show();}
  if(v==='profile-back'){S.screen='title';S.back=[];return show();}
  if(v==='switch-profile'){S.screen='profiles';S.back=['home'];return show();}
+ if(v==='review-rewards'){if(!playerSave()?.run?.pendingReward)return;S.outcomeStep='reward';S.screen='outcome';return show();}
  if(v==='continue-event'){S.lastEventSummary=null;S.campaignPanel='ladder';S.choice=0;S.screen='career';S.back=[];return show();}
  if(v==='campaign-map'){S.campaignPanel='ladder';return show();}
  if(v==='campaign-sortie'){S.campaignPanel='sortie';return show();}
@@ -551,7 +572,7 @@ document.addEventListener('click',e=>{
  if(el.dataset.eventOption){const result=api()?.resolveCampaignEvent?.(S.choice,el.dataset.eventOption);if(result){S.campaignPanel='ladder';S.choice=0;S.lastEventSummary=result;S.screen='event-result';S.back=[];show();}return;}
  if(el.dataset.reward){
    if(api()?.claimCampaignReward?.(el.dataset.reward)){
-     S.screen='career';S.lastCareer=false;S.lastResult=null;S.back=[];show();
+     S.outcomeStep='debrief';S.screen='career';S.lastCareer=false;S.lastResult=null;S.back=[];show();
    }
    return;
  }
@@ -585,7 +606,7 @@ document.addEventListener('change',e=>{
   JSON.stringify({difficulty:S.difficulty,theatre:S.theatre}))}catch{}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.screen!=='title')back();else if((e.key==='Enter'||e.key===' ')&&S.screen==='title'){e.preventDefault();action('opening-start')}});
-window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.data?.wmUI==='career'){S.career=false;S.screen='career';S.back=[];S.lastResult=null;show()}if(e.data?.wmUI==='home'){S.career=false;S.screen='home';S.back=[];show()}if(e.data?.wmUI==='result'){S.lastResult=e.data.result;S.lastCareer=!!e.data.career;S.screen='outcome';S.back=[];show()}});
+window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.data?.wmUI==='career'){S.career=false;S.screen='career';S.back=[];S.lastResult=null;show()}if(e.data?.wmUI==='home'){S.career=false;S.screen='home';S.back=[];show()}if(e.data?.wmUI==='result'){S.lastResult=e.data.result;S.lastCareer=!!e.data.career;S.outcomeStep='debrief';S.screen='outcome';S.back=[];show()}});
 try{
  const arrived=sessionStorage.getItem('wingman-menu-arrival-v1');
  if(arrived==='home'||arrived==='pilots'){
