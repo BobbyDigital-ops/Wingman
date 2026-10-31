@@ -1871,15 +1871,15 @@ function plane(type,id,x,y,angle){
       const sightX=hero.x+Math.cos(hero.angle)*(hero.d.radius+19);
       const sightY=hero.y-state.cameraY+Math.sin(hero.angle)*(hero.d.radius+19);
       c.save();c.translate(sightX,sightY);c.rotate(hero.angle);
-      // G2.2: a further 34% smaller, dark period reflector sight.
-      // A very soft warm outline preserves visibility over storm clouds.
-      c.scale(.23,.23);
+      // v0.8.4: +39% reticle diameter (0.23 -> 0.32), slightly bolder lines.
+      // Purely visual; no change to aim vector, firing physics or target locking.
+      c.scale(.32,.32);
       c.lineCap='round';c.lineJoin='round';
       c.globalAlpha=locked?1:cue>.2?.88:.76;
       c.strokeStyle=locked?'#100f0b':cue>.2?'#111713':'#10191b';
       c.shadowColor='rgba(238,225,189,.38)';
       c.shadowBlur=.95;
-      c.lineWidth=locked?1.3:1.05;
+      c.lineWidth=locked?1.40:1.14;
       const r=4.5;
       // Open circular graticule with four fine reference ticks.
       for(let k=0;k<4;k++){
@@ -1896,7 +1896,7 @@ function plane(type,id,x,y,angle){
       // Dark sweep: acquisition remains readable without a bright white ring.
       if(strength>.02){
         c.strokeStyle=locked?'#18130d':'#25221a';
-        c.lineWidth=1.4;
+        c.lineWidth=1.54;
         c.beginPath();c.arc(0,0,7.8,-Math.PI/2,-Math.PI/2+TAU*strength);c.stroke();
       }
       if(locked){
