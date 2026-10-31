@@ -1001,8 +1001,8 @@ function plane(type,id,x,y,angle){
     p.aiRank=rank;p.aiStyle=personality?.style||raw.personality||AI_STYLES[hash%AI_STYLES.length];
     p.aiPersonality=personality||null;
     p.aiSkillLevel=clamp((rank-1)/11+
-      (encounter.lane===2?.28:encounter.lane===1?.14:0)+
-      (encounter.eliteEncounter?.12:0),0,1);
+      (encounter.lane===2?.44:encounter.lane===1?.22:0)+
+      (encounter.eliteEncounter?.16:0),0,1);
     p.aiManeuver='PATROL';p.aiManeuverTimer=0;p.aiManeuverCooldown=3;
     p.aiMistake=0;
     p.attributes=pilotAttributes(personality?.attributes||raw.attributes||encounter.attributes);
