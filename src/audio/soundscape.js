@@ -3,6 +3,8 @@
    Original gun audio provenance: assets/audio/guns/README.md */
 (()=>{'use strict';
  let ctx=null,master=null,motor=null,motorFilter=null,motorGain=null;
+ let volume=1;
+ try{const v=Number(localStorage.getItem('wingman-audio-volume'));if(Number.isFinite(v))volume=Math.max(0,Math.min(1,v));}catch{}
  let muted=false,lastFire=-10,lastHit=-10,lastCrash=-10,lastFlight=0,lastBombWhistle=-10;
  let lastGunTail=-10,gunShotIndex=0,gunBus=null,gunAssetsPromise=null;
  const GUN_FILES={
@@ -30,7 +32,7 @@
   const AC=window.AudioContext||window.webkitAudioContext;
   if(!ctx&&AC)try{
    ctx=new AC();
-   master=ctx.createGain();master.gain.value=muted?0:.42;
+   master=ctx.createGain();master.gain.value=muted?0:.42*volume;
    master.connect(ctx.destination);
    // Gun bus compressor makes each field-recorded report audible on small
    // laptop/phone speakers without clipping when several shots overlap.
@@ -275,16 +277,25 @@
   motor=null;motorFilter=null;motorGain=null;
   if(ctx&&g){g.gain.setTargetAtTime(.001,ctx.currentTime,.11);try{o.stop(ctx.currentTime+.65);}catch{}}
  }
+ function setVolume(value){
+  const next=Math.max(0,Math.min(1,Number(value)));
+  if(!Number.isFinite(next))return volume;
+  volume=next;
+  try{localStorage.setItem('wingman-audio-volume',String(volume));}catch{}
+  if(master&&ctx)master.gain.setTargetAtTime(muted?0:.42*volume,ctx.currentTime,.045);
+  return volume;
+ }
  function setMuted(value){
   muted=Boolean(value);
   try{localStorage.setItem('wingman-audio-muted',String(muted));}catch{}
-  if(master&&ctx)master.gain.setTargetAtTime(muted?0:.42,ctx.currentTime,.045);
+  if(master&&ctx)master.gain.setTargetAtTime(muted?0:.42*volume,ctx.currentTime,.045);
   if(muted)stopEngine();
   sync();
  }
  for(const button of buttons)button.addEventListener('click',()=>{if(muted){setMuted(false);unlock();play('medal');}else setMuted(true);});
  sync();
- window.WingmanAudio={unlock,play,startEngine,flight,stopEngine,setMuted,
+ window.WingmanAudio={unlock,play,startEngine,flight,stopEngine,setMuted,setVolume,
+   get volume(){return volume;},
    get muted(){return muted;},
    get recordedGunfireReady(){return gunBuffers.mg.filter(Boolean).length>0&&gunBuffers.cannon.filter(Boolean).length>0;}
  };
