@@ -1,0 +1,27 @@
+name: Wingman Phase 9 Verification
+on:
+  push:
+    branches:
+      - feature/phase9b-campaign-balance
+  workflow_dispatch:
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run Wingman regression tests
+        run: npm run test:unit
+  campaign-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Simulate twelve-rung combat encounters
+        run: npm run campaign:benchmark
