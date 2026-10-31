@@ -75,7 +75,7 @@ test('high-risk wins offer exclusive elite modifications; low routes do not',()=
    C.settle(run,enc,true,.68);
    const prize=run.pendingReward;
    assert.ok(prize?.offers?.length>=2);
-   assert.equal(prize.offers.some(x=>owned.has(x)),lane===2);
+   assert.equal(prize.offers.some(x=>owned.has(x)),lane===2||enc.eliteEncounter);
    assert.equal(prize.offers.length,lane===0?2:3);
    const id=prize.offers[0];
    assert.ok(C.claim(run,id));
