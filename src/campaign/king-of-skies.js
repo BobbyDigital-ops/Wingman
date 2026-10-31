@@ -76,12 +76,14 @@ function resolveEvent(run,enc,optionId){
  const repair=(amount)=>{run.condition=n(run.condition+amount,15,100);};
  const addEffect=(id)=>{if(byId[id]&&!run.effects.includes(id))run.effects.push(id);run.effects=run.effects.slice(-MAX_EFFECTS);};
  const kind=enc.nodeType;
- const gamble=hash(run.seed,run.rank,enc.lane,run.visits,optionId)%2===0;
+ const diceRoll=kind==='dice'&&optionId==='roll'?1+hash(run.seed,run.rank,enc.lane,run.visits,optionId)%6:null;
+ const gamble=diceRoll===null?hash(run.seed,run.rank,enc.lane,run.visits,optionId)%2===0:diceRoll>=4;
  if(kind==='supply'){if(optionId==='patch')repair(25);else gain(3);}
  else if(kind==='intel'){if(optionId==='scout')gain(2);else if(!run.effects.includes('ace-weapon-sights'))addEffect('ace-weapon-sights');else gain(2);}
  else if(kind==='shop'){
   const cost=optionId==='service'?2:optionId==='guns'?3:0;
   if(run.supplies<cost)return null;
+  if(optionId==='guns'&&run.effects.includes('gunsmith'))return null; // Do not charge twice for a fitted upgrade.
   if(cost)gain(-cost);
   if(optionId==='service')repair(50);
   if(optionId==='guns')addEffect('gunsmith');
@@ -95,7 +97,15 @@ function resolveEvent(run,enc,optionId){
   rank:run.rank,kind,choice:optionId,mission:enc.mission,
   label:enc.label,description:available.find(o=>o.id===optionId)?.name||'EVENT COMPLETED',
   suppliesDelta:run.supplies-before.supplies,conditionDelta:run.condition-before.condition,
-  newEffects:run.effects.filter(id=>!before.effects.includes(id))
+  newEffects:run.effects.filter(id=>!before.effects.includes(id)),
+  suppliesBefore:before.supplies,suppliesAfter:run.supplies,
+  conditionBefore:before.condition,conditionAfter:run.condition,
+  diceRoll,diceWon:diceRoll===null?null:gamble,
+  headline:kind==='dice'?optionId==='safe'?'WAGER DECLINED':gamble?'YOU WON THE DICE':'YOU LOST THE DICE':
+   kind==='supply'?optionId==='patch'?'AIRFRAME REPAIRED':'SUPPLIES COLLECTED':
+   kind==='intel'?optionId==='prepare'?'INTELLIGENCE APPLIED':'RECON COMPLETE':
+   kind==='shop'?optionId==='leave'?'STORES VISITED':optionId==='guns'?'GUN UPGRADE FITTED':'AIRCRAFT SERVICED':
+   kind==='event'?optionId==='help'?'GROUND CREW ASSISTED':'ENGINE TEST COMPLETE':'ENCOUNTER COMPLETE'
  };
  run.lastEvent=result;
  run.eventHistory=Array.isArray(run.eventHistory)?run.eventHistory.slice(-23):[];
