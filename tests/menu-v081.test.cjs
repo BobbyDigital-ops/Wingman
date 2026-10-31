@@ -43,7 +43,7 @@ test('reference main menu presents Skirmish and King of the Skies',()=>{
  const t=make(save);t.action('opening-start');
  assert.match(t.body(),/SELECT YOUR SERVICE RECORD/);
  t.click({profileSlot:'0'});
- assert.match(t.body(),/CHOOSE YOUR ADVENTURE/);
+ assert.match(t.body(),/CHOOSE YOUR<br>ADVENTURE/);
  assert.match(t.body(),/KING OF/);
  assert.match(t.body(),/data-action="operations"/);
  assert.match(t.body(),/data-action="career"/);
