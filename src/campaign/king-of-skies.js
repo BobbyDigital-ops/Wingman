@@ -31,12 +31,21 @@ const SETBACKS=[
 
 // Each row is an encounter, not necessarily a fight. Four rungs per theatre.
 // Rungs 4 and 8 include regional elite battles; 12 always ends in combat.
+// At least seven flights per complete campaign; recovery/event choices change
+// the route but cannot bypass all the high-stakes combat encounters.
 const NODE_LAYOUT=[
- ['combat','combat','combat'],['supply','combat','intel'],['combat','event','combat'],
- ['elite','elite','elite'],['shop','combat','dice'],['combat','intel','combat'],
+ ['combat','combat','combat'],['supply','combat','intel'],['combat','combat','combat'],
+ ['elite','elite','elite'],['shop','combat','dice'],['combat','combat','combat'],
  ['supply','combat','event'],['elite','elite','elite'],['shop','combat','intel'],
- ['combat','event','combat'],['supply','combat','dice'],['boss','boss','boss']
+ ['combat','combat','combat'],['supply','combat','dice'],['boss','boss','boss']
 ];
+// Actual branch links; all paths converge to the ONE final boss.
+function reachableLanes(previousLane,rank){
+ if(rank>=MAX_RANK)return [1];
+ if(previousLane===null||previousLane===undefined||!Number.isInteger(Number(previousLane)))return [0,1,2];
+ const p=Number(previousLane);
+ return p===0?[0,1]:p===2?[1,2]:[0,1,2];
+}
 const EVENT_DESCRIPTIONS={
  supply:{mission:'FIELD SUPPLIES',label:'GROUND CREW',briefing:'The engineers have spare parts, fuel and a battered crate of equipment. Make the best of the stop.'},
  intel:{mission:'INTELLIGENCE BRIEFING',label:'OPERATIONS OFFICER',briefing:'Fresh reconnaissance reports reveal enemy activity. Choose how to use the intelligence.'},
@@ -140,14 +149,15 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
    region:regionForRank(rank)});
  }
  const encounters=[
-  ['patrol','duel','ace-hunt'],['intercept','duel','ace-hunt'],
+  ['patrol','duel','outnumbered'],['intercept','duel','ace-hunt'],
   ['recon','ace-hunt','outnumbered'],['intercept','escort','outnumbered'],
   ['recon','duel','ace-hunt'],['intercept','ace-hunt','outnumbered'],
   ['recon','escort','outnumbered'],['intercept','ace-hunt','outnumbered'],
   ['recon','duel','ace-hunt'],['intercept','ace-hunt','outnumbered'],
   ['recon','escort','outnumbered'],['final','final','final']
  ];
- const objective=kind==='elite'?(lane===2?'outnumbered':'ace-hunt'):encounters[rank-1][lane];
+ const objective=kind==='elite'?(lane===2?'outnumbered':'ace-hunt'):
+   ((rank===6&&lane===2)||(rank===9&&lane===2)||(rank===11&&lane===1))?'intel-hunt':encounters[rank-1][lane];
  // Maintain the known real roster; don't create artificial pilots or replace art.
  if(objective==='intercept'){
    const type=run.faction==='Allies'?'he111':'bomber';
@@ -180,6 +190,17 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
        signature:rival.signature,archetype:rival.archetype,personality:rival.personality});
    }
  }
+ if(objective==='intel-hunt'&&profile){
+   const carrier=pool.find(p=>p.plane===(run.faction==='Allies'?'he111':'bomber'));
+   const fighter=pool.find(p=>p.id!==carrier?.id&&p.plane===(run.faction==='Allies'?'bf109':'fighter'));
+   if(carrier&&fighter){
+     const intel=profile(carrier),guard=profile(fighter);
+     Object.assign(enc,{id:carrier.id,label:carrier.name,types:[intel.plane,guard.plane],
+       opponents:[intel,guard],wingman:guard,wingmen:[],
+       attributes:intel.attributes,signature:intel.signature,
+       archetype:intel.archetype,personality:intel.personality});
+   }
+ }
  if(objective==='outnumbered'&&enc.opponents.length===1&&profile){
    const spare=pool.find(p=>p.id!==enc.id&&p.plane!==enc.types[0]);
    if(spare){enc.opponents.push(profile(spare));enc.types=enc.opponents.map(p=>p.plane);enc.wingman=enc.opponents[1];}
@@ -201,25 +222,45 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
    objective==='escort'?'BOMBER ESCORT':
    objective==='intercept'?'BOMBER INTERCEPTION':
    objective==='recon'?'RECONNAISSANCE RUN':
+   objective==='intel-hunt'?'INTELLIGENCE CARRIER':
    objective==='ace-hunt'?'ACE HUNT':
    objective==='outnumbered'?'OUTNUMBERED PATROL':
    lane===1?'ACE DUEL':'SCOUT PATROL';
  enc.briefing=final?'Defeat both escorts and the named final ace before time expires.':
    kind==='elite'?'A veteran squadron guards this region. Expect sharper tactics, committed manoeuvres and no easy escape.':
-   objective==='escort'?'Protect your bomber until relief arrives, or defeat both attackers.':
+   objective==='escort'?'Protect the damaged bomber until extraction. Enemy fighters will attack the bomber, and additional interceptors may arrive.':
    objective==='intercept'?'Destroy the enemy bomber before it escapes into cloud cover.':
    objective==='recon'?'Protect the reconnaissance aircraft: survive until the photographs are complete, or destroy the pursuer.':
+   objective==='intel-hunt'?'Shoot down the marked intelligence carrier before it escapes. Its escorts are optional, and enemy reinforcements may arrive.':
    objective==='ace-hunt'?'Bring down a veteran fighter before the short intercept window closes.':
-   objective==='outnumbered'?'Survive against two skilled pilots. Both must be defeated.':
+   objective==='outnumbered'?'Defeat two coordinated fighter pilots, with enemy reinforcements possible on later rungs.':
    lane===1?'Win a determined one-on-one duel.':
    'Complete a lower-risk patrol. Rewards are modest and field setbacks are possible.';
- enc.timeLimit=final?(lane===2?145:lane===1?160:175):
+ enc.timeLimit=final?165:
    objective==='escort'?Math.max(65,79-rank*2):
    objective==='intercept'?Math.max(54,96-rank*4):
    objective==='recon'?Math.max(49,63-rank*2):
-   objective==='ace-hunt'?Math.max(60,87-rank*3):
+   objective==='intel-hunt'?Math.max(70,101-rank*2):
+   objective==='ace-hunt'?Math.max(66,100-rank*2):
    objective==='outnumbered'?Math.max(97,126-rank*3):115;
- enc.escortType=objective==='escort'?(run.faction==='Allies'?'bomber':'he111'):null;
+enc.escortType=objective==='escort'?(run.faction==='Allies'?'bomber':'he111'):null;
+ enc.priorityTargetIndex=objective==='intel-hunt'?0:null;
+ const backupType=run.faction==='Allies'?'bf109':'fighter';
+ enc.reinforcements=final?[]:
+   objective==='escort'?[{at:30,count:1,type:backupType},...(rank>=7?[{at:53,count:1,type:backupType}]:[])]:
+   objective==='outnumbered'&&rank>=6?[{at:30,count:1,type:backupType},...(rank>=10?[{at:54,count:1,type:backupType}]:[])]:
+   objective==='intel-hunt'?[{at:30,count:1,type:backupType}]:
+   objective==='ace-hunt'&&rank>=7?[{at:32,count:1,type:backupType}]:[];
+ enc.initialEnemies=final?2:enc.types.length;
+ enc.totalEnemyThreat=enc.types.length+enc.reinforcements.reduce((count,w)=>count+w.count,0);
+ enc.missionGoal=final?'Destroy the escorts and their ace commander':
+   objective==='escort'?'Keep the damaged bomber alive until extraction':
+   objective==='intel-hunt'?'Destroy the marked intelligence carrier; escorts are optional':
+   objective==='recon'?'Survive until reconnaissance completes':
+   objective==='intercept'?'Destroy the enemy bomber before time expires':
+   objective==='outnumbered'?'Destroy the fighters and incoming reinforcements':
+   objective==='ace-hunt'?'Defeat the named ace before time expires':
+   'Destroy the hostile aircraft';
  enc.aiRank=n(Math.ceil(rank*8/MAX_RANK)+(lane===2?2:lane===1?1:0)+(kind==='elite'?1:0),1,8);
  enc.difficulty=enc.aiRank<=2?'rookie':enc.aiRank<=4?'standard':'ace';
  enc.suppliesAward=final?3:kind==='elite'?Math.max(2,lane+1):lane+1;
@@ -233,10 +274,10 @@ function threatRating(enc){
  // Planning estimate only, NOT a measured win probability.
  const opponents=enc.types?.length||1,rank=enc.aiRank||enc.rank||1;
  const task=enc.objective==='escort'?13:enc.objective==='ace-hunt'?14:
-   enc.objective==='outnumbered'?10:enc.objective==='final'?17:
+   enc.objective==='outnumbered'?10:enc.objective==='intel-hunt'?18:enc.objective==='final'?17:
    enc.objective==='intercept'?5:enc.objective==='recon'?-13:0;
  return Math.max(10,Math.min(100,Math.round(9+rank*8.5+
-   Math.max(0,opponents-1)*13+task+(enc.eliteEncounter?8:0)+(enc.timeLimit<75&&enc.objective!=='recon'?7:0))));
+   Math.max(0,opponents-1)*13+Math.min(15,(enc.reinforcements?.length||0)*8)+task+(enc.eliteEncounter?8:0)+(enc.timeLimit<75&&enc.objective!=='recon'?7:0))));
 }
 function offerReward(run,encounter){
  normalizeRun(run);
@@ -318,7 +359,7 @@ function settle(run,encounter,won,remaining=1){
  }
  return run;
 }
-const api={MAX_RANK,REGIONS,NODE_LAYOUT,nodeTypeFor,regionForRank,eventOptions,resolveEvent,UPGRADES,ELITE_UPGRADES,SETBACKS,normalizeRun,decorateEncounter,threatRating,sortieGrade,offerReward,claim,repair,sortieBonuses,settle};
+const api={MAX_RANK,REGIONS,NODE_LAYOUT,nodeTypeFor,regionForRank,reachableLanes,eventOptions,resolveEvent,UPGRADES,ELITE_UPGRADES,SETBACKS,normalizeRun,decorateEncounter,threatRating,sortieGrade,offerReward,claim,repair,sortieBonuses,settle};
 root.WingmanCampaign=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
