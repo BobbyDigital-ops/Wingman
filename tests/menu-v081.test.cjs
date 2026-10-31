@@ -62,9 +62,12 @@ test('Skirmish operations, RAF/Luftwaffe switching, back and launch preserve set
  for(let i=0;i<3;i++)assert.ok(!t.body().includes('asset-'+i+'.jpg'));
  assert.match(t.body(),/77/);
  assert.match(t.body(),/1.90/);
- t.action('mission-review');assert.match(t.body(),/BF 110/);
- t.action('back');assert.equal(t.window.WingmanLiveUI.state.plane,4);
- t.action('mission-review');t.action('launch-arcade');
+ assert.match(t.body(),/BF 110/);
+ assert.match(t.body(),/data-action="launch-arcade"/);
+ assert.doesNotMatch(t.body(),/FINAL BRIEFING/);
+ t.action('back');assert.equal(t.window.WingmanLiveUI.state.screen,'operations');
+ t.action('operations-next');assert.equal(t.window.WingmanLiveUI.state.plane,4);
+ t.action('launch-arcade');
  assert.deepEqual(t.logs[0],{action:'arcade',opts:{mode:'duel',aircraft:'bf110',
   opponent:'random',difficulty:'ace',arena:'2'}});
 });
@@ -78,7 +81,9 @@ test('campaign locked faction, pilot specialism and handoff remain intact',()=>{
  assert.match(t.body(),/YOUR ACTIVE SQUADRON/);
  assert.doesNotMatch(t.body(),/data-faction="Axis"/);
  assert.match(t.body(),/SPECIALIST/);
- t.click({plane:'1'});t.action('mission-review');assert.match(t.body(),/ACE HUNT/);
+ t.click({plane:'1'});assert.match(t.body(),/ACE HUNT/);
+ assert.match(t.body(),/data-action="launch-career"/);
+ assert.doesNotMatch(t.body(),/FINAL BRIEFING/);
  t.action('launch-career');assert.deepEqual(t.logs[0],{action:'career',choice:0,plane:'heavy'});
 });
 test('no model art files or canonical aircraft identifiers were replaced',()=>{
