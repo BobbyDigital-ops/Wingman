@@ -112,6 +112,7 @@ function mount(){
 window.WingmanUIBridge={show,hide,choosePilot,beginCareer,startCareer,startArcade,continueCareer,
  listProfileSlots(){return window.WingmanProfileSlots?.slots?.()||[];},
  selectProfileSlot(index){return window.WingmanProfileSlots?.select?.(index)||{ok:false,error:'profile-manager-unavailable'};},
+ resolveCampaignEvent(index,optionId){return window.WingmanCareer?.resolveCampaignEvent?.(index,optionId)||null;},
  claimCampaignReward(id){
   return !!window.WingmanCareer?.claimReward?.(id);
  },
