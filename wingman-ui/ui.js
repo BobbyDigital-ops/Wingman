@@ -191,9 +191,11 @@ function career(){
  if(!saved?.profile||saved.awaitingPilotSelection)return `<section class="frame career-screen v4-career">${header('KING OF THE SKIES','CHOOSE YOUR PILOT')}<div class="inner career-intro-layout"><div class="career-hangar-art"></div><div class="career-block"><h2>YOUR FIRST SORTIE</h2><p>Choose your pilot to begin.</p>${confirmButton('CHOOSE PILOT →','to-pilots')}</div></div></section>`;
  if(!saved.run)return `<section class="frame career-screen v4-career">${header('KING OF THE SKIES','READY FOR DUTY')}<div class="inner career-intro-layout"><div class="career-hangar-art"></div><div class="career-block"><h2>${esc(saved.profile.name)}</h2><p>Twelve encounters across three regions: combat, choices and the final ace.</p>${confirmButton('START CAMPAIGN →','begin-career')}</div></div></section>`;
  if(saved.run.pendingReward)return outcome();
- const run=saved.run,choices=run.choices||[],selected=choices[S.choice]||choices[0],p=player(),played=Math.max(0,(saved.wins||0)+(saved.losses||0)),rate=played?Math.round((saved.wins||0)/played*100):0;
+ const run=saved.run,choices=run.choices||[],currentRank=run.rank||1;
+ const allowed=P.WingmanCampaign?.reachableLanes?.(run.lastLane,currentRank)||run.allowedLanes||[0,1,2];
+ if(!allowed.includes(S.choice))S.choice=allowed[0];
+ const selected=choices[S.choice]||choices[allowed[0]]||choices[0],p=player(),played=Math.max(0,(saved.wins||0)+(saved.losses||0)),rate=played?Math.round((saved.wins||0)/played*100):0;
  const campaignRanks=Array.from({length:12},(_,i)=>12-i);
- const currentRank=run.rank||1;
  const laneX=[17,50,83],mapRows=Array.from({length:12},(_,i)=>12-i);
  const encounterMeta=(mission,kind)=>{
   if(kind==='supply')return {icon:'✚',name:'FIELD SUPPLIES'};
@@ -202,6 +204,7 @@ function career(){
   if(kind==='dice')return {icon:'⚄',name:'HANGAR DICE'};
   if(kind==='event')return {icon:'☕',name:'MESS HALL'};
   if(kind==='elite')return {icon:'♛',name:'ELITE SQUADRON'};
+  if(String(mission||'').toUpperCase().includes('INTELLIGENCE CARRIER'))return {icon:'◉',name:'INTEL CARRIER'};
   const key=String(mission||'').toUpperCase();
   if(key.includes('FINAL'))return {icon:'★',name:'FINAL ACE'};
   if(key.includes('ESCORT'))return {icon:'✦',name:'BOMBER ESCORT'};
@@ -219,18 +222,19 @@ function career(){
   const final=rank===12,now=rank===currentRank,passed=rank<currentRank;
 
   return '<div class="route-map-row '+(now?'is-current':passed?'is-cleared':'is-ahead')+'" data-map-rank="'+rank+'"><span class="route-map-rank">RANK '+rank+' · '+esc(rankTitles[rank-1])+'</span><div class="route-map-nodes">'+laneX.map((x,lane)=>{
-   if(final&&!now&&lane!==1)return '';
-   const actual=now?choices[lane]:null,meta=now?encounterMeta(actual?.mission,actual?.nodeType):final?{icon:'★',name:'FINAL ACE'}:passed?{icon:'✓',name:'CLEARED'}:{icon:'?',name:'UNREVEALED'};
-   const chosen=now&&lane===Math.min(S.choice,2),state=now?'is-available':passed?'is-complete':'is-future';
-   const label=now?(meta.name+' · '+(actual?.label||'CHOOSE A RIVAL')+' · '+(actual?.risk||'')+' RISK'):meta.name;
-   const tag=now&&actual?'button':'span',attrs=now&&actual?' type="button" data-choice="'+lane+'" aria-pressed="'+(chosen?'true':'false')+'"':'';
+   if(final&&lane!==1)return ''; // A single boss, not three arbitrary choices.
+   const accessible=now&&allowed.includes(lane);
+   const actual=now?choices[lane]:null,meta=now?(accessible?encounterMeta(actual?.mission,actual?.nodeType):{icon:'×',name:'NO CONNECTING ROUTE'}):final?{icon:'★',name:'FINAL ACE'}:passed?{icon:'✓',name:'CLEARED'}:{icon:'?',name:'UNREVEALED'};
+   const chosen=accessible&&lane===S.choice,state=now?(accessible?'is-available':'is-locked'):passed?'is-complete':'is-future';
+   const label=accessible?(meta.name+' · '+(actual?.label||'RIVAL')+' · '+(actual?.risk||'')+' RISK'):meta.name;
+   const tag=accessible&&actual?'button':'span',attrs=accessible&&actual?' type="button" data-choice="'+lane+'" aria-pressed="'+(chosen?'true':'false')+'"':'';
    return '<'+tag+' class="route-map-node '+(chosen?'is-chosen ':'')+state+'" style="left:'+x+'%" title="'+esc(label)+'" aria-label="'+esc(label)+'"'+attrs+'><span class="node-symbol">'+meta.icon+'</span><small>'+esc(meta.name)+(actual?' · '+esc(actual.risk)+' RISK':'')+'</small></'+tag+'>';
   }).join('')+'</div></div>';
  }).join('');
  const mapEdges=mapRows.slice(0,-1).map((rank,row)=>{
   const sources=rank===12?[1]:[0,1,2];
   return sources.map(lane=>{
-   const destinations=rank===12?[0,1,2]:lane===0?(row%2===0?[0,1]:[0]):lane===1?(row%2===0?[1,2]:[0,1]):(row%2===0?[2]:[1,2]);
+   const destinations=rank===12?[0,1,2]:lane===0?[0,1]:lane===1?[0,1,2]:[1,2];
    return destinations.map(dest=>'<path d="M '+laneX[lane]+' '+(48+row*105)+' L '+laneX[dest]+' '+(48+(row+1)*105)+'" />').join('');
   }).join('');
  }).join('');
@@ -245,6 +249,13 @@ function career(){
     '<h2>'+esc(selected.mission)+'</h2><p class="wm-v085-sortie-description">'+esc(selected.briefing)+'</p>'+
     '<div class="wm-v09-event-options">'+(selected.eventOptions||[]).map(opt=>{const cost=selected.nodeType==='shop'?(opt.id==='service'?2:opt.id==='guns'?3:0):selected.nodeType==='dice'&&opt.id==='roll'?1:0;const blocked=(run.supplies||0)<cost;return '<button type="button" class="wm-v09-event-button" data-event-option="'+esc(opt.id)+'" '+(blocked?'disabled aria-disabled="true"':'')+'><strong>'+esc(opt.name)+'</strong><small>'+esc(opt.detail)+(blocked?' · NOT ENOUGH SUPPLIES':'')+'</small></button>'}).join('')+'</div>'+
     '<small class="wm-v085-sortie-history">CHOOSE AN ACTION TO ADVANCE · RETURN TO THE CHART TO CHANGE ROUTES</small></div></article>':null;
+ const encounterInfo=selected&&!selected.isNonCombat?
+  '<div class="wm-v9f-mission-goal"><strong>PRIMARY OBJECTIVE</strong><span>'+esc(selected.missionGoal||'Defeat hostile aircraft')+'</span></div>'+
+  '<div class="wm-v9f-mission-forces"><div><small>ENEMIES AT SCRAMBLE</small><strong>'+esc(selected.initialEnemies??selected.types?.length??1)+'</strong></div>'+
+  '<div><small>ENEMY REINFORCEMENTS</small><strong>'+esc((selected.reinforcements||[]).reduce((n,w)=>n+w.count,0))+'</strong></div>'+
+  '<div><small>YOUR ALLIES</small><strong>'+(selected.objective==='escort'?'1 PROTECTED BOMBER':'UP TO 2 CALLED IN')+'</strong></div></div>'+
+  ((selected.reinforcements||[]).length?'<p class="wm-v9f-wave-brief">BACKUP EXPECTED · '+(selected.reinforcements||[]).map(w=>esc(w.count)+' fighter'+(w.count>1?'s':'')+' around '+esc(w.at)+'s').join(' · ')+'</p>':''):
+  '';
  const selectedSortie=eventDossier || (selected?
   '<article class="wm-v085-sortie-brief" aria-label="Selected campaign mission">'+
    '<div class="wm-v085-sortie-portrait">'+(rival?atlas(rival):'<span class="wm-v085-no-photo">✈</span>')+
@@ -253,14 +264,14 @@ function career(){
     '<div class="wm-v085-sortie-overline">✦ SELECTED FROM OPERATIONAL CHART · RANK '+currentRank+'</div>'+
     '<h2>'+esc(selected.mission||'COMBAT SORTIE')+'</h2>'+
     '<div class="wm-v085-sortie-opponent"><small>OPPOSING PILOT</small><strong>'+esc(rival?.name||selected.label||'UNKNOWN RIVAL')+'</strong></div>'+
-    '<p class="wm-v085-sortie-description">'+esc(selected.briefing||rival?.bio||'Complete the assigned mission and return safely.')+'</p>'+
+    '<p class="wm-v085-sortie-description">'+esc(selected.briefing||rival?.bio||'Complete the assigned mission and return safely.')+'</p>'+encounterInfo+
     '<div class="wm-v085-sortie-metrics">'+
      '<div><span>DIFFICULTY</span><strong>'+esc(selected.risk||'LOW')+' RISK</strong></div>'+
      '<div><span>THREAT RATING</span><strong>'+esc(selected.threat??'—')+' / 100</strong></div>'+
      '<div><span>TIME LIMIT</span><strong>'+esc(selected.timeLimit||120)+' SECONDS</strong></div>'+
     '</div>'+
     '<div class="wm-v085-sortie-payoff"><strong>MISSION REWARD</strong><span>+'+esc(selected.suppliesAward||1)+' REPAIR SUPPLIES'+
-    (selected.rewardTier===2?' · ELITE UPGRADE POSSIBLE':'')+'</span></div>'+
+    (selected.rewardTier===2?' · INCLUDES A PREMIUM ELITE UPGRADE OPTION':' · STANDARD REWARD OPTIONS')+'</span></div>'+
     '<small class="wm-v085-sortie-history">'+(fought?'RIVAL RECORD · '+(prior.wins||0)+' WINS / '+(prior.losses||0)+' LOSSES':'FIRST ENCOUNTER')+
     ' · TO CHOOSE ANOTHER MISSION, RETURN TO THE CHART</small>'+
    '</div></article>':
@@ -269,7 +280,7 @@ function career(){
  <div class="wm-v13-campaign-status"><span>RANK <b>${currentRank} / 12</b></span><span>${run.lives} LIVES REMAINING</span><span>AIRCRAFT ${Math.round(run.condition??100)}%</span><span>${run.supplies||0} REPAIR SUPPLIES</span></div>
  ${S.lastEventSummary?'<div class="wm-v09-last-event" role="status"><strong>✓ '+esc(S.lastEventSummary.description||'EVENT COMPLETE')+'</strong><span>'+esc(S.lastEventSummary.mission||'SQUADRON EVENT')+' · SUPPLIES '+(S.lastEventSummary.suppliesDelta>=0?'+':'')+S.lastEventSummary.suppliesDelta+' · CONDITION '+(S.lastEventSummary.conditionDelta>=0?'+':'')+S.lastEventSummary.conditionDelta+'%</span></div>':''}
  <div class="campaign-rework-content"><div class="campaign-main">
- <div class="campaign-ladder-head"><strong>ROAD TO ACE</strong><span>BRANCHING ROUTES · CLIMB TO THE FINAL ACE</span></div>
+ <div class="campaign-ladder-head"><strong>ROAD TO ACE</strong><span>FOLLOW THE CONNECTING ROUTES · ONE FINAL BOSS</span></div>
  <div class="campaign-map-legend"><span>✈ INTERCEPT</span><span>◈ RECON</span><span>♠ ACE HUNT</span><span>✦ ESCORT</span><span>⚔ OUTNUMBERED</span><span>★ FINALE</span></div><div class="campaign-ladder-scroll" data-rank="${currentRank}" aria-label="Twelve rung branching campaign map">${connectedLadder}</div>
  <div class="campaign-rivals-title"><strong>YOUR SELECTED SORTIE</strong><small>ONE MISSION · ORDERS CONFIRMED</small></div>
  <div class="campaign-rivals wm-v085-single-sortie">${selectedSortie}</div>
@@ -557,7 +568,7 @@ document.addEventListener('click',e=>{
  if(el.dataset.filter){S.pilotFilter=el.dataset.filter;S.page=0;const i=roster.findIndex(p=>p.faction===S.pilotFilter);if(i>=0)S.pilotIndex=i;return show()}
  if(el.dataset.page){S.page=Math.max(0,Math.min(3,S.page+Number(el.dataset.page)));return show()}
  if(el.dataset.pilot){S.pilotIndex=roster.findIndex(p=>p.id===el.dataset.pilot);return show()}
- if(el.dataset.choice!=null){S.lastEventSummary=null;S.choice=Number(el.dataset.choice);if(S.screen==='career')S.campaignPanel='sortie';return show()}
+ if(el.dataset.choice!=null){const run=playerSave()?.run;const index=Number(el.dataset.choice);if(!run||!P.WingmanCampaign?.reachableLanes?.(run.lastLane,run.rank)?.includes(index))return;S.lastEventSummary=null;S.choice=index;if(S.screen==='career')S.campaignPanel='sortie';return show()}
 });
 document.addEventListener('input',e=>{
  if(!e.target.matches?.('input[data-audio-volume]'))return;
