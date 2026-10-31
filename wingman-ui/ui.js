@@ -444,7 +444,59 @@ function outcome(){
   </div>
  </section>`;
 }
-function show(){const views={title,profiles,home,operations,aircraft,pilots,career,records,options,outcome};const oldMap=stage.querySelector('.campaign-ladder-scroll');const mapMemory=oldMap?.closest?.('.wm-v13-ladder')?{rank:oldMap.dataset.rank,top:oldMap.scrollTop}:null;
+
+function eventResult(){
+ const run=playerSave()?.run,report=S.lastEventSummary||run?.lastEvent;
+ if(!report)return career();
+ const isDice=report.kind==='dice';
+ const faces=['⚀','⚁','⚂','⚃','⚄','⚅'];
+ const roll=Number(report.diceRoll),rolled=isDice&&Number.isInteger(roll)&&roll>=1&&roll<=6;
+ const headline=report.headline||(isDice?report.choice==='safe'?'WAGER DECLINED':
+    report.suppliesDelta>0?'YOU WON THE DICE':'YOU LOST THE DICE':'ENCOUNTER COMPLETE');
+ const beforeSupplies=Number.isFinite(report.suppliesBefore)?report.suppliesBefore:
+   Math.max(0,(run?.supplies||0)-(report.suppliesDelta||0));
+ const afterSupplies=Number.isFinite(report.suppliesAfter)?report.suppliesAfter:run?.supplies||0;
+ const beforeCondition=Number.isFinite(report.conditionBefore)?report.conditionBefore:
+   Math.max(0,(run?.condition??100)-(report.conditionDelta||0));
+ const afterCondition=Number.isFinite(report.conditionAfter)?report.conditionAfter:run?.condition??100;
+ const sign=v=>v>0?'+'+v:String(v);
+ const effectCards=(report.newEffects||[]).map(id=>'<div class="wm-v10-result-upgrade">'+
+    '<span>NEW AIRCRAFT MODIFICATION</span><strong>'+esc(perkById(id)?.name||id)+'</strong>'+
+    '<small>'+esc(perkById(id)?.detail||'Added to your campaign aircraft')+'</small></div>').join('');
+ const outcomeText=rolled?(report.diceWon?'WINNING THROW · YOUR SUPPLIES HAVE INCREASED':
+       'LOSING THROW · ONE SUPPLY WAS STAKED'):
+    isDice?'YOU CHOSE TO KEEP YOUR SUPPLIES':
+    report.kind==='shop'?'YOUR QUARTERMASTER ORDER HAS BEEN PROCESSED':
+    report.kind==='supply'?'THE GROUND CREW HAS COMPLETED THE STOP':
+    report.kind==='intel'?'THE INTELLIGENCE REPORT HAS BEEN FILED':
+    'THE SQUADRON HAS RECORDED YOUR DECISION';
+ return '<section class="frame wm-v10-event-result">'+
+  header('ENCOUNTER COMPLETE','KING OF THE SKIES · OPERATIONS REPORT · FORM 11')+
+  '<div class="wm-v10-result-workspace">'+
+    '<aside class="wm-v10-result-art"><div class="wm-v10-result-stamp">SQUADRON OPERATIONS · RANK '+esc(report.rank)+'</div>'+
+     '<span class="wm-v10-result-icon" aria-hidden="true">'+(rolled?faces[roll-1]:isDice?'⚄':report.kind==='shop'?'⚒':report.kind==='supply'?'✚':report.kind==='intel'?'◈':'✦')+'</span>'+
+     '<strong>'+esc(report.mission||'SQUADRON ENCOUNTER')+'</strong>'+
+     '<small>'+esc(report.label||'RAF FIGHTER COMMAND')+'</small></aside>'+
+    '<article class="wm-v10-result-paper" aria-label="Encounter outcome report">'+
+      '<div class="wm-v10-report-kicker">FORM 11 / FIELD ENCOUNTER RESULTS</div>'+
+      '<h2>'+esc(headline)+'</h2>'+
+      '<p class="wm-v10-report-summary">'+esc(outcomeText)+'</p>'+
+      '<div class="wm-v10-result-decision"><span>YOUR DECISION</span><strong>'+esc(report.description||'FIELD ACTION')+'</strong></div>'+
+      (rolled?'<div class="wm-v10-dice-result"><strong>'+faces[roll-1]+'</strong><div><small>ACTUAL DIE RESULT</small>'+
+        '<b>'+roll+' / 6</b><span>'+(report.diceWon?'WIN · ROLLED 4–6':'LOSS · ROLLED 1–3')+'</span></div></div>':'')+
+      '<div class="wm-v10-result-ledger">'+
+        '<div><small>REPAIR SUPPLIES</small><strong>'+esc(beforeSupplies)+' → '+esc(afterSupplies)+'</strong>'+
+           '<span class="'+(report.suppliesDelta<0?'negative':'')+'">'+sign(report.suppliesDelta||0)+'</span></div>'+
+        '<div><small>AIRCRAFT CONDITION</small><strong>'+esc(beforeCondition)+'% → '+esc(afterCondition)+'%</strong>'+
+           '<span class="'+(report.conditionDelta<0?'negative':'')+'">'+sign(report.conditionDelta||0)+'%</span></div>'+
+      '</div>'+effectCards+
+      '<div class="wm-v10-result-actions">'+confirmButton('RETURN TO CAMPAIGN LADDER ›','continue-event','red')+'</div>'+
+    '</article>'+
+  '</div><div class="wm-v10-result-footer">RESULT SAVED TO THE CAMPAIGN LOG · RUNG '+esc(report.rank)+' COMPLETE</div>'+
+ '</section>';
+}
+
+function show(){const views={title,profiles,home,operations,aircraft,pilots,career,records,options,outcome,'event-result':eventResult};const oldMap=stage.querySelector('.campaign-ladder-scroll');const mapMemory=oldMap?.closest?.('.wm-v13-ladder')?{rank:oldMap.dataset.rank,top:oldMap.scrollTop}:null;
 stage.innerHTML=(views[S.screen]||home)();
 const newMap=stage.querySelector('.campaign-ladder-scroll');
 if(newMap){if(mapMemory&&mapMemory.rank===newMap.dataset.rank)newMap.scrollTop=mapMemory.top;else{const current=newMap.querySelector('.route-map-row.is-current');if(current){const top=current.getBoundingClientRect().top-newMap.getBoundingClientRect().top+newMap.scrollTop;newMap.scrollTop=Math.max(0,Math.min(newMap.scrollHeight-newMap.clientHeight,top-newMap.clientHeight*.65));}}}document.querySelector('.utility-home').hidden=['home','title','profiles'].includes(S.screen);document.querySelector('.utility-settings').hidden=S.screen!=='career';document.querySelector('.career-settings-popup').hidden=true;nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===S.screen?'page':'false'));document.querySelector('#squadron strong').textContent=playerSave()?.profile?.name||'Guest Pilot';stage.querySelectorAll('select[data-setting]').forEach(sel=>sel.value=S[sel.dataset.setting]);stage.scrollTop=0;}
@@ -456,6 +508,7 @@ function action(v){
  if(v==='opening-start'){S.screen='profiles';S.back=[];return show();}
  if(v==='profile-back'){S.screen='title';S.back=[];return show();}
  if(v==='switch-profile'){S.screen='profiles';S.back=['home'];return show();}
+ if(v==='continue-event'){S.lastEventSummary=null;S.campaignPanel='ladder';S.choice=0;S.screen='career';S.back=[];return show();}
  if(v==='campaign-map'){S.campaignPanel='ladder';return show();}
  if(v==='campaign-sortie'){S.campaignPanel='sortie';return show();}
  if(v==='campaign-settings'){const panel=document.querySelector('.career-settings-popup');panel.hidden=!panel.hidden;return;}
@@ -484,7 +537,7 @@ function action(v){
 document.addEventListener('click',e=>{
  const el=e.target.closest('button');if(!el)return;
  if(el.dataset.go){S.career=false;return go(el.dataset.go)}
- if(el.dataset.eventOption){const result=api()?.resolveCampaignEvent?.(S.choice,el.dataset.eventOption);if(result){S.campaignPanel='ladder';S.choice=0;S.screen='career';S.lastEventSummary=result;show();}return;}
+ if(el.dataset.eventOption){const result=api()?.resolveCampaignEvent?.(S.choice,el.dataset.eventOption);if(result){S.campaignPanel='ladder';S.choice=0;S.lastEventSummary=result;S.screen='event-result';S.back=[];show();}return;}
  if(el.dataset.reward){
    if(api()?.claimCampaignReward?.(el.dataset.reward)){
      S.screen='career';S.lastCareer=false;S.lastResult=null;S.back=[];show();
