@@ -53,7 +53,7 @@ test('older pilots and source art remain compatible; the selected event is never
  const ui=fs.readFileSync(path.join(root,'wingman-ui/ui.js'),'utf8');
  const bridge=fs.readFileSync(path.join(root,'src/ui/wingman-bridge.js'),'utf8');
  assert.match(career,/MAX_RANK=12/);
- assert.match(career,/campaignSchema=9/);
+ assert.match(career,/campaignSchema=10/);
  assert.match(career,/resolveCampaignEvent/);
  assert.match(bridge,/resolveCampaignEvent/);
  assert.match(ui,/data-event-option/);
