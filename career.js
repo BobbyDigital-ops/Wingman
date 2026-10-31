@@ -492,11 +492,23 @@ function finishEncounter(won,encounter,summary={}){
    aircraft:run.aircraft,integrity:Number(summary.integrity??1),
    kills,grade,threat:rival.threat??null,
    secondsRemaining:Math.max(0,Number(summary.remainingSeconds??0)||0),
+   secondsElapsed:Math.max(0,Number(summary.elapsedSeconds??0)||0),
+   shots:Math.max(0,Math.floor(Number(summary.shots)||0)),
+   hits:Math.max(0,Math.floor(Number(summary.hits)||0)),
+   damageDealt:Math.max(0,Math.round(Number(summary.damageDealt)||0)),
+   damageTaken:Math.max(0,Math.round(Number(summary.damageTaken)||0)),
+   reinforcements:Math.max(0,Math.floor(Number(summary.reinforcements)||0)),
+   alliesLost:Math.max(0,Math.floor(Number(summary.alliesLost)||0)),
+   enemiesExpected:rival.totalEnemyThreat||rival.types?.length||1,
    suppliesEarned:won?rival.suppliesAward||1:0};
  archiveService({won,rank:atRank,rival:rival.label,
   mission:rival.mission||'DOGFIGHT',enemies:rival.types.length,
   kills,grade,threat:rival.threat??null,risk:rival.risk||'LOW',
   remainingSeconds:Math.max(0,Number(summary.remainingSeconds??0)||0),
+  shots:Math.max(0,Math.floor(Number(summary.shots)||0)),
+  hits:Math.max(0,Math.floor(Number(summary.hits)||0)),
+  damageDealt:Math.max(0,Math.round(Number(summary.damageDealt)||0)),
+  damageTaken:Math.max(0,Math.round(Number(summary.damageTaken)||0)),
   result:won?'VICTORY':'SHOT DOWN'});
  if(data.run){run.visits++;if(won){run.choices=makeChoices(run);run.campaignSchema=10;}}
  save();active=null;
