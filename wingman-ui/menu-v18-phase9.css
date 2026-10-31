@@ -1,0 +1,13 @@
+/* Wingman Phase 9D and 9E: accessible audio settings and mobile polish. */
+.wm-v14-option-content .wm-v9-audio-mute{display:inline-flex;align-items:center;justify-content:center;min-height:39px;margin:5px 0 10px;padding:9px 18px}
+.wm-v9-volume{width:min(580px,100%);padding:clamp(10px,1.4vw,18px);border:1px solid #b99e70;background:linear-gradient(145deg,#18303b,#0c1c29);box-shadow:inset 0 3px 11px #0005}
+.wm-v9-volume label{display:flex;justify-content:space-between;gap:10px;color:#f1dfb9;font:800 clamp(13px,1.4vw,18px) 'Barlow Condensed',Impact,sans-serif;letter-spacing:.08em}
+.wm-v9-volume label strong{color:#f3c579;font-size:1.2em}
+.wm-v9-volume input[type=range]{display:block;width:100%;height:24px;margin-top:8px;accent-color:#d2ad68;cursor:pointer;touch-action:pan-x}
+.wm-v14-option-content button[data-action=fullscreen]{margin-top:8px;min-height:40px}
+.wm-v9-volume input:focus-visible,.wm-v14-option-content button:focus-visible{outline:3px solid #f4c86d;outline-offset:3px}
+@media(max-height:520px) and (orientation:landscape){
+ .wm-v14-option-content .wm-v9-audio-mute{min-height:30px;padding:5px 12px;margin:3px 0 6px}
+ .wm-v9-volume{padding:8px 10px}
+ .wm-v9-volume input[type=range]{margin-top:3px}
+}
