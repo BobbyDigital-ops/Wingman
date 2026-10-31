@@ -49,5 +49,5 @@ test('latest campaign dossier stylesheet is present after v0.8.4 styling',()=>{
  assert.ok(html.indexOf('menu-v16-selected-sortie.css')>html.indexOf('menu-v15-debrief.css'));
  assert.match(css,/wm-v085-sortie-brief/);
  assert.match(css,/service-brief\{display:none!important\}/);
- assert.match(html,/ui\.js\?v=85/);
+ assert.match(html,/ui\.js\?v=90/);
 });
