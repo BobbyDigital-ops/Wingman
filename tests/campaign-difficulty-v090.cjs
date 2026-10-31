@@ -2,7 +2,7 @@
 /* Phase 9B: production-engine campaign benchmark, not a human difficulty rating.
    Examples:
      node tests/campaign-difficulty-v090.cjs --aircraft=fighter
-     node tests/campaign-difficulty-v090.cjs --aircraft=all --faction=all --output=/tmp/wingman-balance.json
+     node tests/campaign-difficulty-v090.cjs --aircraft=all --faction=all --loadout=upgraded --preferred=all --output=/tmp/wingman-balance.json
 */
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
@@ -18,6 +18,8 @@ const aircraft={
  Allies:['fighter','heavy','bomber'],Axis:['bf109','bf110','he111']
 };
 const planes=opts.aircraft==='all'?null:(opts.aircraft||'fighter').split(',');
+const loadout=opts.loadout||'stock';
+const preferred=opts.preferred||'fighter';
 const selectedRanks=opts.ranks?opts.ranks.split(',').map(Number):Array.from({length:C.MAX_RANK},(_,i)=>i+1);
 const scenarios=[],nonCombat=[];
 for(const faction of factions){
@@ -28,7 +30,8 @@ for(const faction of factions){
  };
  for(const rank of selectedRanks)for(let lane=0;lane<3;lane++){
   assert.ok(rank>=1&&rank<=C.MAX_RANK,'Invalid rank');
-  const run={faction,rank,seed:13071,visits:rank*2,condition:100,supplies:3,effects:[]};
+  const run={faction,rank,seed:13071,visits:rank*2,condition:100,supplies:3,
+   effects:loadout==='upgraded'?['reinforced-spars','gunsmith','control-rigging','supercharger']:[]};
   const lead=pool[(rank*3+lane)%pool.length];
   const final=rank===C.MAX_RANK;
   const duo=!final&&rank>=3&&lane===2&&rank%2===1;
@@ -44,7 +47,8 @@ for(const faction of factions){
   const enc=C.decorateEncounter(raw,run,lane,{pool,profile:p=>profile(p,rank)});
   if(enc.isNonCombat){nonCombat.push({rank,lane,type:enc.nodeType,faction});continue;}
   for(const type of aircraft[faction].filter(p=>!planes||planes.includes(p))){
-   scenarios.push({...enc,playerType:type,faction});
+   scenarios.push({...enc,playerType:type,faction,
+    playerAptitude:C.sortieBonuses({...run,effects:[...run.effects]},type,preferred==='all'||preferred===type)});
   }
  }
 }
@@ -70,7 +74,7 @@ const group=(key)=>{
 };
 const report={
  disclaimer:'Scripted AI test pilot using the real Wingman engine, not a human win probability or automatic balance pass.',
- metadata:{factions,ranks:selectedRanks,aircraft:opts.aircraft||'fighter',
+ metadata:{factions,ranks:selectedRanks,aircraft:opts.aircraft||'fighter',loadout,preferred,
   combatMissions:battles.length,nonCombatNodes:nonCombat.length,attempts:battles.length*2},
  byRegion:group(x=>x.region),byRisk:group(x=>x.risk),
  byAircraft:group(x=>x.playerType),byRank:group(x=>x.rank),
