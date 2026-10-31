@@ -3,7 +3,8 @@
    historical records remain authoritative in career.js. */
 (function(root){
 'use strict';
-const MAX_SUPPLIES=12,MAX_EFFECTS=14;
+const MAX_SUPPLIES=12,MAX_EFFECTS=14,MAX_RANK=12;
+const REGIONS=['CHANNEL DEFENCE','CONTINENTAL FRONT','THE FINAL PUSH'];
 const UPGRADES=[
  {id:'reinforced-spars',name:'REINFORCED SPARS',detail:'+8% hull for the rest of this run',mods:{hull:.08}},
  {id:'armour-plates',name:'EXTRA ARMOUR',detail:'+10% armour for the rest of this run',mods:{armour:.10}},
@@ -27,6 +28,81 @@ const SETBACKS=[
  {id:'wing-strain',name:'WING STRAIN',detail:'-6% handling until repaired',mods:{turn:-.06}},
  {id:'sights-damaged',name:'DAMAGED SIGHTS',detail:'-6% gun damage until repaired',mods:{damage:-.06}}
 ];
+
+// Each row is an encounter, not necessarily a fight. Four rungs per theatre.
+// Rungs 4 and 8 include regional elite battles; 12 always ends in combat.
+const NODE_LAYOUT=[
+ ['combat','combat','combat'],['supply','combat','intel'],['combat','event','combat'],
+ ['elite','elite','elite'],['shop','combat','dice'],['combat','intel','combat'],
+ ['supply','combat','event'],['elite','elite','elite'],['shop','combat','intel'],
+ ['combat','event','combat'],['supply','combat','dice'],['boss','boss','boss']
+];
+const EVENT_DESCRIPTIONS={
+ supply:{mission:'FIELD SUPPLIES',label:'GROUND CREW',briefing:'The engineers have spare parts, fuel and a battered crate of equipment. Make the best of the stop.'},
+ intel:{mission:'INTELLIGENCE BRIEFING',label:'OPERATIONS OFFICER',briefing:'Fresh reconnaissance reports reveal enemy activity. Choose how to use the intelligence.'},
+ event:{mission:'MESS HALL EVENT',label:'SQUADRON MESS',briefing:'An unexpected decision awaits in the squadron mess. Fortune can favour the prepared.'},
+ shop:{mission:'THE QUARTERMASTER',label:'AIRFIELD STORES',briefing:'Spend repair supplies for practical support, or keep what you have.'},
+ dice:{mission:'DICE IN THE HANGAR',label:'HANGAR GAMBLERS',briefing:'The mechanics invite you to roll the bones. You can walk away or take a small gamble.'}
+};
+function regionForRank(rank){return REGIONS[Math.min(2,Math.floor((Math.max(1,rank)-1)/4))];}
+function nodeTypeFor(rank,lane){return NODE_LAYOUT[Math.min(MAX_RANK,Math.max(1,rank))-1][Math.max(0,Math.min(2,lane))];}
+function eventOptions(kind){
+ switch(kind){
+ case 'supply':return [
+  {id:'patch',name:'REPAIR THE AIRFRAME',detail:'Restore 25% aircraft condition.'},
+  {id:'crate',name:'COLLECT SPARE PARTS',detail:'Gain 3 repair supplies.'}];
+ case 'intel':return [
+  {id:'scout',name:'SCOUT THE FRONT',detail:'Collect 2 repair supplies from the reconnaissance cache.'},
+  {id:'prepare',name:'PREPARE AN AMBUSH',detail:'Gain an upgraded gunsight for this run, or supplies if already fitted.'}];
+ case 'shop':return [
+  {id:'service',name:'FULL SERVICE · 2 SUPPLIES',detail:'Spend 2 supplies to restore 50% condition.'},
+  {id:'guns',name:'GUNSMITH · 3 SUPPLIES',detail:'Spend 3 supplies to install +7% gun damage.'},
+  {id:'leave',name:'LEAVE STORES',detail:'Keep your supplies and move on.'}];
+ case 'dice':return [
+  {id:'safe',name:'PASS THE DICE',detail:'Keep your supplies and continue.'},
+  {id:'roll',name:'ROLL FOR A CRATE',detail:'Stake 1 supply: win 4 supplies, or lose the stake.'}];
+ default:return [
+  {id:'help',name:'HELP THE GROUND CREW',detail:'Earn 2 repair supplies.'},
+  {id:'risk',name:'TEST A NEW ENGINE',detail:'Gain speed tuning, but the engine may suffer wear.'}];
+ }
+}
+function resolveEvent(run,enc,optionId){
+ normalizeRun(run);
+ if(!enc?.isNonCombat||run.pendingReward||run.rank!==enc.rank)return null;
+ const available=eventOptions(enc.nodeType);
+ if(!available.some(x=>x.id===optionId))return null;
+ const before={condition:run.condition,supplies:run.supplies,effects:[...run.effects]};
+ const gain=(amount)=>{run.supplies=n(run.supplies+amount,0,MAX_SUPPLIES);};
+ const repair=(amount)=>{run.condition=n(run.condition+amount,15,100);};
+ const addEffect=(id)=>{if(byId[id]&&!run.effects.includes(id))run.effects.push(id);run.effects=run.effects.slice(-MAX_EFFECTS);};
+ const kind=enc.nodeType;
+ const gamble=hash(run.seed,run.rank,enc.lane,run.visits,optionId)%2===0;
+ if(kind==='supply'){if(optionId==='patch')repair(25);else gain(3);}
+ else if(kind==='intel'){if(optionId==='scout')gain(2);else if(!run.effects.includes('ace-weapon-sights'))addEffect('ace-weapon-sights');else gain(2);}
+ else if(kind==='shop'){
+  const cost=optionId==='service'?2:optionId==='guns'?3:0;
+  if(run.supplies<cost)return null;
+  if(cost)gain(-cost);
+  if(optionId==='service')repair(50);
+  if(optionId==='guns')addEffect('gunsmith');
+ }else if(kind==='dice'){
+  if(optionId==='roll'){if(run.supplies<1)return null;gain(gamble?4:-1);}
+ }else if(kind==='event'){
+  if(optionId==='help')gain(2);
+  else {addEffect('supercharger');if(!gamble)addEffect('engine-wear');}
+ }
+ const result={
+  rank:run.rank,kind,choice:optionId,mission:enc.mission,
+  label:enc.label,description:available.find(o=>o.id===optionId)?.name||'EVENT COMPLETED',
+  suppliesDelta:run.supplies-before.supplies,conditionDelta:run.condition-before.condition,
+  newEffects:run.effects.filter(id=>!before.effects.includes(id))
+ };
+ run.lastEvent=result;
+ run.eventHistory=Array.isArray(run.eventHistory)?run.eventHistory.slice(-23):[];
+ run.eventHistory.push(result);
+ return result;
+}
+
 const n=(v,min,max)=>Math.max(min,Math.min(max,Number(v)||0));
 const pick=(arr,seed)=>arr[(Math.abs(seed)>>>0)%arr.length];
 const hash=(...v)=>{let x=2166136261;for(const value of v.join('|'))x=Math.imul(x^value.charCodeAt(0),16777619)>>>0;return x;};
@@ -40,21 +116,28 @@ function normalizeRun(run){
  return run;
 }
 function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
- const rank=n(run.rank,1,8),final=rank===8;
+ const rank=n(run.rank,1,MAX_RANK),final=rank===MAX_RANK;
+ const kind=nodeTypeFor(rank,lane);
  const risk=lane===0?'LOW':lane===1?'MEDIUM':'HIGH';
  // Each row offers three genuinely distinct engagements. Every route still
  // uses the existing pilots and real flight physics, never decorative labels.
+ if(!['combat','elite','boss'].includes(kind)){
+  const e=EVENT_DESCRIPTIONS[kind];
+  return Object.assign(enc,{rank,lane,nodeType:kind,isNonCombat:true,
+   id:'event-'+rank+'-'+lane,label:e.label,mission:e.mission,briefing:e.briefing,
+   objective:'event',risk:'EVENT',types:[],opponents:[],wingmen:[],timeLimit:0,
+   eventOptions:eventOptions(kind),suppliesAward:0,rewardTier:0,threat:0,finalBoss:false,
+   region:regionForRank(rank)});
+ }
  const encounters=[
-  ['patrol','duel','ace-hunt'],
-  ['intercept','duel','ace-hunt'],
-  ['recon','ace-hunt','outnumbered'],
-  ['intercept','escort','outnumbered'],
-  ['recon','ace-hunt','outnumbered'],
-  ['intercept','ace-hunt','outnumbered'],
-  ['recon','escort','outnumbered'],
-  ['final','final','final']
+  ['patrol','duel','ace-hunt'],['intercept','duel','ace-hunt'],
+  ['recon','ace-hunt','outnumbered'],['intercept','escort','outnumbered'],
+  ['recon','duel','ace-hunt'],['intercept','ace-hunt','outnumbered'],
+  ['recon','escort','outnumbered'],['intercept','ace-hunt','outnumbered'],
+  ['recon','duel','ace-hunt'],['intercept','ace-hunt','outnumbered'],
+  ['recon','escort','outnumbered'],['final','final','final']
  ];
- const objective=encounters[rank-1][lane];
+ const objective=kind==='elite'?(lane===2?'outnumbered':'ace-hunt'):encounters[rank-1][lane];
  // Maintain the known real roster; don't create artificial pilots or replace art.
  if(objective==='intercept'){
    const type=run.faction==='Allies'?'he111':'bomber';
@@ -99,7 +182,8 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
      enc.types=enc.opponents.map(p=>p.plane);enc.id=enemyFighter.id;enc.label=enemyFighter.name;
    }
  }
- enc.lane=lane;enc.risk=risk;enc.objective=objective;
+ enc.lane=lane;enc.risk=risk;enc.objective=objective;enc.nodeType=kind;
+ enc.region=regionForRank(rank);
  enc.mission=final?'FINAL SQUADRON':
    objective==='escort'?'BOMBER ESCORT':
    objective==='intercept'?'BOMBER INTERCEPTION':
@@ -122,7 +206,7 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
    objective==='ace-hunt'?Math.max(60,87-rank*3):
    objective==='outnumbered'?Math.max(97,126-rank*3):115;
  enc.escortType=objective==='escort'?(run.faction==='Allies'?'bomber':'he111'):null;
- enc.aiRank=n(rank+(lane===2?2:lane===1?1:0),1,8);
+ enc.aiRank=n(Math.ceil(rank*8/MAX_RANK)+(lane===2?2:lane===1?1:0),1,8);
  enc.difficulty=enc.aiRank<=2?'rookie':enc.aiRank<=4?'standard':'ace';
  enc.suppliesAward=final?3:lane+1;
  enc.rewardTier=lane;
@@ -218,7 +302,7 @@ function settle(run,encounter,won,remaining=1){
  }
  return run;
 }
-const api={UPGRADES,ELITE_UPGRADES,SETBACKS,normalizeRun,decorateEncounter,threatRating,sortieGrade,offerReward,claim,repair,sortieBonuses,settle};
+const api={MAX_RANK,REGIONS,NODE_LAYOUT,nodeTypeFor,regionForRank,eventOptions,resolveEvent,UPGRADES,ELITE_UPGRADES,SETBACKS,normalizeRun,decorateEncounter,threatRating,sortieGrade,offerReward,claim,repair,sortieBonuses,settle};
 root.WingmanCampaign=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
