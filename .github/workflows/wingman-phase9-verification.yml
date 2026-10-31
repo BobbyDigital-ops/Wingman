@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/phase9b-campaign-balance
+      - feature/phase9f-reinforcements-mission-depth
   workflow_dispatch:
 jobs:
   unit:
