@@ -221,7 +221,7 @@ function career(){
    if(final&&!now&&lane!==1)return '';
    const actual=now?choices[lane]:null,meta=now?encounterMeta(actual?.mission,actual?.nodeType):final?{icon:'★',name:'FINAL ACE'}:passed?{icon:'✓',name:'CLEARED'}:{icon:'?',name:'UNREVEALED'};
    const chosen=now&&lane===Math.min(S.choice,2),state=now?'is-available':passed?'is-complete':'is-future';
-   const label=now?(meta.name+' · '+(actual?.label||'CHOOSE A RIVAL')+' · '+(actual?.risk||'')+' RISK'):meta.name;
+   const label=now?(meta.name+' · '+(actual?.label||'CHOOSE A RIVAL')+' · '+(actual?.risk||'')+' RISK'+(actual?.hazardLabel?' · '+actual.hazardLabel:'')):meta.name;
    const tag=now&&actual?'button':'span',attrs=now&&actual?' type="button" data-choice="'+lane+'" aria-pressed="'+(chosen?'true':'false')+'"':'';
    return '<'+tag+' class="route-map-node '+(chosen?'is-chosen ':'')+state+'" style="left:'+x+'%" title="'+esc(label)+'" aria-label="'+esc(label)+'"'+attrs+'><span class="node-symbol">'+meta.icon+'</span><small>'+esc(meta.name)+(actual?' · '+esc(actual.risk)+' RISK':'')+'</small></'+tag+'>';
   }).join('')+'</div></div>';
@@ -253,6 +253,7 @@ function career(){
     '<h2>'+esc(selected.mission||'COMBAT SORTIE')+'</h2>'+
     '<div class="wm-v085-sortie-opponent"><small>OPPOSING PILOT</small><strong>'+esc(rival?.name||selected.label||'UNKNOWN RIVAL')+'</strong></div>'+
     '<p class="wm-v085-sortie-description">'+esc(selected.briefing||rival?.bio||'Complete the assigned mission and return safely.')+'</p>'+
+    (selected.hazardLabel?'<div class="wm-v09-hazard-note"><strong>FLIGHT CONDITIONS · '+esc(selected.hazardLabel)+'</strong><span>'+esc(selected.hazardBriefing||'')+'</span></div>':'')+
     '<div class="wm-v085-sortie-metrics">'+
      '<div><span>DIFFICULTY</span><strong>'+esc(selected.risk||'LOW')+' RISK</strong></div>'+
      '<div><span>THREAT RATING</span><strong>'+esc(selected.threat??'—')+' / 100</strong></div>'+
