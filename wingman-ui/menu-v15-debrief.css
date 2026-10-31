@@ -1,0 +1,175 @@
+/* Wingman v0.8.4 — v11 illustrated after-action report.
+   Visual-only: maintain original approved artwork, pilot/aircraft IDs and live result actions. */
+#stage>.wm-v084-debrief{
+  display:flex!important;flex-direction:column!important;
+  height:100%!important;min-height:0!important;overflow:hidden!important;
+  background:linear-gradient(105deg,#071c29ef,#102735bd 70%,#06131bd9),
+   url('./v11-art/operations.jpg') center/cover no-repeat!important;
+  color:#f8e7c9!important;
+}
+.wm-v084-debrief .section-header{flex:none!important;min-height:0!important}
+.wm-v084-debrief .section-header h1{font-size:clamp(27px,4vw,49px)!important}
+.wm-v084-debrief-body{
+  flex:1;min-height:0;min-width:0;width:min(1380px,100%);
+  margin:auto;padding:clamp(7px,1.8vh,19px) clamp(10px,3.3vw,45px);
+  display:grid;grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr);
+  gap:clamp(10px,2vw,25px);
+}
+.wm-v084-debrief-illustration{
+  position:relative;min-width:0;min-height:0;overflow:hidden;
+  border:8px solid #5d4b35;outline:1px solid #c1a272;outline-offset:-4px;
+  background-image:linear-gradient(180deg,#071b2433 0%,transparent 40%,#081c29bd 100%),
+    var(--art-raf-hangar-scene,url('./v11-art/hangar.webp'));
+  background-size:cover;background-position:center 47%;
+  box-shadow:0 15px 30px #000a,inset 0 0 18px #0a1216;
+}
+.wm-v084-photo-tag{
+  display:inline-flex;position:absolute;top:clamp(7px,1.5vw,16px);left:clamp(7px,1.5vw,16px);
+  padding:7px 12px;background:linear-gradient(#203948eb,#081c28eb);
+  border-left:4px solid #d4aa6a;color:#f3dcaf;
+  font:900 clamp(10px,1.2vw,15px) 'Barlow Condensed',Impact,sans-serif;
+  letter-spacing:.14em;box-shadow:0 4px 12px #0007;
+}
+.wm-v084-photo-caption{
+  position:absolute;left:0;right:0;bottom:0;
+  display:flex;gap:5px;justify-content:space-between;align-items:center;
+  background:linear-gradient(90deg,#071a29f2,#0a2736e0);border-top:1px solid #cead72;
+  padding:clamp(7px,1vw,15px);color:#e9d0a4;
+  font:800 clamp(10px,1.1vw,13px) 'Barlow Condensed',Impact,sans-serif;
+  letter-spacing:.13em;
+}
+.wm-v084-debrief-paper{
+  display:flex;flex-direction:column;min-width:0;min-height:0;
+  padding:clamp(11px,2.1vw,30px);
+  border:10px solid #624a2e;outline:2px solid #c19f69;outline-offset:-5px;
+  background:
+   repeating-linear-gradient(165deg,#6d54300a 0px,#6d54300a 1px,transparent 2px,transparent 19px),
+   linear-gradient(135deg,#f1e0b8,#d5bd92 66%,#e9d2a2);
+  color:#322b22;overflow:auto;scrollbar-width:thin;scrollbar-color:#98764a #ead3a3;
+  box-shadow:inset 0 0 32px #73563349,0 16px 33px #000b;
+}
+.wm-v084-report-kicker{
+  flex:none;font:900 clamp(10px,1vw,13px) 'Barlow Condensed',Impact,sans-serif;
+  color:#745334;letter-spacing:.18em;
+}
+.wm-v084-report-top{
+  flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  margin-top:8px;border-top:3px double #8d714b;border-bottom:1px solid #9c8159;
+  padding:5px 0;font:900 clamp(10px,1.15vw,14px) 'Barlow Condensed',Impact,sans-serif;
+  color:#60462a;letter-spacing:.14em;
+}
+.wm-v084-verdict{
+  font:900 clamp(35px,5vw,78px)/.98 'Barlow Condensed',Impact,sans-serif!important;
+  letter-spacing:.025em;color:#293944!important;margin:clamp(6px,1.5vh,14px) 0!important;
+  text-shadow:0 1px 0 #fff7;
+}
+.wm-v084-debrief.is-victory .wm-v084-verdict{color:#2c4a38!important}
+.wm-v084-debrief.is-defeat .wm-v084-verdict{color:#803c2d!important}
+.wm-v084-report-summary{
+  color:#594d39!important;font:600 clamp(11px,1.15vw,15px)/1.35 Barlow,Arial,sans-serif;
+  margin:0 0 clamp(6px,1vh,14px)!important;
+}
+.wm-v084-report-rule{
+  flex:none;display:flex;justify-content:space-between;align-items:center;gap:10px;
+  color:#694e2d;border-bottom:1px solid #ab8d5f;padding:5px 0;
+  font:900 clamp(10px,1.2vw,14px) 'Barlow Condensed',Impact,sans-serif;letter-spacing:.12em;
+}
+.wm-v084-report-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(6px,1.2vh,15px);
+  padding:clamp(6px,1.2vh,14px) 0;flex:0 1 auto;
+}
+.wm-v084-report-grid>div{
+  min-width:0;padding-left:9px;border-left:3px solid #91754d;
+}
+.wm-v084-report-grid small{
+  display:block;color:#785938;font:900 clamp(9px,.95vw,12px) 'Barlow Condensed',Impact,sans-serif;
+  letter-spacing:.12em;
+}
+.wm-v084-report-grid strong{
+  display:block;overflow-wrap:anywhere;color:#253740;
+  font:900 clamp(15px,1.9vw,25px)/1.04 'Barlow Condensed',Impact,sans-serif;
+  margin-top:4px;
+}
+.wm-v084-debrief-actions{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:clamp(6px,1vw,12px);margin-top:auto;padding-top:clamp(6px,1vh,12px);
+  border-top:1px solid #b09369;
+}
+.wm-v084-debrief-actions .btn{
+  min-width:0;min-height:39px;padding:8px!important;
+  border-radius:3px!important;font:900 clamp(13px,1.6vw,22px) 'Barlow Condensed',Impact,sans-serif!important;
+  letter-spacing:.045em!important;white-space:normal;
+  box-shadow:inset 0 2px #fff4,0 4px 0 #30211a,0 7px 15px #0008!important;
+}
+.wm-v084-debrief-actions .btn:first-child{grid-column:1/-1;background:linear-gradient(#d46a47,#9b3023)!important}
+.wm-v084-debrief-actions .btn.navy{background:linear-gradient(#3e6070,#132d3c)!important}
+.wm-v084-debrief-actions .btn.outline{
+  background:linear-gradient(#d7c29a,#aa8d62)!important;color:#2e2a23!important;
+  border:2px solid #725937!important;
+}
+.wm-v084-debrief-footer{
+  flex:none;border-top:1px solid #a78955;
+  padding:5px 22px;text-align:right;
+  background:#061b27d9;color:#d0ab6c;
+  font:900 10px 'Barlow Condensed',Impact,sans-serif;letter-spacing:.13em;
+}
+.wm-v12-hangar .wm-v12-primary[data-action="launch-arcade"],
+.wm-v12-hangar .wm-v12-primary[data-action="launch-career"]{
+  background:linear-gradient(#cb6648,#a33627 55%,#6d241d)!important;
+  border:1px solid #edb18c!important;color:#fff4d8!important;
+  box-shadow:inset 0 2px #ffe1b05c,0 4px #301913,0 8px 14px #0007!important;
+  letter-spacing:.08em;
+}
+.wm-v084-launch-error{
+  position:absolute;bottom:60px;right:10px;z-index:20;background:#622620;
+  color:#fff1d4;padding:6px 10px;border:1px solid #edc385;
+  font:800 13px 'Barlow Condensed',Impact,sans-serif;
+}
+/* Retain existing campaign rewards and pilot identity; finish their frame in v11 materials. */
+.wg-v7-debrief .wg-v7-debrief-banner{
+  border:7px solid #55422f!important;outline:1px solid #c5a577;
+  background:linear-gradient(135deg,#253b45df,#0a2431ed)!important;
+  box-shadow:0 14px 29px #0009!important;
+}
+.wg-v7-debrief .wg-v7-debrief-choice{
+  border:8px solid #60482f!important;outline:1px solid #c8a474;
+  background:linear-gradient(135deg,#ebd7ab,#c7ac79)!important;
+  color:#302b22!important;box-shadow:0 16px 30px #0009;
+}
+.wg-v7-debrief .wg-v7-debrief-choice h3{color:#2c3740!important}
+.wg-v7-debrief .wg-v7-debrief-choice p{color:#574632!important}
+.wg-v7-debrief .wg-v7-overline{color:#78502e!important}
+.wg-v7-debrief .wg-v7-reward-card{background:linear-gradient(#304858,#102c3a)!important}
+/* Compact landscape is the main handheld target. No off-screen action buttons. */
+@media(max-height:530px) and (orientation:landscape){
+ .wm-v084-debrief .section-header{padding:3px 12px!important}
+ .wm-v084-debrief .section-header h1{font-size:clamp(23px,3.3vw,34px)!important}
+ .wm-v084-debrief-body{padding:5px 9px;gap:8px}
+ .wm-v084-debrief-illustration{border-width:5px}
+ .wm-v084-debrief-paper{border-width:5px;padding:8px 10px}
+ .wm-v084-report-kicker{font-size:9px}
+ .wm-v084-report-top{margin-top:4px;padding:3px 0;font-size:9px}
+ .wm-v084-verdict{font-size:clamp(30px,4.7vw,44px)!important;margin:3px 0!important}
+ .wm-v084-report-summary{font-size:10px;line-height:1.2;margin-bottom:3px!important}
+ .wm-v084-report-rule{padding:2px 0;font-size:10px}
+ .wm-v084-report-grid{gap:4px;padding:4px 0}
+ .wm-v084-report-grid small{font-size:9px}
+ .wm-v084-report-grid strong{font-size:clamp(13px,1.8vw,17px);margin-top:1px}
+ .wm-v084-debrief-actions{padding-top:5px;gap:5px}
+ .wm-v084-debrief-actions .btn{min-height:29px!important;padding:4px 5px!important;font-size:clamp(12px,1.55vw,15px)!important}
+ .wm-v084-photo-caption{font-size:9px;padding:5px}
+ .wm-v084-photo-tag{font-size:9px;padding:4px}
+ .wm-v084-debrief-footer{font-size:9px;padding:3px 10px}
+}
+@media(max-width:730px) and (orientation:portrait){
+ .wm-v084-debrief{overflow-y:auto!important;height:100%!important}
+ .wm-v084-debrief-body{
+  overflow-y:auto;grid-template-columns:1fr;grid-template-rows:minmax(135px,28vh) minmax(0,auto);
+ }
+ .wm-v084-debrief-illustration{min-height:125px}
+ .wm-v084-debrief-paper{overflow:visible}
+ .wm-v084-debrief-actions .btn{min-height:39px}
+}
+@media(prefers-reduced-motion:reduce){
+ .wm-v084-debrief .btn{transition:none!important}
+}
