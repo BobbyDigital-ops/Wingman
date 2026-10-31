@@ -589,7 +589,7 @@ document.addEventListener('click',e=>{
  if(el.dataset.filter){S.pilotFilter=el.dataset.filter;S.page=0;const i=roster.findIndex(p=>p.faction===S.pilotFilter);if(i>=0)S.pilotIndex=i;return show()}
  if(el.dataset.page){S.page=Math.max(0,Math.min(3,S.page+Number(el.dataset.page)));return show()}
  if(el.dataset.pilot){S.pilotIndex=roster.findIndex(p=>p.id===el.dataset.pilot);return show()}
- if(el.dataset.choice!=null){const run=playerSave()?.run;const index=Number(el.dataset.choice);if(!run||!P.WingmanCampaign?.reachableLanes?.(run.lastLane,run.rank)?.includes(index))return;S.lastEventSummary=null;S.choice=index;if(S.screen==='career')S.campaignPanel='sortie';return show()}
+ if(el.dataset.choice!=null){const run=playerSave()?.run;const index=Number(el.dataset.choice);const legal=P.WingmanCampaign?.reachableLanes?.(run?.lastLane,run?.rank)||run?.allowedLanes||[0,1,2];if(!run||!legal.includes(index))return;S.lastEventSummary=null;S.choice=index;if(S.screen==='career')S.campaignPanel='sortie';return show()}
 });
 document.addEventListener('input',e=>{
  if(!e.target.matches?.('input[data-audio-volume]'))return;
