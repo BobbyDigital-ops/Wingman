@@ -14,9 +14,9 @@ const {runAI}=require('./ai-behaviour.cjs');
 const roster=window.WingmanRoster,pool=roster.filter(p=>p.faction==='Axis');
 const profile=p=>({...p,attributes:{...p.attributes},personality:'hunter'});
 const scenarios=[];
-for(let rank=1;rank<=8;rank++)for(let lane=0;lane<3;lane++){
+for(let rank=1;rank<=12;rank++)for(let lane=0;lane<3;lane++){
  const run={faction:'Allies',rank,visits:0,seed:13071,condition:100,supplies:0,effects:[]};
- const p=pool[(rank*3+lane)%pool.length],lead=profile(p),final=rank===8;
+ const p=pool[(rank*3+lane)%pool.length],lead=profile(p),final=rank===12;
  const duo=!final&&rank>=3&&lane===2&&rank%2===1;
  const opponents=final?[
    profile(pool[(rank+lane*3+1)%pool.length]),
@@ -26,7 +26,8 @@ for(let rank=1;rank<=8;rank++)for(let lane=0;lane<3;lane++){
    opponents,finalBoss:final,wingmen:final?opponents.slice(0,2):[],
    wingman:duo?opponents[1]:null,attributes:lead.attributes,signature:lead.signature,
    archetype:lead.archetype,personality:'hunter',arena:rank%4};
- scenarios.push(C.decorateEncounter(raw,run,lane,{pool,profile}));
+ const enc=C.decorateEncounter(raw,run,lane,{pool,profile});
+ if(!enc.isNonCombat)scenarios.push(enc);
 }
 const result=runAI({
  game:read('game.js'),
@@ -46,8 +47,12 @@ const byRisk=Object.fromEntries(['LOW','MEDIUM','HIGH'].map(risk=>{
   crashes:entries.reduce((n,x)=>n+x.crashes,0)
  }];
 }));
-const report={description:'Identical scripted test pilot with no campaign upgrades; two deterministic attempts per mission. NOT human win probability.',
- byRisk,missions:result.campaignBenchmark,objectiveChecks:result.campaignChecks};
+const byRegion=Object.fromEntries(C.REGIONS.map(region=>{
+ const entries=result.campaignBenchmark.filter(x=>C.regionForRank(x.rank)===region);
+ return [region,{missions:entries.length,scriptedPilotWinPct:entries.length?Math.round(entries.reduce((a,m)=>a+m.winRate,0)/entries.length):null}];
+}));
+const report={description:'Identical scripted AI pilot with no campaign upgrades; two deterministic attempts per COMBAT mission. NOT human win probability.',
+ totalRungs:12,nonCombatRoutes:36-scenarios.length,byRisk,byRegion,missions:result.campaignBenchmark,objectiveChecks:result.campaignChecks};
 console.log(JSON.stringify(report,null,2));
 if(!result.campaignBenchmark.length||
  result.campaignBenchmark.some(x=>x.samples.length!==2)||
