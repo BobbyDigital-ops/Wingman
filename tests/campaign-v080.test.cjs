@@ -58,7 +58,7 @@ test('real mission aircraft remain faction-correct for both factions',()=>{
   assert.equal(hunt.objective,'ace-hunt');
   assert.equal(hunt.types[0],faction==='Allies'?'bf109':'fighter');
   const two=mission(6,2,faction).enc;
-  assert.equal(two.objective,'outnumbered');
+  assert.equal(two.objective,'intel-hunt');
   assert.equal(two.types.length,2);
   const finale=mission(12,2,faction).enc;
   assert.equal(finale.finalBoss,true);
