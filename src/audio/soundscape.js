@@ -4,7 +4,7 @@
 (()=>{'use strict';
  let ctx=null,master=null,motor=null,motorFilter=null,motorGain=null;
  let volume=1;
- try{const v=Number(localStorage.getItem('wingman-audio-volume'));if(Number.isFinite(v))volume=Math.max(0,Math.min(1,v));}catch{}
+ try{const saved=localStorage.getItem('wingman-audio-volume');if(saved!==null){const v=Number(saved);if(Number.isFinite(v))volume=Math.max(0,Math.min(1,v));}}catch{}
  let muted=false,lastFire=-10,lastHit=-10,lastCrash=-10,lastFlight=0,lastBombWhistle=-10;
  let lastGunTail=-10,gunShotIndex=0,gunBus=null,gunAssetsPromise=null;
  const GUN_FILES={
