@@ -51,3 +51,21 @@
  .wm-v13-campaign .wm-v09-event-dossier{grid-template-columns:1fr!important}
  .wm-v09-event-seal{min-height:120px}
 }
+
+/* Resolving an event gives immediate visible feedback on the next rung. */
+.wm-v13-campaign .wm-v09-last-event{
+ flex:none;display:flex;justify-content:center;align-items:center;gap:14px;
+ background:linear-gradient(90deg,#28443c,#476a51,#28443c);
+ border-bottom:1px solid #d1bd82;color:#f8ebc7;
+ padding:4px 12px;min-height:26px;
+ font:800 12px 'Barlow Condensed',Impact,sans-serif;
+}
+.wm-v09-last-event strong{color:#fff2c6;letter-spacing:.08em}
+.wm-v09-last-event span{color:#dfeccc}
+.wm-v09-event-button:disabled{
+ cursor:not-allowed;opacity:.48;filter:grayscale(.4);
+ box-shadow:none;
+}
+@media(max-height:520px) and (orientation:landscape){
+ .wm-v13-campaign .wm-v09-last-event{min-height:20px;padding:1px 6px;font-size:10px}
+}
