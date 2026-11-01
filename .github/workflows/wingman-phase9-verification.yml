@@ -7,6 +7,7 @@ on:
       - feature/v100-tactical-ai-missions
       - feature/v101-campaign-consequences
       - feature/v103-regression-bugfix
+      - feature/v104-phase10e-combat-balance
   workflow_dispatch:
 jobs:
   unit:
