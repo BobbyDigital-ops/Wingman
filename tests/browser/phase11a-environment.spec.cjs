@@ -65,7 +65,7 @@ test('sun glare, fog and final boss weather use existing aircraft and remain pla
  expect(glare.visuals.weather).toBe('glare');
  expect(glare.visuals.hazard).toBeNull();
  await page.screenshot({path:testInfo.outputPath('sun-glare.png')});
- const fog=await launchCampaign(page,5,0);
+ const fog=await launchCampaign(page,6,0);
  expect(fog.visuals.weather).toBe('fog');
  await page.screenshot({path:testInfo.outputPath('fog.png')});
  const boss=await launchCampaign(page,12,1);
