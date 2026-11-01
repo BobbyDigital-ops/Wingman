@@ -1,4 +1,4 @@
-name: Wingman Phase 10E Browser Acceptance
+name: Wingman Desktop & Mobile Visual Acceptance
 on:
   push:
     branches:
@@ -21,6 +21,14 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Test current desktop and Android landscape menu and gameplay
         run: npx playwright test tests/browser/phase10e-campaign.spec.cjs tests/browser/phase11a-environment.spec.cjs --retries=0 --timeout=25000 --workers=2 --reporter=line
+      - name: Upload environmental flight screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase11a-desktop-mobile-visuals
+          path: test-results/**/*.png
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Upload failure traces
         if: failure()
         uses: actions/upload-artifact@v4
