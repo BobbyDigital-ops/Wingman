@@ -61,11 +61,11 @@ if(data?.run&&campaign){
  }
  // Migrate current v0.7 missions once without resetting rank, lives,
  // earned effects, service history or a pending post-sortie reward.
- if(!data.run.pendingReward&&(data.run.campaignSchema!==11||
+ if(!data.run.pendingReward&&(data.run.campaignSchema!==12||
    !Array.isArray(data.run.choices)||data.run.choices.length!==3||
    data.run.choices.some(c=>!c?.objective))){
    data.run.choices=makeChoices(data.run);
-   data.run.campaignSchema=11;
+   data.run.campaignSchema=12;
  }
  if(data.run.pendingReward)view='outcome';
  save();
@@ -402,7 +402,7 @@ function startRun(aircraftId){
  const allowed=data.profile.faction==='Allies'?ALLIES:AXIS;
  if(!allowed.includes(aircraftId))return;
  data.run={faction:data.profile.faction,aircraft:aircraftId,airframe:null,rank:1,
-  lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null,campaignSchema:11,lastLane:null,allowedLanes:[0,1,2],pathHistory:[]};
+  lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null,campaignSchema:12,lastLane:null,allowedLanes:[0,1,2],pathHistory:[]};
  campaign?.normalizeRun(data.run);
  data.run.choices=makeChoices(data.run);save();view='ladder';render();
 }
@@ -436,7 +436,7 @@ function resolveCampaignEvent(index,optionId){
   label:enc.label,kills:0,grade:'—',description:result.description};
  if(run.rank>MAX_RANK)return null; // Final rung is a mandatory combat boss.
  run.choices=makeChoices(run);
- run.campaignSchema=11;
+ run.campaignSchema=12;
  save();
  if(showing){view='ladder';render();}
  return result;
@@ -518,7 +518,7 @@ function finishEncounter(won,encounter,summary={}){
   damageDealt:Math.max(0,Math.round(Number(summary.damageDealt)||0)),
   damageTaken:Math.max(0,Math.round(Number(summary.damageTaken)||0)),
   result:won?'VICTORY':'SHOT DOWN'});
- if(data.run){run.visits++;if(won){run.choices=makeChoices(run);run.campaignSchema=11;}}
+ if(data.run){run.visits++;if(won){run.choices=makeChoices(run);run.campaignSchema=12;}}
  save();active=null;
  view='outcome';showing=true;screen.hidden=false;result.classList.add('hidden');
  const promotion=won&&rankTitle(Math.min(MAX_RANK,atRank+1))!==previousTitle?
@@ -738,9 +738,9 @@ nav.addEventListener('click',()=>show(data?'ladder':'select'));licenceBtn.addEve
 document.getElementById('career-open-mobile')?.addEventListener('click',()=>show(data?'ladder':'select'));
 function claimReward(id){
  if(!data?.run||!campaign?.claim(data.run,id))return false;
- if(data.run.campaignSchema!==11){
+ if(data.run.campaignSchema!==12){
    data.run.choices=makeChoices(data.run);
-   data.run.campaignSchema=11;
+   data.run.campaignSchema=12;
  }
  save();
  if(showing){view='ladder';render();}
