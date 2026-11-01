@@ -69,7 +69,7 @@
  }
  function bankMatrix(p){
   const bank=clamp(Number(p?.visualBank)||0,-1,1),strength=Math.abs(bank);
-  return {bank,shearX:bank*.49,shearY:bank*.19,height:1-strength*.55,depth:strength*.80};
+  return {bank,shearX:bank*.49,shearY:bank*.19,height:Math.max(.45,1-strength*.55),depth:strength*.80};
  }
  // Always-visible cockpit windsock: cloth droop in calm conditions,
  // stretched striped fabric when a real shared wind field is active.
