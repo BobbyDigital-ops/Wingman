@@ -69,7 +69,7 @@ test('Skirmish operations, RAF/Luftwaffe switching, back and launch preserve set
  t.action('operations-next');assert.equal(t.window.WingmanLiveUI.state.plane,4);
  t.action('launch-arcade');
  assert.deepEqual(t.logs[0],{action:'arcade',opts:{mode:'duel',aircraft:'bf110',
-  opponent:'random',difficulty:'ace',arena:'2'}});
+  opponent:'random',difficulty:'ace',arena:'2',weather:'auto'}});
 });
 test('campaign locked faction, pilot specialism and handoff remain intact',()=>{
  const data=JSON.parse(JSON.stringify(save));
