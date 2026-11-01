@@ -38,7 +38,7 @@
     phase:'menu',cameraY:SKY_EXTRA,selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
     scores:[0,0],round:1,time:90,intermission:0,banner:'',bannerTime:0,paused:false,
     impactLock:0,trails:[],blasts:[],visualClock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2,teams:false,difficulty:'standard',
-    wind:{active:false,base:0,current:0,elapsed:0},environment:null,recordMode:'duel',challenge:'intercept',session:null,survivalCarry:null,supportCharge:0,supportTime:0,supportUses:0
+    wind:{active:false,base:0,current:0,elapsed:0},environment:null,environmentOverride:null,recordMode:'duel',challenge:'intercept',session:null,survivalCarry:null,supportCharge:0,supportTime:0,supportUses:0
   };
   const controls={left:false,right:false,boost:false};
   const ui={
@@ -136,7 +136,11 @@ function plane(type,id,x,y,angle){
   function updateWind(dt){
     const w=state.wind;if(!w?.active)return;
     w.elapsed+=dt;
-    w.current=w.base*(1+.16*Math.sin(w.elapsed*1.1)+.07*Math.sin(w.elapsed*2.7));
+    const storm=state.environment?.weather==='storm';
+    // A single shared gust field affects all pilots and bullets via the
+    // existing wind physics; storm fronts add stronger but bounded variance.
+    w.current=w.base*(1+(storm?.27:.16)*Math.sin(w.elapsed*1.1)+
+      (storm?.11:.07)*Math.sin(w.elapsed*2.7));
   }
   function drawWind(){
     const w=state.wind;if(!w?.active)return;
@@ -293,7 +297,8 @@ function plane(type,id,x,y,angle){
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.trails=[];state.blasts=[];state.visualClock=0;
     state.environment=window.WingmanFlightAtmosphere?.create(
-      state.mode==='campaign'&&state.campaignEncounter?.environment||
+      (state.mode==='campaign'&&state.campaignEncounter?.environment)||
+      (state.mode!=='campaign'&&state.environmentOverride)||
       window.WingmanFlightAtmosphere.forEncounter(
         state.mode==='campaign'?state.campaignEncounter:null,state.arena))||null;
     state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
@@ -304,6 +309,12 @@ function plane(type,id,x,y,angle){
     }
     if(state.mode==='challenge'&&state.challenge==='crosswind')
       state.wind={active:true,base:state.round%2===0?-16:16,current:state.round%2===0?-16:16,elapsed:0};
+    // Storms genuinely change the flight conditions using the same global
+    // wind field as crosswinds, never a player-only steering penalty.
+    if(state.environment?.weather==='storm'&&!state.wind.active){
+      const strength=(state.mode==='campaign'?7:9)*(state.arena%2===0?-1:1);
+      state.wind={active:true,base:strength,current:strength,elapsed:0};
+    }
     state.time=state.mode==='survival'?70:state.mode==='challenge'?CHALLENGES[state.challenge].time:
       state.mode==='campaign'?(state.campaignEncounter?.timeLimit||(state.campaignEncounter?.finalBoss?165:120)):90;
     state.impactLock=0;state.phase='playing';state.paused=false;
@@ -366,7 +377,7 @@ function plane(type,id,x,y,angle){
     state.selected=aircraft;
     state.campaignAirframe=airframe?.type===aircraft?airframe:null;
     state.enemyType=encounter.types[0];
-    state.campaignEncounter=encounter;
+    state.campaignEncounter=encounter;state.environmentOverride=null;
     state.scores=[0,0];state.round=1;state.kills=0;
     state.mode='campaign';state.recordMode='campaign';
     state.participants=encounter.types.length+1+(encounter.reinforcements?.length?1:0);
@@ -379,7 +390,7 @@ function plane(type,id,x,y,angle){
   }
   // Direct launch avoids the obsolete hidden setup screen / synthetic clicks.
   // startMatch remains authoritative for round setup and campaign preservation.
-  function launchArcade({mode='duel',aircraft='fighter',difficulty='standard',arena=0,opponent='random'}={}){
+  function launchArcade({mode='duel',aircraft='fighter',difficulty='standard',arena=0,opponent='random',weather='auto'}={}){
     if(state.phase==='playing'||!Object.prototype.hasOwnProperty.call(PLANES,aircraft))return false;
     if(!['duel','survival','triple','teams','challenge'].includes(mode))return false;
     if(!['rookie','standard','ace'].includes(difficulty))return false;
@@ -387,6 +398,9 @@ function plane(type,id,x,y,angle){
        !Object.prototype.hasOwnProperty.call(PLANES,opponent))return false;
     const theatre=Number(arena);
     if(!Number.isInteger(theatre)||theatre<0||theatre>3)return false;
+    if(!window.WingmanFlightAtmosphere?.PRESETS?.includes(weather))return false;
+    state.environmentOverride=weather==='auto'?null:
+      window.WingmanFlightAtmosphere.forPreset(weather,theatre);
     const set=(id,value)=>{
       const field=document.getElementById(id);
       if(field){field.value=String(value);field.dispatchEvent(new Event('change',{bubbles:true}));}
@@ -1747,7 +1761,7 @@ function plane(type,id,x,y,angle){
       }
       // Neutral, telegraphed terrain hazards run after ordinary flight.
       // Every aircraft has the same range, spawn protection and exposure rules.
-      if(state.mode==='campaign'){
+      if(state.mode==='campaign'||state.environment?.hazard){
         const oldBursts=state.environment?.flakBursts?.length||0;
         window.WingmanFlightAtmosphere?.advance(state.environment,dt,W,WORLD_H,
           state.fliers,(p,damage,x,y,cause)=>hit(p,damage,x,y,undefined,cause,null));
