@@ -73,7 +73,9 @@ test('Combat code uses timed waves, bomber-focused pursuit and objective-based c
  assert.match(s,/campaignBackupPending\(\)/);
  assert.match(s,/p\.aiManeuver='HIGH YO-YO'/);
  assert.match(s,/p\.aiManeuver='LAG PURSUIT'/);
- assert.match(s,/contactRows\(friendly,false\);contactRows\(hostile,true\);/);
+ // Stage 9's old contactRows() renderer was superseded by live tactical HUD cues.
+ assert.match(s,/function drawHud\(/);
+ assert.match(s,/state\.campaignEncounter\?\.objective/);
 });
 test('Debrief contains real per-sortie statistics before the reward step',()=>{
  const career=read('career.js'),ui=read('wingman-ui/ui.js');
