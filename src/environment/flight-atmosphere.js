@@ -41,6 +41,17 @@
    'No additional environmental hazards.';
   return {weather,hazard,label:headline,detail};
  }
+ // Optional Skirmish flight-condition presets make every effect testable
+ // without grinding to rank ten. Never change a campaign's declared hazard.
+ const PRESETS=Object.freeze(['auto','clear','clouds','fog','rain','storm','glare','flak','searchlight']);
+ function forPreset(id,arena=0){
+  if(id==='auto'||!PRESETS.includes(id))return forEncounter(null,arena);
+  const hazard=id==='flak'||id==='searchlight'?id:null;
+  const weather=id==='flak'?'clouds':id==='searchlight'?'fog':id;
+  const description=forEncounter({rank:id==='flak'?10:11,lane:id==='flak'?2:1},arena);
+  return {weather,hazard,label:hazard?labels[hazard]+' · '+labels[weather]:labels[weather],
+   detail:hazard?description.detail:'Selected Skirmish flight conditions; all pilots face the same sky.'};
+ }
  // 2.5D illusion. Sign follows actual turn rate, not player input: AI banks too.
  // Only the rendered silhouette is sheared/foreshortened; hitboxes stay put.
  function bankTarget(p){
@@ -195,7 +206,7 @@
   }
   g.restore();
  }
- const api={forEncounter,advanceBank,bankTarget,bankMatrix,create,advance,
+ const api={forEncounter,forPreset,PRESETS,advanceBank,bankTarget,bankMatrix,create,advance,
   drawBack,drawFront,flakPoint,searchlightX,labels};
  if(typeof module!=='undefined'&&module.exports)module.exports=api;
  root.WingmanFlightAtmosphere=api;
