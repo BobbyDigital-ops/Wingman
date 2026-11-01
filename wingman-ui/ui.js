@@ -290,6 +290,7 @@ function career(){
  const encounterInfo=selected&&!selected.isNonCombat?
   (selected.tacticalMission?'<div class="wm-v100-special-objective"><strong>TACTICAL MISSION</strong><span>'+esc(selected.tacticalMission)+'</span><small>Follow the primary objective shown below. Escort aircraft may be optional targets.</small></div>':'')+
   '<div class="wm-v9f-mission-goal"><strong>PRIMARY OBJECTIVE</strong><span>'+esc(selected.missionGoal||'Defeat hostile aircraft')+'</span></div>'+
+  (selected.environment?'<div class="wm-v110-environment"><strong>FLIGHT CONDITIONS</strong><span>'+esc(selected.environment.label)+'</span><small>'+esc(selected.environment.detail)+'</small></div>':'')+
   '<div class="wm-v9f-mission-forces"><div><small>ENEMIES AT SCRAMBLE</small><strong>'+esc(selected.initialEnemies??selected.types?.length??1)+'</strong></div>'+
   '<div><small>ENEMY REINFORCEMENTS</small><strong>'+esc((selected.reinforcements||[]).reduce((n,w)=>n+w.count,0))+'</strong></div>'+
   '<div><small>YOUR ALLIES</small><strong>'+(selected.objective==='escort'?'1 PROTECTED BOMBER':'UP TO 2 CALLED IN')+'</strong></div></div>'+
