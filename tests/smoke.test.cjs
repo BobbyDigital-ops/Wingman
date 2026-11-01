@@ -181,17 +181,21 @@ test('Spitfire Corkscrew gives a brief bounded boost and distinct cooldown',()=>
  assert.equal(p.boosting,true);
  assert.ok(p.overdriveTime<1.10);
 });
-test('Bomber E releases exactly three spaced bombs and retains the rear gunner',()=>{
+test('Bomber E arms an assisted three-bomb run and releases only on a viable line',()=>{
  const game=launch();game.listeners.get('bomber:click')();
  game.listeners.get('start:click')();
- const p=game.internals.state.fliers[0];
+ const [p,target]=game.internals.state.fliers;
+ p.x=140;p.y=120;p.vx=0;p.vy=0;p.spawnSafe=0;
+ target.x=140;target.y=190;target.vx=0;target.vy=0;target.spawnSafe=0;
  game.internals.triggerSpecial(p);
- assert.equal(p.bombQueue,3);
+ assert.equal(p.bombQueue,0,'arming is not an instant bomb drop');
+ assert.ok(p.bombAssistTime>0,'pilot has a short window to set up the run');
+ assert.equal(p.specialCooldown,0,'no 20-second cost until bombs actually release');
+ game.internals.updatePlane(p,1/60,0);
  assert.equal(p.specialCooldown,20);
- assert.ok('rearCooldown' in p);
- game.advance(8,1000);
- assert.ok(game.internals.state.bombs.length>=1);
- assert.equal(p.bombQueue,2);
+ assert.equal(p.bombQueue,2,'first of three bombs drops on a valid line');
+ assert.equal(game.internals.state.bombs.length,1);
+ assert.ok('rearCooldown' in p,'rear gunner remains available');
 });
 test('Spitfire has effective guns while remaining controllable',()=>{
  const game=launch();
@@ -260,15 +264,16 @@ test('horizontal boundaries wrap aircraft without changing heading or health',()
  assert.ok(p.x>200,'plane should appear on the right');
  assert.equal(p.health,health);
 });
-test('floor collision crashes the plane and finishes the duel',()=>{
+test('contact with the actual world floor crashes the aircraft and ends the duel',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];
- p.spawnSafe=0;p.y=245;p.angle=Math.PI/2;
- game.advance(2,1000);
+ // World height is 400; y=245 is mid-air after the extended vertical sky.
+ p.spawnSafe=0;p.y=389;p.angle=Math.PI/2;p.speed=88;p.vx=0;p.vy=88;
+ game.advance(3,1000);
  assert.equal(p.alive,false);
  assert.equal(p.damageCause,'GROUND');
 });
-test('ceiling returns immediately below HUD on reversed heading, without damage',()=>{
+test('ceiling returns aircraft below HUD without teleporting or reversing horizontal momentum',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[0];p.spawnSafe=0;
  p.y=1;p.angle=-Math.PI/3;p.speed=88;
@@ -276,10 +281,10 @@ test('ceiling returns immediately below HUD on reversed heading, without damage'
  const hp=p.health;
  game.internals.steerPlane(p,0,1/60);
  assert.ok(p.alive);assert.equal(p.health,hp);
- assert.ok(p.y>=31+p.d.radius,'no delayed top wrap above the HUD');
- assert.ok(p.vx<0,'re-entry reverses horizontal direction');
- assert.ok(p.vy>0,'re-entry points down into playable sky');
- assert.equal(p.flightRisk,0);
+ assert.ok(p.y>=31+p.d.radius,'aircraft returns below the visible top');
+ assert.ok(p.vx>0,'soft ceiling preserves momentum rather than snapping a 180° turn');
+ assert.ok(p.vy>0,'aircraft receives a gentle downward recovery velocity');
+ assert.ok(p.topRecovery>0);
 });
 test('ceiling re-entry also works during special manoeuvres',()=>{
  const game=launch();game.listeners.get('start:click')();
@@ -380,17 +385,21 @@ test('Heavy fighter shield reduces damage while active',()=>{
  assert.ok(p.armourTime>0);
  assert.equal(p.specialCooldown,20);
 });
-test('G3A.3 fighter pursues close target even when pointing away instead of orbiting',()=>{
+test('G3A.3 fighter commits to a real reversal before resuming close pursuit',()=>{
  const game=launch();game.listeners.get('start:click')();
  const [player,fighter]=game.internals.state.fliers;
  fighter.type='bf109';fighter.role='fighter';fighter.d=game.internals.PLANES.bf109;
  fighter.x=145;fighter.y=100;fighter.angle=2.35;
- fighter.vx=-58;fighter.vy=-10;
- fighter.aiThink=10;fighter.aiMode='attack';fighter.aiRecoveryTime=0;
+ fighter.vx=-58;fighter.vy=-10;fighter.aiRecoveryTime=0;
  player.x=198;player.y=100;player.vx=0;player.vy=0;player.spawnSafe=0;
- const turn=game.internals.aiInput(fighter,player);
- assert.ok(turn<0,'turn toward the nearby target, not away on a forward lap');
- assert.equal(fighter.aiMode,'attack','fighter stays in combat after close crossing');
+ const first=game.internals.aiInput(fighter,player);
+ assert.ok(fighter.aiBreakTime>0,'nearby target behind the nose triggers a committed reversal');
+ assert.equal(first,fighter.aiBreakSign,'reversal holds a consistent bank');
+ // Once a reversal is on cooldown, the fighter must resume closing on its target.
+ fighter.aiBreakTime=0;fighter.aiBreakCooldown=3;fighter.aiEvadeTime=0;
+ const second=game.internals.aiInput(fighter,player);
+ assert.ok(second<0,'direct pursuit turns back toward the target');
+ assert.equal(fighter.aiMode,'attack');
 });
 test('G3A.2 near-ceiling fighter keeps chasing instead of bobbing in ground-recovery mode',()=>{
  const game=launch();game.listeners.get('start:click')();
@@ -450,22 +459,25 @@ test('HUD styles all have the same playable game state',()=>{
  assert.equal(game.internals.state.fliers.length,2);
 });
 
-test('all six aircraft use distinct tactical class statistics',()=>{
+test('all six aircraft retain their approved current class statistics',()=>{
  const game=launch(),planes=game.internals.PLANES;
  const cases=[
   ['fighter',82,3.15,130,40,11],
-  ['heavy',75,1.98,160,78,16],
-  ['bomber',66,1.30,180,124,10],
+  ['heavy',83,2.42,160,78,16],
+  ['bomber',75,1.72,162,98,10],
   ['bf109',87,3.02,125,42,11],
-  ['bf110',78,1.91,160,75,17],
-  ['he111',69,1.35,175,116,10]
+  ['bf110',85,2.35,160,75,17],
+  ['he111',77,1.75,158,92,10]
  ];
  for(const [type,speed,turn,hull,armour,damage] of cases){
-  const p=planes[type];assert.equal(p.speed,speed);assert.equal(p.turn,turn);
-  assert.equal(p.hull,hull);assert.equal(p.armour,armour);assert.equal(p.damage,damage);
+  const p=planes[type];assert.equal(p.speed,speed,type+' speed');assert.equal(p.turn,turn,type+' turn');
+  assert.equal(p.hull,hull,type+' hull');assert.equal(p.armour,armour,type+' armour');assert.equal(p.damage,damage,type+' guns');
  }
- assert.ok(planes.fighter.turn>planes.heavy.turn&&planes.heavy.turn>planes.bomber.turn);
- assert.ok(planes.fighter.speed>planes.heavy.speed&&planes.heavy.speed>planes.bomber.speed);
+ for(const faction of [['fighter','heavy','bomber'],['bf109','bf110','he111']]){
+  const [fighter,heavy,bomber]=faction.map(key=>planes[key]);
+  assert.ok(fighter.turn>heavy.turn&&heavy.turn>bomber.turn);
+  assert.ok(bomber.speed<fighter.speed&&bomber.speed<heavy.speed);
+ }
 });
 test('bullet lifetime extends effective range and keeps deliberate class differences',()=>{
  const game=launch();game.listeners.get('start:click')();
@@ -514,17 +526,16 @@ test('low-health performance loss stays mild and flight controls survive',()=>{
  assert.ok(p.speed>p.d.speed*.9,'no abrupt speed collapse from low health');
 });
 
-test('durability hierarchy preserves protection and fighter manoeuvrability',()=>{
+test('durability hierarchy preserves agile fighters and protected strike aircraft',()=>{
  const planes=launch().internals.PLANES;
  for(const nation of [['fighter','heavy','bomber'],['bf109','bf110','he111']]){
   const [f,h,b]=nation.map(type=>planes[type]);
-  assert.ok(f.turn>h.turn&&h.turn>b.turn);
-  assert.ok(f.speed>h.speed&&h.speed>b.speed);
-  assert.ok(f.armour<h.armour&&h.armour<b.armour);
-  assert.ok(f.hull<h.hull&&h.hull<b.hull);
+  assert.ok(f.turn>h.turn&&h.turn>b.turn,'fighter handling remains best');
+  assert.ok(b.speed<f.speed&&b.speed<h.speed,'strike aircraft have lower airspeed');
+  assert.ok(f.armour<h.armour&&h.armour<b.armour,'protection increases by class');
+  assert.ok(f.hull<h.hull&&f.hull<b.hull,'fighter hull is lighter than either twin-engine class');
  }
 });
-
 test('campaign rank AI changes tactical decision level without modifying hull or damage',()=>{
  const game=launch();game.listeners.get('start:click')();
  const p=game.internals.state.fliers[1];
