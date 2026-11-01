@@ -207,6 +207,8 @@ function career(){
   if(kind==='event')return {icon:'☕',name:'MESS HALL'};
   if(kind==='elite')return {icon:'♛',name:'ELITE SQUADRON'};
   if(String(mission||'').toUpperCase().includes('INTELLIGENCE CARRIER'))return {icon:'◉',name:'INTEL CARRIER'};
+  if(String(mission||'').toUpperCase().includes('BREAK THE FORMATION'))return {icon:'♜',name:'FORMATION LEADER'};
+  if(String(mission||'').toUpperCase().includes('THE ESCAPE ARTIST'))return {icon:'➤',name:'ESCAPING ACE'};
   const key=String(mission||'').toUpperCase();
   if(key.includes('FINAL'))return {icon:'★',name:'FINAL ACE'};
   if(key.includes('ESCORT'))return {icon:'✦',name:'BOMBER ESCORT'};
@@ -286,11 +288,13 @@ function career(){
     '<div class="wm-v09-event-options">'+(selected.eventOptions||[]).map(opt=>{const cost=selected.nodeType==='shop'?(opt.id==='service'?2:opt.id==='guns'?3:0):selected.nodeType==='dice'&&opt.id==='roll'?1:0;const blocked=(run.supplies||0)<cost;return '<button type="button" class="wm-v09-event-button" data-event-option="'+esc(opt.id)+'" '+(blocked?'disabled aria-disabled="true"':'')+'><strong>'+esc(opt.name)+'</strong><small>'+esc(opt.detail)+(blocked?' · NOT ENOUGH SUPPLIES':'')+'</small></button>'}).join('')+'</div>'+
     '<small class="wm-v085-sortie-history">CHOOSE AN ACTION TO ADVANCE · RETURN TO THE CHART TO CHANGE ROUTES</small></div></article>':null;
  const encounterInfo=selected&&!selected.isNonCombat?
+  (selected.tacticalMission?'<div class="wm-v100-special-objective"><strong>TACTICAL MISSION</strong><span>'+esc(selected.tacticalMission)+'</span><small>Only the marked primary target is required for victory. Its escort may remain alive.</small></div>':'')+
   '<div class="wm-v9f-mission-goal"><strong>PRIMARY OBJECTIVE</strong><span>'+esc(selected.missionGoal||'Defeat hostile aircraft')+'</span></div>'+
   '<div class="wm-v9f-mission-forces"><div><small>ENEMIES AT SCRAMBLE</small><strong>'+esc(selected.initialEnemies??selected.types?.length??1)+'</strong></div>'+
   '<div><small>ENEMY REINFORCEMENTS</small><strong>'+esc((selected.reinforcements||[]).reduce((n,w)=>n+w.count,0))+'</strong></div>'+
   '<div><small>YOUR ALLIES</small><strong>'+(selected.objective==='escort'?'1 PROTECTED BOMBER':'UP TO 2 CALLED IN')+'</strong></div></div>'+
-  ((selected.reinforcements||[]).length?'<p class="wm-v9f-wave-brief">BACKUP EXPECTED · '+(selected.reinforcements||[]).map(w=>esc(w.count)+' fighter'+(w.count>1?'s':'')+' around '+esc(w.at)+'s').join(' · ')+'</p>':''):
+  ((selected.reinforcements||[]).length?'<p class="wm-v9f-wave-brief">BACKUP EXPECTED · '+(selected.reinforcements||[]).map(w=>esc(w.count)+' fighter'+(w.count>1?'s':'')+' around '+esc(w.at)+'s').join(' · ')+'</p>':'')+
+  (selected.tacticalMission?'<p class="wm-v100-target-line">MARKED TARGET · '+esc(selected.opponents?.[selected.priorityTargetIndex??0]?.name||selected.label||'ENEMY LEADER')+' · '+esc(selected.types?.[selected.priorityTargetIndex??0]||'FIGHTER').toUpperCase()+'</p>':''):
   '';
  const selectedSortie=eventDossier || (selected?
   '<article class="wm-v085-sortie-brief" aria-label="Selected campaign mission">'+
