@@ -320,6 +320,14 @@ function career(){
    (S.orderNotice?'<small class="wm-v101-order-notice">'+esc(S.orderNotice)+'</small>':'')+
   '</section>':'';
 
+ const bossDossier=selected?.bossPlan?
+  '<section class="wm-v102-boss-dossier"><strong>♛ '+esc(selected.bossPlan.name)+' · STAGED ENCOUNTER</strong>'+
+  '<div class="wm-v102-boss-stages">'+selected.bossPlan.stages.map(stage=>
+   '<div><small>STAGE '+stage.id+' · '+esc(stage.name)+'</small><span>'+esc(stage.hint)+'</span></div>'
+  ).join('')+'</div><small>Each change is signalled in flight. Enemy flight physics and weapons are unchanged.</small></section>':'';
+ const rivalryDossier=selected?.rivalry?
+  '<section class="wm-v102-rivalry-dossier"><strong>'+esc(selected.rivalry.title)+'</strong>'+
+  '<span>'+esc(selected.rivalry.text)+'</span><small>SAME PILOT · SAME PORTRAIT · CAREER RECORD PERSISTS</small></section>':'';
  const selectedSortie=eventDossier || (selected?
   '<article class="wm-v085-sortie-brief" aria-label="Selected campaign mission">'+
    '<div class="wm-v085-sortie-portrait">'+(rival?atlas(rival):'<span class="wm-v085-no-photo">✈</span>')+
@@ -328,7 +336,7 @@ function career(){
     '<div class="wm-v085-sortie-overline">✦ SELECTED FROM OPERATIONAL CHART · RANK '+currentRank+'</div>'+
     '<h2>'+esc(selected.mission||'COMBAT SORTIE')+'</h2>'+
     '<div class="wm-v085-sortie-opponent"><small>OPPOSING PILOT</small><strong>'+esc(rival?.name||selected.label||'UNKNOWN RIVAL')+'</strong></div>'+
-    '<p class="wm-v085-sortie-description">'+esc(selected.briefing||rival?.bio||'Complete the assigned mission and return safely.')+'</p>'+encounterInfo+fieldOrders+
+    '<p class="wm-v085-sortie-description">'+esc(selected.briefing||rival?.bio||'Complete the assigned mission and return safely.')+'</p>'+encounterInfo+bossDossier+rivalryDossier+fieldOrders+
     '<div class="wm-v085-sortie-metrics">'+
      '<div><span>DIFFICULTY</span><strong>'+esc(selected.risk||'LOW')+' RISK</strong></div>'+
      '<div><span>THREAT RATING</span><strong>'+esc(selected.threat??'—')+' / 100</strong></div>'+
@@ -551,12 +559,19 @@ function outcome(){
  const fieldOrdersUsed=Object.entries(report.fieldOrders||{}).filter(([,value])=>value>0);
  const fieldOrderNames={radio:'RADIO INTERFERENCE · BACKUP DELAYED',ambush:'AMBUSH TACTICS · ENEMY SKILL REDUCED',favour:'GROUND CREW · EARLY SUPPORT CHARGE'};
  const fieldOrdersReport=fieldOrdersUsed.length?'<div class="wm-v101-debrief-orders"><small>FIELD PREPARATIONS USED ON THIS SORTIE</small>'+fieldOrdersUsed.map(([key])=>'<strong>✓ '+esc(fieldOrderNames[key]||key)+'</strong>').join('')+'</div>':'';
+ const bossDebrief=report.bossStage?
+  '<div class="wm-v102-rivalry-debrief"><strong>ACE ENCOUNTER · STAGE '+esc(report.bossStage)+
+  ' REACHED</strong><small>Boss manoeuvres are distinct phases; no artificial hull recovery.</small></div>':'';
+ const rivalryDebrief=report.rivalry?
+  '<div class="wm-v102-rivalry-debrief"><strong>RIVALRY UPDATED · '+esc(report.label||'ENEMY ACE')+'</strong>'+
+  '<small>'+esc(report.rivalry.wins)+' victories / '+esc(report.rivalry.losses)+
+  ' defeats on the saved service record</small></div>':'';
  const debriefPanel='<span class="wg-v7-overline">FORM 09 · AFTER ACTION REPORT</span>'+
    '<h3>'+(report.won?'MISSION SUCCESSFUL':'MISSION FAILED')+'</h3>'+
    '<p>'+esc(report.mission||'COMBAT SORTIE')+' · '+esc(report.label||'ENEMY SQUADRON')+
    ' · RANK '+esc(report.rank||'—')+' · '+esc(report.grade||'—')+' GRADE</p>'+
    '<div class="wm-v9f-sortie-stats">'+debriefItems.map(([label,value])=>
-     '<div><small>'+esc(label)+'</small><strong>'+esc(value)+'</strong></div>').join('')+'</div>'+fieldOrdersReport+
+     '<div><small>'+esc(label)+'</small><strong>'+esc(value)+'</strong></div>').join('')+'</div>'+fieldOrdersReport+bossDebrief+rivalryDebrief+
    '<p class="wm-v9f-sortie-note">'+(report.won?
       'Sortie complete. Review your performance before claiming the reward you earned.':
       run?'One life lost. Your rung is unchanged; retry a connected mission.':
