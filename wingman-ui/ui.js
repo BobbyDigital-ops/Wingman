@@ -293,6 +293,10 @@ function career(){
   '<div class="wm-v9f-mission-forces"><div><small>ENEMIES AT SCRAMBLE</small><strong>'+esc(selected.initialEnemies??selected.types?.length??1)+'</strong></div>'+
   '<div><small>ENEMY REINFORCEMENTS</small><strong>'+esc((selected.reinforcements||[]).reduce((n,w)=>n+w.count,0))+'</strong></div>'+
   '<div><small>YOUR ALLIES</small><strong>'+(selected.objective==='escort'?'1 PROTECTED BOMBER':'UP TO 2 CALLED IN')+'</strong></div></div>'+
+  '<div class="wm-v100-force-roster">'+(selected.types||[]).map((type,i)=>{
+    const role=P.WingmanMissionDoctrine?.roleFor?.(selected.objective,i,{finalBoss:!!selected.finalBoss})||'hunter';
+    const roleName=P.WingmanMissionDoctrine?.roles?.[role]||'INTERCEPTOR';
+    return '<span>'+(i===selected.priorityTargetIndex?'★ ':'')+esc(type).toUpperCase()+' · '+esc(roleName)+'</span>';}).join('')+'</div>'+
   ((selected.reinforcements||[]).length?'<p class="wm-v9f-wave-brief">BACKUP EXPECTED · '+(selected.reinforcements||[]).map(w=>esc(w.count)+' fighter'+(w.count>1?'s':'')+' around '+esc(w.at)+'s').join(' · ')+'</p>':'')+
   (selected.priorityTargetIndex!=null?'<p class="wm-v100-target-line">MARKED TARGET · '+esc(selected.opponents?.[selected.priorityTargetIndex??0]?.name||selected.label||'ENEMY LEADER')+' · '+esc(selected.types?.[selected.priorityTargetIndex??0]||'FIGHTER').toUpperCase()+'</p>':''):
   '';
