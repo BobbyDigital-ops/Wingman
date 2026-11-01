@@ -249,6 +249,29 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
   if(Object.values(summary.campaignChecks).some(value=>!value))
     throw Error('Campaign mission objective regression: '+JSON.stringify(summary.campaignChecks));
  }
+ // Phase 10C: measure field-order modifiers in the production simulation.
+ // The same aircraft, mission and pilot are used with and without orders.
+ if(campaignCheck){
+  const mission={objective:'outnumbered',rank:6,aiRank:6,lane:2,
+   types:['bf109','bf110'],opponents:[{id:'a',plane:'bf109'},{id:'b',plane:'bf110'}],
+   label:'Ground orders QA',timeLimit:100,reinforcements:[{at:30,count:1,type:'bf109'}]};
+  const measure=(orders)=>{
+   window.aiQA.mission({...mission,fieldOrders:orders,reinforcements:[
+    {at:orders.radio?45:30,count:1,type:'bf109'}]});
+   const combat=window.aiQA.state;
+   return {support:combat.supportCharge,skill:combat.fliers[1].aiSkillLevel,
+    wave:combat.campaignWaves[0].at};
+  };
+  const none=measure({radio:0,ambush:0,favour:0});
+  const full=measure({radio:1,ambush:1,favour:1});
+  summary.fieldOrderChecks={
+   support:full.support===25&&none.support===0,
+   ambush:Math.abs(none.skill-full.skill-.13)<.00001,
+   radio:full.wave===45&&none.wave===30
+  };
+  if(Object.values(summary.fieldOrderChecks).some(v=>!v))
+   throw Error('Campaign field-order effects regression: '+JSON.stringify({none,full}));
+ }
  return summary;
 }
 if(typeof module!=='undefined')module.exports={runAI};
