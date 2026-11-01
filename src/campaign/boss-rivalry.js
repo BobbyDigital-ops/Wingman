@@ -53,13 +53,14 @@ function bossPlanFor(enc){
 }
 function decorateEncounter(enc,records={}){
  if(!enc||enc.isNonCombat)return enc;
+ // Re-evaluate a rematch without duplicating previous briefing paragraphs.
+ enc.bossBaseBriefing??=enc.briefing||'';
+ enc.briefing=enc.bossBaseBriefing;
  const rival=rivalryDetail(records?.[enc.finalBoss?(enc.bossId||enc.id):enc.id]);
- if(rival){
-  enc.returningRival=true;
-  enc.rivalry=rival;
-  if(enc.eliteEncounter||enc.finalBoss)
-   enc.briefing+=' '+rival.title+': '+rival.text;
- }
+ enc.returningRival=!!rival;
+ enc.rivalry=rival||null;
+ if(rival&&(enc.eliteEncounter||enc.finalBoss))
+  enc.briefing+=' '+rival.title+': '+rival.text;
  const plan=bossPlanFor(enc);
  if(plan){
   enc.bossPlan=plan;
