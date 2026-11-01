@@ -355,6 +355,8 @@ enc.escortType=objective==='escort'?(run.faction==='Allies'?'bomber':'he111'):nu
 }
 function threatRating(enc){
  // Planning estimate only, NOT a measured win probability.
+ const calibrated=root.WingmanCombatBalance?.calibratedThreat?.(enc);
+ if(Number.isFinite(calibrated))return calibrated;
  const opponents=enc.types?.length||1,rank=enc.aiRank||enc.rank||1;
  const task=enc.objective==='escort'?13:enc.objective==='ace-hunt'?14:
    enc.objective==='outnumbered'?10:enc.objective==='formation-break'?17:
