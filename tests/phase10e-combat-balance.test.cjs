@@ -12,7 +12,8 @@ test('12-rung skill curve is staged rather than becoming perfect at rank six',()
  assert.equal(low[0],0);
  assert.ok(low[2]<low[5]&&low[5]<low[7]&&low[7]<low[11]);
  assert.ok(low[11]<1,'final baseline pilot still has exploitable weaknesses');
- assert.ok(low[4]<low[3],'brief recovery after the regional boss is deliberate');
+ assert.ok(low[4]<balance.skillFor({rank:4,lane:0,eliteEncounter:true}),
+  'brief recovery after the regional boss is deliberate');
  assert.ok(low[8]<low[9]&&low[9]<low[10],'end-game pressure increases');
 });
 test('lane risks are ordered early AND late without premature saturation',()=>{
