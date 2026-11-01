@@ -1,9 +1,10 @@
-name: Wingman Phase 9 Verification
+name: Wingman Tactical Campaign Verification
 on:
   push:
     branches:
       - feature/phase9b-campaign-balance
       - feature/phase9f-reinforcements-mission-depth
+      - feature/v100-tactical-ai-missions
   workflow_dispatch:
 jobs:
   unit:
