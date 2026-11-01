@@ -285,7 +285,7 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
      enc.types=enc.opponents.map(p=>p.plane);enc.id=enemyFighter.id;enc.label=enemyFighter.name;
    }
  }
- enc.lane=lane;enc.risk=risk;enc.objective=objective;enc.nodeType=kind;
+ enc.rank=rank;enc.lane=lane;enc.risk=risk;enc.objective=objective;enc.nodeType=kind;
  // Regional elites earn premium rewards regardless of route: the extra fight is mandatory.
  enc.eliteEncounter=kind==='elite';
  enc.region=regionForRank(rank);
