@@ -26,13 +26,20 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
   state.teams=enc.types.length>1||enc.objective==='escort';
   state.difficulty=enc.qaDifficulty||enc.difficulty||'ace';state.arena=0;state.round=1;
   newRound();state.wind={active:false,base:0,current:0,elapsed:0};
-  state.qa=true;state.qaScenario='duel';state.qaWinner=null;
+  state.qa=true;state.qaScenario=enc.testPilotPattern||'duel';state.qaWinner=null;
+  state.qaMaxBossStage=state.bossPhase||0;state.qaCommanderEntered=false;
   state.qaDamage=Array(130).fill(0);state.qaHits=Array(130).fill(0);
  },
  projectileStep(){projectiles(STEP);},
  advance(frames){
-  for(let i=0;i<frames&&state.phase==='playing';i++)update(STEP);
-  return {phase:state.phase,winner:state.qaWinner,flights:state.fliers.map(p=>({id:p.id,team:p.team,escort:!!p.escortProtected,alive:p.alive}))};
+  for(let i=0;i<frames&&state.phase==='playing';i++){
+   update(STEP);
+   state.qaMaxBossStage=Math.max(state.qaMaxBossStage||0,state.bossPhase||0);
+   if(state.campaignEncounter?.finalBoss&&state.fliers[3]?.alive)state.qaCommanderEntered=true;
+  }
+  return {phase:state.phase,winner:state.qaWinner,maxBossStage:state.qaMaxBossStage||0,
+   commanderEntered:!!state.qaCommanderEntered,
+   flights:state.fliers.map(p=>({id:p.id,team:p.team,escort:!!p.escortProtected,alive:p.alive}))};
  },
  setup(a,b,d,scenario,wind){
   state.qa=false;state.mode='duel';state.participants=2;state.teams=false;state.selected=a;state.enemyType=b;state.difficulty=d;
@@ -111,7 +118,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
  const document={hidden:false,documentElement:{style:{setProperty:noop}},getElementById:k=>k==='game'||k==='aircraft-layer'?canvas:(elements[k]??={value:'',hidden:false,textContent:'',classList:{add:noop,remove:noop,toggle:noop},setAttribute:noop,addEventListener:noop}),createElement:()=>({getContext:()=>ctx}),querySelectorAll:()=>[],addEventListener:noop};
  const window={location:{search:''},matchMedia:()=>({matches:false}),devicePixelRatio:1,innerWidth:1280,innerHeight:720,addEventListener:noop},Params=class{get(){return null}};
  let seed=1;const math=Object.create(Math);math.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
- for(const script of [sources.physics,sources.aircraft,sources.scenery,sources.roster,sources.pilotAI,sources.missionDoctrine].filter(Boolean))new Function('window','document','Math',script)(window,document,math);
+ for(const script of [sources.physics,sources.aircraft,sources.scenery,sources.roster,sources.pilotAI,sources.missionDoctrine,sources.bossRivalry,sources.combatBalance].filter(Boolean))new Function('window','document','Math',script)(window,document,math);
  new Function('window','document','requestAnimationFrame','localStorage','URLSearchParams','Math',source)(window,document,noop,{getItem:()=>null,setItem:noop},Params,math);
  const types=['fighter','bf109','heavy','bf110','bomber','he111'];
  const summary={reversalsByType:{},reEngagementsByType:{},maxTailByType:{},evadeDisengagementsByType:{},games:0,groundCrashes:0,byType:{},bombSalvos:0,gunShots:0,tailSeconds:0,pursuitSeconds:0,firingOpportunitySeconds:0,damageTaken:[0,0],hitsTaken:[0,0],enemyVictories:0,bomberAboveSeconds:0,bomberClimbingSeconds:0,ceilingContact:0,modeChanges:0,modes:{},scenarios:{},samples:[]};
@@ -166,12 +173,14 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
     const result=window.aiQA.advance(Math.ceil((enc.timeLimit||120)*60)+2);
     const hero=window.aiQA.state.fliers[0];
     samples.push({win:result.winner===0,loss:result.winner===1,
+     maxBossStage:result.maxBossStage||0,commanderEntered:!!result.commanderEntered,
       seconds:Math.max(0,Math.round((enc.timeLimit||120)-window.aiQA.state.time)),
       integrity:+((Math.max(0,hero.health)+Math.max(0,hero.armour))/Math.max(1,startingCondition)).toFixed(2),
       killed:window.aiQA.state.fliers.filter(p=>p.team===1&&!p.alive&&!p.queued).length,
       crashed:window.aiQA.state.fliers.filter(p=>p.damageCause==='GROUND').length});
    }
-   matches.push({rank:enc.rank,lane:enc.lane,objective:enc.objective,risk:enc.risk,
+   matches.push({rank:enc.rank,lane:enc.lane,playerType:enc.playerType||'fighter',
+      bossStages:enc.bossPlan?.stages?.length||0,objective:enc.objective,risk:enc.risk,
       aiRank:enc.aiRank,threat:enc.threat,opponents:enc.types?.length||0,
       winRate:Math.round(samples.filter(x=>x.win).length/samples.length*100),
       avgIntegrity:+(samples.reduce((n,x)=>n+x.integrity,0)/samples.length).toFixed(2),
