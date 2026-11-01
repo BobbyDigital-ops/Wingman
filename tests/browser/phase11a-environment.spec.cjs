@@ -23,6 +23,26 @@ async function launchCampaign(page,rank,lane){
    isPlaying:window.WingmanGame.isPlaying()};
  },{rank,lane});
 }
+test('Skirmish weather dropdown launches the chosen hazard through the real menu',async({page},testInfo)=>{
+ const errors=await boot(page);
+ const ui=page.frameLocator('#wingman-new-interface iframe');
+ await ui.locator('[data-action="opening-start"]').click();
+ await ui.locator('[data-profile-slot="0"]').click();
+ if(await ui.locator('[data-action="confirm-pilot"]').count())
+  await ui.locator('[data-action="confirm-pilot"]').click();
+ await expect(ui.locator('[data-action="operations"]')).toBeVisible();
+ await ui.locator('[data-action="operations"]').click();
+ const weather=ui.locator('select[data-setting="weather"]');
+ await expect(weather).toHaveValue('auto');
+ await weather.selectOption('flak');
+ await expect(weather).toHaveValue('flak');
+ await page.screenshot({path:testInfo.outputPath('skirmish-weather-choice.png')});
+ await ui.locator('[data-action="operations-next"]').click();
+ await ui.locator('[data-action="launch-arcade"]').click();
+ await expect.poll(()=>page.evaluate(()=>window.WingmanGame.flightVisuals().hazard)).toBe('flak');
+ expect(await page.evaluate(()=>window.WingmanGame.isPlaying())).toBe(true);
+ expect(errors).toEqual([]);
+});
 test('turning bank is visible for human and AI aircraft, and naturally levels',async({page},testInfo)=>{
  const errors=await boot(page);
  const start=await page.evaluate(()=>{
