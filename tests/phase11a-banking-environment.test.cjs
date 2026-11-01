@@ -26,6 +26,24 @@ test('arcade four theatres have atmospheric personality without added hazards',(
  for(let i=0;i<4;i++)assert.equal(A.forEncounter(null,i).hazard,null);
 });
 
+test('all visual conditions and neutral hazards are selectable in Skirmish',()=>{
+ assert.deepEqual(A.PRESETS,['auto','clear','clouds','fog','rain','storm','glare','flak','searchlight']);
+ assert.equal(A.forPreset('auto',3).weather,'storm');
+ assert.equal(A.forPreset('clear',3).weather,'clear');
+ assert.equal(A.forPreset('rain',0).weather,'rain');
+ assert.equal(A.forPreset('flak',0).hazard,'flak');
+ assert.equal(A.forPreset('searchlight',0).hazard,'searchlight');
+ assert.equal(A.forPreset('searchlight',0).weather,'fog');
+ assert.equal(A.forPreset('wrong',0).hazard,null);
+});
+test('storm weather uses stronger shared wind gusts and preserves old wind physics',()=>{
+ const game=read('game.js');
+ assert.match(game,/const storm=state\.environment\?\.weather==='storm'/);
+ assert.match(game,/state\.environment\?\.weather==='storm'&&!state\.wind\.active/);
+ assert.match(game,/state\.wind=\{active:true,base:strength,current:strength,elapsed:0\}/);
+ assert.match(game,/environmentOverride=weather==='auto'/);
+ assert.match(read('wingman-ui/ui.js'),/data-setting="weather"/);
+});
 test('turn-rate banking follows left and right turns and gradually levels',()=>{
  const plane={alive:true,role:'fighter',turnVelocity:1.7,angle:.2,speed:82};
  let bank=0;
