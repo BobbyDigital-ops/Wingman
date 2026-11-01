@@ -34,6 +34,7 @@ test('Skirmish weather dropdown launches the chosen hazard through the real menu
  await ui.locator('[data-action="operations"]').click();
  const weather=ui.locator('select[data-setting="weather"]');
  await expect(weather).toHaveValue('auto');
+ await expect(weather.locator('option[value="searchlight"]')).toHaveCount(0);
  await weather.selectOption('flak');
  await expect(weather).toHaveValue('flak');
  await page.screenshot({path:testInfo.outputPath('skirmish-weather-choice.png')});
@@ -56,7 +57,10 @@ test('turning bank is visible for human and AI aircraft, and naturally levels',a
  await page.keyboard.down('ArrowRight');
  await page.waitForTimeout(700);
  const bank=await page.evaluate(()=>window.WingmanGame.flightVisuals().banking[0].bank);
- expect(bank).toBeGreaterThan(.23);
+ expect(bank).toBeGreaterThan(.50);
+ const wind=await page.evaluate(()=>window.WingmanGame.flightVisuals().wind);
+ expect(wind.active).toBe(true);
+ expect(Math.abs(wind.current)).toBeGreaterThan(18);
  await page.screenshot({path:testInfo.outputPath('right-bank-and-storm.png')});
  await page.keyboard.up('ArrowRight');
  await page.waitForTimeout(950);
@@ -64,7 +68,7 @@ test('turning bank is visible for human and AI aircraft, and naturally levels',a
  expect(Math.abs(after)).toBeLessThan(Math.abs(bank));
  expect(errors).toEqual([]);
 });
-test('campaign flak and searchlights have distinct readable conditions and no crashes',async({page},testInfo)=>{
+test('campaign flak is readable and old searchlight missions fall back to fog',async({page},testInfo)=>{
  const errors=await boot(page);
  const flak=await launchCampaign(page,10,2);
  expect(flak.isPlaying).toBe(true);
@@ -73,10 +77,11 @@ test('campaign flak and searchlights have distinct readable conditions and no cr
  await page.screenshot({path:testInfo.outputPath('flak-mission.png')});
  const lights=await launchCampaign(page,11,1);
  expect(lights.isPlaying).toBe(true);
- expect(lights.visuals.hazard).toBe('searchlight');
- expect(lights.label).toContain('SEARCHLIGHT');
+ expect(lights.visuals.hazard).toBeNull();
+ expect(lights.visuals.weather).toBe('fog');
+ expect(lights.label).not.toContain('SEARCHLIGHT');
  await page.waitForTimeout(400);
- await page.screenshot({path:testInfo.outputPath('searchlight-mission.png')});
+ await page.screenshot({path:testInfo.outputPath('retired-searchlight-fog-mission.png')});
  expect(errors).toEqual([]);
 });
 test('sun glare, fog and final boss weather use existing aircraft and remain playable',async({page},testInfo)=>{
