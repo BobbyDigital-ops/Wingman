@@ -157,6 +157,8 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
   ['recon','escort','outnumbered'],['final','final','final']
  ];
  const objective=kind==='elite'?(lane===2?'outnumbered':'ace-hunt'):
+   ((rank===3&&lane===1)||(rank===10&&lane===1))?'escape-artist':
+   rank===9&&lane===1?'formation-break':
    ((rank===6&&lane===2)||(rank===9&&lane===2)||(rank===11&&lane===1))?'intel-hunt':encounters[rank-1][lane];
  // Maintain the known real roster; don't create artificial pilots or replace art.
  if(objective==='intercept'){
@@ -201,6 +203,34 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
        archetype:intel.archetype,personality:intel.personality});
    }
  }
+ if(objective==='escape-artist'&&profile){
+   const ace=pool.find(p=>p.plane===(run.faction==='Allies'?'bf109':'fighter'));
+   const guard=pool.find(p=>p.id!==ace?.id&&p.plane===(run.faction==='Allies'?'bf110':'heavy'))||
+     pool.find(p=>p.id!==ace?.id);
+   if(ace&&guard){
+     const target=profile(ace),escort=profile(guard);
+     Object.assign(enc,{id:ace.id,label:ace.name,types:[target.plane,escort.plane],
+       opponents:[target,escort],wingman:escort,wingmen:[],
+       attributes:target.attributes,signature:target.signature,
+       archetype:target.archetype,personality:target.personality});
+   }
+ }
+ if(objective==='formation-break'&&profile){
+   const fighterType=run.faction==='Allies'?'bf109':'fighter';
+   const heavyType=run.faction==='Allies'?'bf110':'heavy';
+   const leader=pool.find(p=>p.plane===fighterType);
+   const second=pool.find(p=>p.id!==leader?.id&&p.plane===fighterType)||
+     pool.find(p=>p.id!==leader?.id);
+   const third=pool.find(p=>p.id!==leader?.id&&p.id!==second?.id&&p.plane===heavyType)||
+     pool.find(p=>p.id!==leader?.id&&p.id!==second?.id);
+   if(leader&&second&&third){
+     const unit=[leader,second,third].map(profile);
+     Object.assign(enc,{id:leader.id,label:leader.name,types:unit.map(p=>p.plane),
+       opponents:unit,wingman:unit[1],wingmen:[unit[1],unit[2]],
+       attributes:unit[0].attributes,signature:unit[0].signature,
+       archetype:unit[0].archetype,personality:unit[0].personality});
+   }
+ }
  if(objective==='outnumbered'&&enc.opponents.length===1&&profile){
    const spare=pool.find(p=>p.id!==enc.id&&p.plane!==enc.types[0]);
    if(spare){enc.opponents.push(profile(spare));enc.types=enc.opponents.map(p=>p.plane);enc.wingman=enc.opponents[1];}
@@ -222,6 +252,8 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
    objective==='escort'?'BOMBER ESCORT':
    objective==='intercept'?'BOMBER INTERCEPTION':
    objective==='recon'?'RECONNAISSANCE RUN':
+   objective==='formation-break'?'BREAK THE FORMATION':
+   objective==='escape-artist'?'THE ESCAPE ARTIST':
    objective==='intel-hunt'?'INTELLIGENCE CARRIER':
    objective==='ace-hunt'?'ACE HUNT':
    objective==='outnumbered'?'OUTNUMBERED PATROL':
@@ -231,6 +263,8 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
    objective==='escort'?'Protect the damaged bomber until extraction. Enemy fighters will attack the bomber, and additional interceptors may arrive.':
    objective==='intercept'?'Destroy the enemy bomber before it escapes into cloud cover.':
    objective==='recon'?'Protect the reconnaissance aircraft: survive until the photographs are complete, or destroy the pursuer.':
+   objective==='formation-break'?'Three hostile aircraft guard an experienced squadron leader. Destroy the marked leader to scatter the formation; his wingmen are optional.':
+   objective==='escape-artist'?'An evasive veteran is fleeing with an armed escort. Destroy the marked ace before the clock expires; ignore the wingman if you can.':
    objective==='intel-hunt'?'Shoot down the marked intelligence carrier before it escapes. Its escorts are optional, and enemy reinforcements may arrive.':
    objective==='ace-hunt'?'Bring down a veteran fighter before the short intercept window closes.':
    objective==='outnumbered'?'Defeat two coordinated fighter pilots, with enemy reinforcements possible on later rungs.':
@@ -240,21 +274,28 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
    objective==='escort'?Math.max(65,79-rank*2):
    objective==='intercept'?Math.max(54,96-rank*4):
    objective==='recon'?Math.max(49,63-rank*2):
+   objective==='formation-break'?108:
+   objective==='escape-artist'?Math.max(75,104-rank*2):
    objective==='intel-hunt'?Math.max(70,101-rank*2):
    objective==='ace-hunt'?Math.max(66,100-rank*2):
    objective==='outnumbered'?Math.max(97,126-rank*3):115;
 enc.escortType=objective==='escort'?(run.faction==='Allies'?'bomber':'he111'):null;
- enc.priorityTargetIndex=objective==='intel-hunt'?0:null;
+ enc.priorityTargetIndex=['intel-hunt','formation-break','escape-artist'].includes(objective)?0:null;
+ enc.tacticalMission=objective==='formation-break'?'LEADER TAKEDOWN':objective==='escape-artist'?'FLEEING ACE':
+  objective==='intel-hunt'?'INTELLIGENCE STRIKE':objective==='escort'?'PROTECT FRIENDLY BOMBER':null;
  const backupType=run.faction==='Allies'?'bf109':'fighter';
  enc.reinforcements=final?[]:
    objective==='escort'?[{at:30,count:1,type:backupType},...(rank>=7?[{at:53,count:1,type:backupType}]:[])]:
    objective==='outnumbered'&&rank>=6?[{at:30,count:1,type:backupType},...(rank>=10?[{at:54,count:1,type:backupType}]:[])]:
+   objective==='escape-artist'&&rank>=10?[{at:42,count:1,type:backupType}]:
    objective==='intel-hunt'?[{at:30,count:1,type:backupType}]:
    objective==='ace-hunt'&&rank>=7?[{at:32,count:1,type:backupType}]:[];
  enc.initialEnemies=final?2:enc.types.length;
  enc.totalEnemyThreat=enc.types.length+enc.reinforcements.reduce((count,w)=>count+w.count,0);
  enc.missionGoal=final?'Destroy the escorts and their ace commander':
    objective==='escort'?'Keep the damaged bomber alive until extraction':
+   objective==='formation-break'?'Destroy the marked squadron leader; the other two pilots are optional':
+   objective==='escape-artist'?'Intercept the marked fleeing ace before he escapes; escort is optional':
    objective==='intel-hunt'?'Destroy the marked intelligence carrier; escorts are optional':
    objective==='recon'?'Survive until reconnaissance completes':
    objective==='intercept'?'Destroy the enemy bomber before time expires':
@@ -274,7 +315,8 @@ function threatRating(enc){
  // Planning estimate only, NOT a measured win probability.
  const opponents=enc.types?.length||1,rank=enc.aiRank||enc.rank||1;
  const task=enc.objective==='escort'?13:enc.objective==='ace-hunt'?14:
-   enc.objective==='outnumbered'?10:enc.objective==='intel-hunt'?18:enc.objective==='final'?17:
+   enc.objective==='outnumbered'?10:enc.objective==='formation-break'?17:
+   enc.objective==='escape-artist'?15:enc.objective==='intel-hunt'?18:enc.objective==='final'?17:
    enc.objective==='intercept'?5:enc.objective==='recon'?-13:0;
  return Math.max(10,Math.min(100,Math.round(9+rank*8.5+
    Math.max(0,opponents-1)*13+Math.min(15,(enc.reinforcements?.length||0)*8)+task+(enc.eliteEncounter?8:0)+(enc.timeLimit<75&&enc.objective!=='recon'?7:0))));
