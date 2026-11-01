@@ -73,7 +73,7 @@ test('campaign combat and browser load calibration before the existing flight en
  const game=read('game.js'),page=read('index.html');
  assert.match(game,/WingmanCombatBalance\?\.skillFor\(encounter\)/);
  assert.match(game,/WingmanCombatBalance\?\.startingPosition\(i\)/);
- assert.match(game,/GAME_VERSION='v1\.1\.0'/);
+ assert.match(game,/GAME_VERSION='v1\.1\.1'/);
  assert.ok(page.indexOf('combat-balance.js')>=0);
  assert.ok(page.indexOf('combat-balance.js')<page.indexOf('<script src="./game.js'));
  assert.match(page,/boss-rivalry\.js/);
