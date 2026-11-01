@@ -19,7 +19,7 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Test current desktop and Android landscape menu and gameplay
-        run: npx playwright test tests/browser/phase10e-campaign.spec.cjs --reporter=line
+        run: npx playwright test tests/browser/phase10e-campaign.spec.cjs --retries=0 --timeout=25000 --workers=2 --reporter=line
       - name: Upload failure traces
         if: failure()
         uses: actions/upload-artifact@v4
