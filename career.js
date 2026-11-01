@@ -526,7 +526,15 @@ function finishEncounter(won,encounter,summary={}){
   damageTaken:Math.max(0,Math.round(Number(summary.damageTaken)||0)),
   fieldOrders:{...rival.fieldOrders},bossStage:data.lastOutcome.bossStage,
   returningRival:!!rival.returningRival,result:won?'VICTORY':'SHOT DOWN'});
- if(data.run){run.visits++;if(won){run.choices=makeChoices(run);run.campaignSchema=14;}}
+ if(data.run){
+  run.visits++;
+  if(won){run.choices=makeChoices(run);run.campaignSchema=14;}
+  else if(Array.isArray(run.choices)){
+   // The defeated ace is immediately a recognised rival on the next attempt.
+   for(const option of run.choices)
+    window.WingmanBossRivalry?.decorateEncounter(option,data.records);
+  }
+ }
  save();active=null;
  view='outcome';showing=true;screen.hidden=false;result.classList.add('hidden');
  const promotion=won&&rankTitle(Math.min(MAX_RANK,atRank+1))!==previousTitle?
