@@ -24,6 +24,20 @@ test('regional and final encounters have explicit stages and no stat patches',()
   assert.equal(Object.hasOwn(enc,'damageMultiplier'),false);
  }
 });
+test('a defeated rival appears on retry without duplicated mission briefing',()=>{
+ const enc={rank:4,id:'a',label:'ACE',eliteEncounter:true,
+  briefing:'Original objective.',missionGoal:'Defeat ace'};
+ B.decorateEncounter(enc,{});
+ assert.equal(enc.returningRival,false);
+ const losses={a:{wins:0,losses:1}};
+ B.decorateEncounter(enc,losses);
+ assert.equal(enc.returningRival,true);
+ assert.match(enc.briefing,/UNFINISHED BUSINESS/);
+ const one=enc.briefing;
+ B.decorateEncounter(enc,losses);
+ assert.equal(enc.briefing,one);
+ assert.equal(enc.bossPlan.stages.length,2);
+});
 test('regional ace changes tactic at 55% actual hull, without healing',()=>{
  const enc={rank:4,eliteEncounter:true,bossPlan:B.bossPlanFor({rank:4,eliteEncounter:true})};
  const hero={alive:true},ace={id:1,alive:true,health:100,d:{hull:100},queued:false};
