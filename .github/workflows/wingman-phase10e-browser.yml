@@ -4,6 +4,7 @@ on:
     branches:
       - feature/v104-phase10e-combat-balance
       - feature/v105-banking-environment-hazards
+      - feature/v111-visible-banking-clouds-flak-windsock
   workflow_dispatch:
 
 jobs:
