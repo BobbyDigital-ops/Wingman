@@ -160,9 +160,14 @@ function deployFieldOrders(run,enc){
   if(key==='radio'&&!enc.reinforcements?.length)continue;
   if(run.operations[key]>0){orders[key]=1;run.operations[key]--;}
  }
+ // Rebuild from the original wave schedule on every attempt: a radio
+ // advantage must not survive defeat or accumulate on retry.
+ if(!Array.isArray(enc.baseReinforcements))
+  enc.baseReinforcements=(enc.reinforcements||[]).map(w=>({...w}));
+ enc.reinforcements=enc.baseReinforcements.map(w=>({...w}));
  enc.fieldOrders=orders;
  if(orders.radio){
-  enc.reinforcements=(enc.reinforcements||[]).map(w=>({...w,
+  enc.reinforcements=enc.reinforcements.map(w=>({...w,
    at:Math.min(Math.max(8,enc.timeLimit-8),w.at+15)}));
  }
  run.lastFieldOrders={rank:run.rank,mission:enc.mission,...orders};
