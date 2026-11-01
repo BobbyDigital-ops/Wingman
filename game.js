@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, SKY_EXTRA=150, WORLD_H=H+SKY_EXTRA, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v1.0.4',GAME_PHASE='CAMPAIGN COMBAT BALANCE'; // stable release identifier
+  const GAME_VERSION='v1.1.0',GAME_PHASE='FLIGHT BANKING / ENVIRONMENT'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -38,7 +38,7 @@
     phase:'menu',cameraY:SKY_EXTRA,selected:'fighter',fliers:[],bullets:[],bombs:[],mines:[],sparks:[],
     scores:[0,0],round:1,time:90,intermission:0,banner:'',bannerTime:0,paused:false,
     impactLock:0,trails:[],blasts:[],visualClock:0,enemyType:'heavy',mode:'duel',arena:0,kills:0,participants:2,teams:false,difficulty:'standard',
-    wind:{active:false,base:0,current:0,elapsed:0},recordMode:'duel',challenge:'intercept',session:null,survivalCarry:null,supportCharge:0,supportTime:0,supportUses:0
+    wind:{active:false,base:0,current:0,elapsed:0},environment:null,recordMode:'duel',challenge:'intercept',session:null,survivalCarry:null,supportCharge:0,supportTime:0,supportUses:0
   };
   const controls={left:false,right:false,boost:false};
   const ui={
@@ -292,6 +292,10 @@ function plane(type,id,x,y,angle){
     state.cameraY=SKY_EXTRA;
     state.bullets=[];state.bombs=[];state.mines=[];state.sparks=[];
     state.trails=[];state.blasts=[];state.visualClock=0;
+    state.environment=window.WingmanFlightAtmosphere?.create(
+      state.mode==='campaign'&&state.campaignEncounter?.environment||
+      window.WingmanFlightAtmosphere.forEncounter(
+        state.mode==='campaign'?state.campaignEncounter:null,state.arena))||null;
     state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
     // Phase 9C: declared weather is symmetric: both teams fly through the same air.
     if(state.mode==='campaign'&&state.campaignEncounter?.hazard==='crosswind'){
@@ -400,6 +404,9 @@ function plane(type,id,x,y,angle){
   window.WingmanGame={
     launchArcade,startCampaignFight,showMenu:()=>showMenu(),
     isPlaying:()=>state.phase==='playing',
+    flightVisuals:()=>({weather:state.environment?.weather||'clear',
+      hazard:state.environment?.hazard||null,
+      banking:state.fliers.map(p=>({id:p.id,bank:p.visualBank||0}))}),
     aircraftSpecs:()=>Object.fromEntries(Object.entries(PLANES).map(([id,p])=>
       [id,{speed:p.speed,turn:p.turn,armour:p.armour,hull:p.hull,damage:(id==='bomber'||id==='he111')?2.9:p.damage,radius:p.radius}]))
   };
@@ -1576,6 +1583,7 @@ function plane(type,id,x,y,angle){
     p.skillFeedbackTime=Math.max(0,(p.skillFeedbackTime||0)-dt);
     p.rollRecovery=Math.max(0,p.rollRecovery-dt);
     steerPlane(p,steer,dt);
+    window.WingmanFlightAtmosphere?.advanceBank(p,dt);
     if(p.id===0)updateTailLock(p,dt);
     if(p.burstLeft>0){
       p.shotTimer-=dt;
@@ -1736,6 +1744,16 @@ function plane(type,id,x,y,angle){
       if(user.alive)updatePlane(user,dt,(controls.right?1:0)-(controls.left?1:0),controls.boost);
       for(const p of state.fliers.slice(1)){
         if(p.alive){const target=nearestEnemy(p);const steer=target?aiInput(p,target):0;updatePlane(p,dt,steer,p.aiBoost);}
+      }
+      // Neutral, telegraphed terrain hazards run after ordinary flight.
+      // Every aircraft has the same range, spawn protection and exposure rules.
+      if(state.mode==='campaign'){
+        const oldBursts=state.environment?.flakBursts?.length||0;
+        window.WingmanFlightAtmosphere?.advance(state.environment,dt,W,WORLD_H,
+          state.fliers,(p,damage,x,y,cause)=>hit(p,damage,x,y,undefined,cause,null));
+        if((state.environment?.flakBursts?.length||0)>oldBursts)sound('bombImpact');
+      }else{
+        window.WingmanFlightAtmosphere?.advance(state.environment,dt,W,WORLD_H,[]);
       }
       projectiles(dt);
       updateCamera(dt);
@@ -1995,10 +2013,12 @@ function plane(type,id,x,y,angle){
     // horizontally, then apply the correct physical pitch angle.
     if(Math.cos(p.angle)<0){c.scale(-1,1);c.rotate(Math.PI-p.angle);}
     else c.rotate(p.angle);
-    if(swoopPhysics&&p.corkscrewTime<=0&&p.rollTime<=0){
-      // Restrained wing-bank hint; this affects artwork only, not hitboxes.
-      const bank=clamp(p.turnVelocity/Math.max(1,p.d.turn),-1,1);
-      c.transform(1,bank*.035,bank*.022,1-Math.abs(bank)*.095,0,0);
+    if(p.corkscrewTime<=0&&p.rollTime<=0){
+      // Actual turn-rate banking: visibly expose the wing plane as the
+      // original side-on aircraft art yaws. No changes to flight, hitboxes,
+      // weapons, pilot portraits, or normal left-facing orientation.
+      const bank=window.WingmanFlightAtmosphere?.bankMatrix(p);
+      if(bank)c.transform(1,bank.shearY,bank.shearX,bank.height,0,0);
     }
     if(p.corkscrewTime>0){
       // Axial double spiral: heading unchanged, and no invulnerability.
@@ -2092,6 +2112,10 @@ function plane(type,id,x,y,angle){
     window.WingmanOrdnance?.draw(c,state.bullets,state.bombs,state.fliers);
     for(const p of state.fliers)if(p.alive)aircraft(p);
     c.restore();
+    // Weather in front of the silhouettes makes rain, cloud and beams feel
+    // part of the actual sky, without obscuring the live flight instruments.
+    window.WingmanFlightAtmosphere?.drawFront(
+      c,state.environment,W,H,state.cameraY);
     // RAF-inspired reflector gunsight projects a few metres ahead of the
     // PLAYER aircraft, rather than painting brackets onto enemy aircraft.
     // Silver = idle; ivory = lining up; brass/amber = tracking; gold = lock.
@@ -2352,6 +2376,7 @@ function plane(type,id,x,y,angle){
     const bgZoom=WORLD_H/H;
     const bgWidth=W*bgZoom;
     g.drawImage(scene,(W-bgWidth)*.5,-state.cameraY,bgWidth,WORLD_H);
+    window.WingmanFlightAtmosphere?.drawBack(g,state.environment,W,H);
     drawWind();
     // Light haze affects visibility for both pilots, never hit detection.
     if(state.mode==='campaign'&&state.campaignEncounter?.hazard==='haze'){
@@ -2416,7 +2441,16 @@ function plane(type,id,x,y,angle){
     // Draw the entire HUD a second time on the high-DPI overlay, preserving
     // sharp glyphs instead of stretching the logical 250px canvas.
     const lowRes=g;g=modelCtx;
-    try{drawHud();}finally{g=lowRes;}
+    try{
+      drawHud();
+      if(state.phase==='playing'&&state.environment&&
+         (state.environment.weather!=='clear'||state.environment.hazard)){
+        g.save();g.textAlign='right';g.textBaseline='middle';
+        g.font='bold 6px monospace';g.fillStyle='#ffe0ad';
+        g.fillText(state.environment.label||'WEATHER',W-12,47,Math.min(160,W*.3));
+        g.restore();
+      }
+    }finally{g=lowRes;}
     // Arcade HUD already carries both hull and armour. Keep the extra
     // damage instrument only in cockpit mode, away from MENU controls.
     if(document.getElementById('hud-style')?.value==='cockpit')damageDiagram();
