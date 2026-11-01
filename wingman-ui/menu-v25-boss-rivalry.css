@@ -1,0 +1,18 @@
+/* Phase 10D — boss and rematch dossier details. Uses the established RAF palette. */
+.wm-v102-boss-dossier,.wm-v102-rivalry-dossier,.wm-v102-rivalry-debrief{
+ border:1px solid rgba(202,175,116,.42);border-radius:8px;
+ background:linear-gradient(125deg,rgba(8,26,40,.91),rgba(36,44,48,.78));
+ color:#e8dfcc;margin:10px 0;padding:11px 13px;min-width:0;
+}
+.wm-v102-boss-dossier>strong,.wm-v102-rivalry-dossier>strong,
+.wm-v102-rivalry-debrief>strong{font:700 .8rem Georgia,serif;letter-spacing:.045em;color:#f4d498;display:block;margin-bottom:7px}
+.wm-v102-boss-stages{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:7px;margin:8px 0}
+.wm-v102-boss-stages>div{padding:8px;border:1px solid rgba(227,218,187,.16);border-radius:5px;background:rgba(230,218,177,.045)}
+.wm-v102-boss-stages small{display:block;color:#efc887;font-size:.72rem;font-weight:750;margin-bottom:5px}
+.wm-v102-boss-stages span,.wm-v102-rivalry-dossier>span{display:block;line-height:1.35;font-size:.79rem}
+.wm-v102-boss-dossier>small,.wm-v102-rivalry-dossier>small,.wm-v102-rivalry-debrief>small{display:block;color:#becbd0;font-size:.7rem;line-height:1.4;margin-top:6px}
+@media(max-width:660px){
+ .wm-v102-boss-stages{grid-template-columns:1fr;gap:4px}
+ .wm-v102-boss-dossier,.wm-v102-rivalry-dossier,.wm-v102-rivalry-debrief{padding:8px 10px}
+ .wm-v102-boss-stages>div{padding:6px 8px}
+}
