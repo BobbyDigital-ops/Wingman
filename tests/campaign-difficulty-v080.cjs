@@ -35,7 +35,8 @@ const result=runAI({
  aircraft:read('src/art/aircraft.js'),
  scenery:read('src/art/scenery.js'),
  roster:read('src/data/pilot-roster.js'),
- pilotAI:read('src/data/pilot-ai.js')
+ pilotAI:read('src/data/pilot-ai.js'),
+ missionDoctrine:read('src/ai/mission-doctrine.js')
 },{reps:1,seconds:1,scenarios:['duel'],difficulty:'standard',
    campaignCheck:true,campaignScenarios:scenarios});
 const byRisk=Object.fromEntries(['LOW','MEDIUM','HIGH'].map(risk=>{
