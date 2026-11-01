@@ -216,8 +216,36 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
     label:'Ace Hunt',timeLimit:56,difficulty:'ace'};
   window.aiQA.mission(aceHunt);window.aiQA.state.time=.005;
   const aceHuntTimedOut=window.aiQA.advance(2).winner===1;
+  const formation={objective:'formation-break',rank:9,aiRank:8,lane:1,types:['bf109','bf109','bf110'],
+   opponents:[{id:'leader',name:'Formation Leader',plane:'bf109'},
+    {id:'guard-one',name:'Escort',plane:'bf109'},{id:'guard-two',name:'Guard',plane:'bf110'}],
+   priorityTargetIndex:0,label:'Formation Break',timeLimit:108,difficulty:'ace'};
+  window.aiQA.mission(formation);
+  const formationRoles=window.aiQA.state.fliers.slice(1).map(p=>p.aiRole);
+  const formationRolesAssigned=formationRoles.join(',')==='leader,guard,guard';
+  window.aiQA.state.fliers[1].alive=false;
+  const leaderVictory=window.aiQA.advance(2).winner===0;
+  window.aiQA.mission(formation);
+  window.aiQA.state.fliers[2].alive=false;window.aiQA.state.fliers[3].alive=false;
+  const escortsNotVictory=window.aiQA.advance(2).winner===null&&window.aiQA.state.phase==='playing';
+  window.aiQA.state.time=.005;
+  const leaderEscapesOnTimeout=window.aiQA.advance(2).winner===1;
+  const escape={objective:'escape-artist',rank:10,aiRank:8,lane:1,types:['bf109','bf110'],
+   opponents:[{id:'evader',name:'Escaping Ace',plane:'bf109'},
+    {id:'wing',name:'Screening Fighter',plane:'bf110'}],
+   priorityTargetIndex:0,label:'Escape Artist',timeLimit:78,difficulty:'ace'};
+  window.aiQA.mission(escape);
+  const escapeRolesAssigned=window.aiQA.state.fliers[1].aiRole==='escapeAce'&&
+   window.aiQA.state.fliers[2].aiRole==='screen';
+  window.aiQA.state.fliers[1].alive=false;
+  const escapeAceVictory=window.aiQA.advance(2).winner===0;
+  window.aiQA.mission(escape);
+  window.aiQA.state.fliers[2].alive=false;window.aiQA.state.time=.005;
+  const escapeAceTimedOut=window.aiQA.advance(2).winner===1;
   summary.campaignChecks={escortPresent,escortSurvived,escortLost,interceptionDeadline,
-   reconSurvivalWin,reconPilotLost,aceHuntTimedOut,campaignBonusesApplied,noFriendlyFire};
+   reconSurvivalWin,reconPilotLost,aceHuntTimedOut,campaignBonusesApplied,noFriendlyFire,
+   formationRolesAssigned,leaderVictory,escortsNotVictory,leaderEscapesOnTimeout,
+   escapeRolesAssigned,escapeAceVictory,escapeAceTimedOut};
   if(Object.values(summary.campaignChecks).some(value=>!value))
     throw Error('Campaign mission objective regression: '+JSON.stringify(summary.campaignChecks));
  }
