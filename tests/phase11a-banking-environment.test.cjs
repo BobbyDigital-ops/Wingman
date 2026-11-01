@@ -43,9 +43,10 @@ test('turn-rate banking follows left and right turns and gradually levels',()=>{
 });
 
 test('heavy craft and bombers bank more gradually than light fighters',()=>{
- const f={alive:true,role:'fighter',turnVelocity:1.3};
- const h={alive:true,role:'heavy',turnVelocity:1.3};
- const b={alive:true,role:'bomber',turnVelocity:1.3};
+ // Compare the same fraction of each airframe's normal turning authority.
+ const f={alive:true,role:'fighter',turnVelocity:1.64};
+ const h={alive:true,role:'heavy',turnVelocity:1.36};
+ const b={alive:true,role:'bomber',turnVelocity:1.04};
  for(let i=0;i<9;i++)for(const p of [f,h,b])A.advanceBank(p,1/60);
  assert.ok(f.visualBank>h.visualBank);
  assert.ok(h.visualBank>b.visualBank);
