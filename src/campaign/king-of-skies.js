@@ -61,8 +61,8 @@ function eventOptions(kind){
   {id:'patch',name:'REPAIR THE AIRFRAME',detail:'Restore 25% aircraft condition.'},
   {id:'crate',name:'COLLECT SPARE PARTS',detail:'Gain 3 repair supplies.'}];
  case 'intel':return [
-  {id:'scout',name:'SCOUT THE FRONT',detail:'Collect 2 repair supplies from the reconnaissance cache.'},
-  {id:'prepare',name:'PREPARE AN AMBUSH',detail:'Gain an upgraded gunsight for this run, or supplies if already fitted.'}];
+  {id:'scout',name:'INTERCEPT RADIO TRAFFIC',detail:'Gain 2 supplies and delay the next combat mission\'s enemy backup by 15 seconds.'},
+  {id:'prepare',name:'PREPARE AN AMBUSH',detail:'Gain upgraded gun sights (or 2 supplies if fitted), plus weaken enemy pilot tactics in your next combat sortie.'}];
  case 'shop':return [
   {id:'service',name:'FULL SERVICE · 2 SUPPLIES',detail:'Spend 2 supplies to restore 50% condition.'},
   {id:'guns',name:'GUNSMITH · 3 SUPPLIES',detail:'Spend 3 supplies to install +7% gun damage.'},
@@ -71,7 +71,7 @@ function eventOptions(kind){
   {id:'safe',name:'PASS THE DICE',detail:'Keep your supplies and continue.'},
   {id:'roll',name:'ROLL FOR A CRATE',detail:'Stake 1 supply: win 4 supplies, or lose the stake.'}];
  default:return [
-  {id:'help',name:'HELP THE GROUND CREW',detail:'Earn 2 repair supplies.'},
+  {id:'help',name:'HELP THE GROUND CREW',detail:'Earn 2 repair supplies and start your next combat sortie with 25 wingman support charge.'},
   {id:'risk',name:'TEST A NEW ENGINE',detail:'Gain speed tuning, but the engine may suffer wear.'}];
  }
 }
@@ -80,7 +80,8 @@ function resolveEvent(run,enc,optionId){
  if(!enc?.isNonCombat||run.pendingReward||run.rank!==enc.rank)return null;
  const available=eventOptions(enc.nodeType);
  if(!available.some(x=>x.id===optionId))return null;
- const before={condition:run.condition,supplies:run.supplies,effects:[...run.effects]};
+ const before={condition:run.condition,supplies:run.supplies,effects:[...run.effects],operations:{...run.operations}};
+ const earnOrder=(key)=>{run.operations[key]=Math.min(2,run.operations[key]+1);};
  const gain=(amount)=>{run.supplies=n(run.supplies+amount,0,MAX_SUPPLIES);};
  const repair=(amount)=>{run.condition=n(run.condition+amount,15,100);};
  const addEffect=(id)=>{if(byId[id]&&!run.effects.includes(id))run.effects.push(id);run.effects=run.effects.slice(-MAX_EFFECTS);};
@@ -88,7 +89,8 @@ function resolveEvent(run,enc,optionId){
  const diceRoll=kind==='dice'&&optionId==='roll'?1+hash(run.seed,run.rank,enc.lane,run.visits,optionId)%6:null;
  const gamble=diceRoll===null?hash(run.seed,run.rank,enc.lane,run.visits,optionId)%2===0:diceRoll>=4;
  if(kind==='supply'){if(optionId==='patch')repair(25);else gain(3);}
- else if(kind==='intel'){if(optionId==='scout')gain(2);else if(!run.effects.includes('ace-weapon-sights'))addEffect('ace-weapon-sights');else gain(2);}
+ else if(kind==='intel'){if(optionId==='scout'){gain(2);earnOrder('radio');}
+  else {if(!run.effects.includes('ace-weapon-sights'))addEffect('ace-weapon-sights');else gain(2);earnOrder('ambush');}}
  else if(kind==='shop'){
   const cost=optionId==='service'?2:optionId==='guns'?3:0;
   if(run.supplies<cost)return null;
@@ -99,7 +101,7 @@ function resolveEvent(run,enc,optionId){
  }else if(kind==='dice'){
   if(optionId==='roll'){if(run.supplies<1)return null;gain(gamble?4:-1);}
  }else if(kind==='event'){
-  if(optionId==='help')gain(2);
+  if(optionId==='help'){gain(2);earnOrder('favour');}
   else {addEffect('supercharger');if(!gamble)addEffect('engine-wear');}
  }
  const result={
@@ -107,6 +109,8 @@ function resolveEvent(run,enc,optionId){
   label:enc.label,description:available.find(o=>o.id===optionId)?.name||'EVENT COMPLETED',
   suppliesDelta:run.supplies-before.supplies,conditionDelta:run.condition-before.condition,
   newEffects:run.effects.filter(id=>!before.effects.includes(id)),
+  newOrders:Object.fromEntries(Object.keys(run.operations).map(key=>[key,run.operations[key]-before.operations[key]])),
+  operationsAfter:{...run.operations},
   suppliesBefore:before.supplies,suppliesAfter:run.supplies,
   conditionBefore:before.condition,conditionAfter:run.condition,
   diceRoll,diceWon:diceRoll===null?null:gamble,
@@ -131,9 +135,40 @@ function normalizeRun(run){
  run.supplies=n(run.supplies,0,MAX_SUPPLIES);
  run.condition=run.condition===undefined?100:n(run.condition,15,100);
  run.effects=Array.isArray(run.effects)?[...new Set(run.effects.filter(id=>typeof id==='string'&&byId[id]))].slice(-MAX_EFFECTS):[];
+ const operation=run.operations&&typeof run.operations==='object'?run.operations:{};
+ run.operations=Object.fromEntries(['radio','ambush','favour'].map(key=>
+  [key,Math.max(0,Math.min(2,Math.floor(Number(operation[key])||0)))]));
  if(run.pendingReward&&!Array.isArray(run.pendingReward.offers))run.pendingReward=null;
  return run;
 }
+// Ground preparation is a genuine short-run resource decision. It is never
+// awarded merely for opening a briefing or selecting a path.
+function buyFieldOrder(run,key){
+ normalizeRun(run);
+ if(!run||run.pendingReward||!['radio','favour'].includes(key)||
+    run.operations[key]>=2||run.supplies<2)return false;
+ run.supplies-=2;run.operations[key]++;
+ return true;
+}
+// Tactical support is spent at actual take-off, not at mission selection.
+// Radio interception remains held if the selected sortie has no backup waves.
+function deployFieldOrders(run,enc){
+ normalizeRun(run);
+ if(!run||!enc||enc.isNonCombat||run.pendingReward)return null;
+ const orders={radio:0,ambush:0,favour:0};
+ for(const key of Object.keys(orders)){
+  if(key==='radio'&&!enc.reinforcements?.length)continue;
+  if(run.operations[key]>0){orders[key]=1;run.operations[key]--;}
+ }
+ enc.fieldOrders=orders;
+ if(orders.radio){
+  enc.reinforcements=(enc.reinforcements||[]).map(w=>({...w,
+   at:Math.min(Math.max(8,enc.timeLimit-8),w.at+15)}));
+ }
+ run.lastFieldOrders={rank:run.rank,mission:enc.mission,...orders};
+ return orders;
+}
+
 function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
  const rank=n(run.rank,1,MAX_RANK),final=rank===MAX_RANK;
  const kind=nodeTypeFor(rank,lane);
@@ -401,7 +436,7 @@ function settle(run,encounter,won,remaining=1){
  }
  return run;
 }
-const api={MAX_RANK,REGIONS,NODE_LAYOUT,nodeTypeFor,regionForRank,reachableLanes,eventOptions,resolveEvent,UPGRADES,ELITE_UPGRADES,SETBACKS,normalizeRun,decorateEncounter,threatRating,sortieGrade,offerReward,claim,repair,sortieBonuses,settle};
+const api={MAX_RANK,REGIONS,NODE_LAYOUT,nodeTypeFor,regionForRank,reachableLanes,eventOptions,resolveEvent,buyFieldOrder,deployFieldOrders,UPGRADES,ELITE_UPGRADES,SETBACKS,normalizeRun,decorateEncounter,threatRating,sortieGrade,offerReward,claim,repair,sortieBonuses,settle};
 root.WingmanCampaign=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
