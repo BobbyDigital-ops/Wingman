@@ -35,7 +35,7 @@ test('Skirmish launches from aircraft selection without final briefing',()=>{
  assert.equal(t.logs[1][0],'hide');
 });
 test('Campaign launches selected sortie directly and retains campaign state',()=>{
- const t=harness(true);t.window.WingmanLiveUI.state.career=true;t.window.WingmanLiveUI.go('aircraft');
+ const t=harness(true);t.window.WingmanLiveUI.state.career=true;t.window.WingmanLiveUI.state.choice=0;t.window.WingmanLiveUI.go('aircraft');
  assert.match(t.stage.innerHTML,/data-action="launch-career"/);
  assert.match(t.stage.innerHTML,/ACE HUNT/);
  t.action('launch-career');assert.deepEqual(t.logs[0],['career',0,'fighter']);
