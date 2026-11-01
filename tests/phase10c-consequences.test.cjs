@@ -96,7 +96,7 @@ test('real career flow carries earned operations across events, sortie, debrief 
  new Function('window','document','localStorage','sessionStorage',read('career.js'))(
   rootWin,document,storage,{getItem(){return null}});
  const load=()=>JSON.parse(db['wingman-road-to-ace-v1']);
- assert.equal(load().run.campaignSchema,13);
+ assert.equal(load().run.campaignSchema,14);
  const event=rootWin.WingmanCareer.resolveCampaignEvent(2,'scout');
  assert.equal(event.newOrders.radio,1);
  assert.equal(load().run.rank,3);
@@ -129,5 +129,5 @@ test('menu reports the actual event reward, held tactical orders and consumed so
  assert.match(ui,/data-buy-order="radio"/);
  assert.match(bridge,/buyCampaignOrder\(key\)/);
  assert.match(career,/deployFieldOrders/);
- assert.match(career,/campaignSchema=13/);
+ assert.match(career,/campaignSchema=14/);
 });
