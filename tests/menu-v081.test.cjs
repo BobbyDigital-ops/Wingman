@@ -102,7 +102,9 @@ test('campaign ladder gets its own full view and sortie choices have their own v
  assert.match(t.body(),/wm-v13-ladder/);
  assert.match(t.body(),/campaign-ladder-scroll/);
  assert.match(t.body(),/VIEW FULL LADDER/);
- t.action('campaign-sortie');
+ // Select an actual reachable mission before entering its dossier.
+ t.click({choice:'0'});
+ assert.equal(t.window.WingmanLiveUI.state.choice,0);
  assert.match(t.body(),/wm-v13-sortie/);
  assert.match(t.body(),/SELECT AIRCRAFT/);
  t.action('campaign-map');assert.match(t.body(),/wm-v13-ladder/);
