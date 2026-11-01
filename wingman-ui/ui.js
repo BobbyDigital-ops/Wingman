@@ -300,6 +300,26 @@ function career(){
   ((selected.reinforcements||[]).length?'<p class="wm-v9f-wave-brief">BACKUP EXPECTED · '+(selected.reinforcements||[]).map(w=>esc(w.count)+' fighter'+(w.count>1?'s':'')+' around '+esc(w.at)+'s').join(' · ')+'</p>':'')+
   (selected.priorityTargetIndex!=null?'<p class="wm-v100-target-line">MARKED TARGET · '+esc(selected.opponents?.[selected.priorityTargetIndex??0]?.name||selected.label||'ENEMY LEADER')+' · '+esc(selected.types?.[selected.priorityTargetIndex??0]||'FIGHTER').toUpperCase()+'</p>':''):
   '';
+
+ const operations=run.operations||{};
+ const orderNames={radio:'RADIO INTERCEPT',ambush:'AMBUSH PLAN',favour:'GROUND CREW FAVOUR'};
+ const orderDescriptions={radio:'Enemy backup delayed by 15 seconds on the next combat sortie with reinforcements',
+  ambush:'Enemy pilots lose 13 percentage points of tactical skill in the next combat sortie',
+  favour:'Start the next combat sortie with 25 / 100 wingman support charge'};
+ const orderCount=Object.values(operations).reduce((n,x)=>n+(Number(x)||0),0);
+ const fieldOrders=selected&&!selected.isNonCombat?
+  '<section class="wm-v101-field-orders"><div class="wm-v101-order-heading"><strong>CAMPAIGN FIELD ORDERS</strong>'+
+   '<small>'+orderCount+' STORED ADVANTAGES · ONE OF EACH TYPE USED ON TAKE-OFF</small></div>'+
+   '<div class="wm-v101-order-list">'+Object.keys(orderNames).map(key=>
+     '<div class="wm-v101-order-entry"><span>'+esc(orderNames[key])+'</span>'+
+       '<strong>× '+esc(operations[key]||0)+'</strong><small>'+esc(orderDescriptions[key])+'</small></div>'
+   ).join('')+'</div>'+
+   '<div class="wm-v101-order-actions">'+
+    '<button type="button" data-buy-order="radio" '+((run.supplies||0)<2||(operations.radio||0)>=2?'disabled':'')+'>BUY RADIO INTEL · 2 SUPPLIES</button>'+
+    '<button type="button" data-buy-order="favour" '+((run.supplies||0)<2||(operations.favour||0)>=2?'disabled':'')+'>BUY CREW SUPPORT · 2 SUPPLIES</button></div>'+
+   (S.orderNotice?'<small class="wm-v101-order-notice">'+esc(S.orderNotice)+'</small>':'')+
+  '</section>':'';
+
  const selectedSortie=eventDossier || (selected?
   '<article class="wm-v085-sortie-brief" aria-label="Selected campaign mission">'+
    '<div class="wm-v085-sortie-portrait">'+(rival?atlas(rival):'<span class="wm-v085-no-photo">✈</span>')+
@@ -308,7 +328,7 @@ function career(){
     '<div class="wm-v085-sortie-overline">✦ SELECTED FROM OPERATIONAL CHART · RANK '+currentRank+'</div>'+
     '<h2>'+esc(selected.mission||'COMBAT SORTIE')+'</h2>'+
     '<div class="wm-v085-sortie-opponent"><small>OPPOSING PILOT</small><strong>'+esc(rival?.name||selected.label||'UNKNOWN RIVAL')+'</strong></div>'+
-    '<p class="wm-v085-sortie-description">'+esc(selected.briefing||rival?.bio||'Complete the assigned mission and return safely.')+'</p>'+encounterInfo+
+    '<p class="wm-v085-sortie-description">'+esc(selected.briefing||rival?.bio||'Complete the assigned mission and return safely.')+'</p>'+encounterInfo+fieldOrders+
     '<div class="wm-v085-sortie-metrics">'+
      '<div><span>DIFFICULTY</span><strong>'+esc(selected.risk||'LOW')+' RISK</strong></div>'+
      '<div><span>THREAT RATING</span><strong>'+esc(selected.threat??'—')+' / 100</strong></div>'+
@@ -580,6 +600,8 @@ function eventResult(){
    Math.max(0,(run?.condition??100)-(report.conditionDelta||0));
  const afterCondition=Number.isFinite(report.conditionAfter)?report.conditionAfter:run?.condition??100;
  const sign=v=>v>0?'+'+v:String(v);
+ const newOrders=Object.entries(report.newOrders||{}).filter(([,amount])=>amount>0);
+ const ordersCards=newOrders.map(([key,amount])=>'<div class="wm-v101-event-order"><strong>NEW CAMPAIGN ADVANTAGE · '+esc(key.toUpperCase())+' ×'+esc(amount)+'</strong><small>Saved for a future combat mission. View Field Orders in the mission dossier.</small></div>').join('');
  const effectCards=(report.newEffects||[]).map(id=>'<div class="wm-v10-result-upgrade">'+
     '<span>NEW AIRCRAFT MODIFICATION</span><strong>'+esc(perkById(id)?.name||id)+'</strong>'+
     '<small>'+esc(perkById(id)?.detail||'Added to your campaign aircraft')+'</small></div>').join('');
@@ -609,7 +631,7 @@ function eventResult(){
            '<span class="'+(report.suppliesDelta<0?'negative':'')+'">'+sign(report.suppliesDelta||0)+'</span></div>'+
         '<div><small>AIRCRAFT CONDITION</small><strong>'+esc(beforeCondition)+'% → '+esc(afterCondition)+'%</strong>'+
            '<span class="'+(report.conditionDelta<0?'negative':'')+'">'+sign(report.conditionDelta||0)+'%</span></div>'+
-      '</div>'+effectCards+
+      '</div>'+effectCards+ordersCards+
       '<div class="wm-v10-result-actions">'+confirmButton('RETURN TO CAMPAIGN LADDER ›','continue-event','red')+'</div>'+
     '</article>'+
   '</div><div class="wm-v10-result-footer">RESULT SAVED TO THE CAMPAIGN LOG · RUNG '+esc(report.rank)+' COMPLETE</div>'+
@@ -660,6 +682,7 @@ function action(v){
 document.addEventListener('click',e=>{
  const el=e.target.closest('button');if(!el)return;
  if(el.dataset.go){S.career=false;return go(el.dataset.go)}
+ if(el.dataset.buyOrder){const ok=api()?.buyCampaignOrder?.(el.dataset.buyOrder);S.orderNotice=ok?'ORDER CONFIRMED · 2 SUPPLIES SPENT':'ORDER UNAVAILABLE · CHECK SUPPLIES OR MAXIMUM OF 2';return show();}
  if(el.dataset.eventOption){const result=api()?.resolveCampaignEvent?.(S.choice,el.dataset.eventOption);if(result){S.campaignPanel='ladder';S.choice=null;S.lastEventSummary=result;S.screen='event-result';S.back=[];show();}return;}
  if(el.dataset.reward){
    if(api()?.claimCampaignReward?.(el.dataset.reward)){
