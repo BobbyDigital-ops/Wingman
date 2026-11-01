@@ -23,7 +23,7 @@ function rivalryDetail(record){
  if(!total)return null;
  return {encounters:total,wins,losses,
   title:losses>wins?'UNFINISHED BUSINESS':wins>losses?'REVENGE INBOUND':'OLD ADVERSARY',
-  text:'Previous meetings: '+wins+' victory'+(wins===1?'':'ies')+
+  text:'Previous meetings: '+wins+(wins===1?' victory':' victories')+
     ', '+losses+' defeat'+(losses===1?'':'s')+'.'};
 }
 function bossPlanFor(enc){
