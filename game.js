@@ -217,7 +217,11 @@ function plane(type,id,x,y,angle){
       encounter.types.slice(0,3).forEach((type,index)=>{
         const [x,y,angle]=starts[index],foe=plane(type,index+1,W*x,H*y,angle);
         foe.team=1;
-        if(encounter.objective==='intel-hunt'&&index===encounter.priorityTargetIndex){foe.priorityCarrier=true;}
+        if(index===encounter.priorityTargetIndex){
+          foe.priorityObjective=true;foe.priorityCarrier=encounter.objective==='intel-hunt';
+          foe.priorityLeader=encounter.objective==='formation-break';
+          foe.priorityEscapeAce=encounter.objective==='escape-artist';
+        }
         state.fliers.push(foe);
       });
       state.fliers[0].team=0;
@@ -423,8 +427,15 @@ function plane(type,id,x,y,angle){
       ui.resultDetail.textContent=won?
         state.campaignEncounter?.objective==='recon'&&state.time<=0?
           'Reconnaissance complete. Your photographs reached Fighter Command.':
-          'Enemy pilots defeated. Return to base.':
-        'The mission has failed. Your aircraft was lost.';
+        state.campaignEncounter?.objective==='formation-break'?
+          'The formation leader is down. His wingmen are scattering.':
+        state.campaignEncounter?.objective==='escape-artist'?
+          'The fleeing ace was intercepted before he escaped.':
+        state.campaignEncounter?.objective==='intel-hunt'?
+          'The intelligence carrier has been destroyed.':
+          'Mission objective achieved. Return to base.':
+        state.fliers[0]?.alive?'The objective was not completed before the deadline.':
+          'The mission has failed. Your aircraft was lost.';
       ui.result.classList.remove('hidden');
       const hero=state.fliers[0];
       const integrity=hero?.d?clamp((Math.max(0,hero.health)+Math.max(0,hero.armour))/
@@ -478,8 +489,13 @@ function plane(type,id,x,y,angle){
     if(state.phase!=='playing')return;
     if(state.mode==='campaign'){
       if(p.id===0||p.escortProtected)endRound(1);
-      else if(p.priorityCarrier&&state.fliers[0]?.alive)endRound(0);
-      else if(!bossWaiting()&&!campaignBackupPending()&&opponents(state.fliers[0]).every(q=>!q.alive))endRound(0);
+      else{
+        const priority=window.WingmanMissionDoctrine?.priorityDecision(
+          state.campaignEncounter,state.fliers,state.time);
+        if(priority!==null&&priority!==undefined){endRound(priority);return;}
+        if(p.priorityCarrier&&state.fliers[0]?.alive){endRound(0);return;}
+        if(!bossWaiting()&&!campaignBackupPending()&&opponents(state.fliers[0]).every(q=>!q.alive))endRound(0);
+      }
       return;
     }
     if(state.recordMode==='survival'){endRound(p.id===0?1:0);return;}
@@ -603,6 +619,12 @@ function plane(type,id,x,y,angle){
   }
   function nearestEnemy(p){
     const targets=opponents(p);
+    if(state.mode==='campaign'){
+      const assigned=window.WingmanMissionDoctrine?.pickTarget(p,targets,{
+        objective:state.campaignEncounter?.objective,dist:combatDistance,
+        player:state.fliers[0],fliers:state.fliers});
+      if(assigned)return assigned;
+    }
     // Enemy interceptors in an escort mission prioritise the bomber.
     if(state.mode==='campaign'&&state.campaignEncounter?.objective==='escort'&&p.team===1){
       const bomber=targets.find(q=>q.escortProtected&&q.alive);
@@ -1009,6 +1031,10 @@ function plane(type,id,x,y,angle){
     let hash=0;for(const ch of String(raw.id||raw.name||'rival'))hash=(hash*31+ch.charCodeAt(0))>>>0;
     p.aiIdentity=raw.id||encounter.id;
     p.aiName=raw.name||encounter.label;
+    p.aiRole=window.WingmanMissionDoctrine?.roleFor(encounter.objective,offset,
+      {finalBoss:!!encounter.finalBoss})||'hunter';
+    p.aiRoleName=window.WingmanMissionDoctrine?.roles?.[p.aiRole]||'HUNTER';
+    p.aiEscapeCommit=0;
     p.aiArchetype=personality?.archetype||raw.archetype||'Balanced';
     p.aiRank=rank;p.aiStyle=personality?.style||raw.personality||AI_STYLES[hash%AI_STYLES.length];
     p.aiPersonality=personality||null;
@@ -1171,11 +1197,6 @@ function plane(type,id,x,y,angle){
       p.aiEscapeSign=p.y>WORLD_H*.66?-1:p.y<WORLD_H*.30?1:(dy>=0?-1:1);
     }
 
-    if(p.priorityCarrier&&state.mode==='campaign'&&state.campaignEncounter?.objective==='intel-hunt'){
-      p.aiMode='escape';p.aiBoost=false;
-      const away=Math.atan2(p.y-target.y,wrappedDelta(target.x,p.x));
-      return clamp(angleDiff(away,p.angle)*2.25,-1,1);
-    }
     // Ground avoidance is bounded by actual descent and available turning
     // space. The previous 2.5-second projection activated as high as y=60
     // and repeatedly hijacked pursuit with an artificial upward orbit.
@@ -1205,11 +1226,20 @@ function plane(type,id,x,y,angle){
       return clamp(angleDiff(heading,p.angle)*2,-1,1);
     }
 
-    if(p.priorityCarrier&&state.mode==='campaign'&&state.campaignEncounter?.objective==='intel-hunt'){
-      p.aiMode='escape';p.aiBoost=false;
-      // Ground and ceiling recovery take priority over escaping the player.
-      const away=Math.atan2(p.y-target.y,wrappedDelta(target.x,p.x));
-      return clamp(angleDiff(away,p.angle)*2.2,-1,1);
+    if((p.aiRole==='runner'||p.aiRole==='escapeAce')&&state.mode==='campaign'){
+      // An evader commits to a safe escape leg rather than aiming its guns at
+      // its pursuer. Ground and ceiling recovery above always take priority.
+      p.aiMode='escape';p.aiBoost=p.energy>35;
+      p.aiEscapeCommit=Math.max(0,(p.aiEscapeCommit||0)-STEP);
+      if(p.aiEscapeCommit<=0){
+        const awayX=wrappedDelta(target.x,p.x);
+        const awayY=clamp(p.y-target.y,-48,48);
+        // Favor a shallow course so a plane doesn't spend the whole mission
+        // diving toward the ground or climbing directly into the ceiling.
+        p.aiEscapeHeading=Math.atan2(awayY*.65,Math.abs(awayX)<10?(p.vx>=0?65:-65):awayX);
+        p.aiEscapeCommit=p.aiRole==='escapeAce'?1.7:1.35;
+      }
+      return clamp(angleDiff(p.aiEscapeHeading,p.angle)*2.3,-1,1);
     }
     const behindNose=ahead< -13;
     // A genuine reversal is a committed bank, not a new shortest-path
@@ -1241,6 +1271,23 @@ function plane(type,id,x,y,angle){
     const predict=facing>1.1||range<25?.04:availableLead*lead;
     let tx=target.x+target.vx*predict;
     let ty=target.y+target.vy*predict;
+    if(rankAI&&p.aiRole==='flanker'&&range>76){
+      // Offset the intercept from the other pursuer instead of stacking
+      // both aircraft in one perfect tail-chase. Closes back in when near.
+      const offset=clamp((range-76)/180,0,1)*27*(p.id%2===0?1:-1);
+      tx-=targetNoseY*offset;ty+=targetNoseX*offset;
+      p.aiManeuver='CROSSING INTERCEPT';
+    }
+    if(rankAI&&(p.aiRole==='screen'||p.aiRole==='guard')&&range>105){
+      const anchor=window.WingmanMissionDoctrine?.formationAnchor(p,state.fliers);
+      if(anchor&&combatDistance(p,anchor)>105){
+        // A screen maintains some formation instead of chasing to the
+        // opposite side of the world. It still targets and fires at the player.
+        tx=p.x+wrappedDelta(p.x,tx)*.55+wrappedDelta(p.x,anchor.x)*.45;
+        ty=ty*.55+anchor.y*.45;
+        p.aiManeuver='PROTECT THE LEADER';
+      }
+    }
 
     // A fighter already approaching from astern settles behind the enemy,
     // rather than blindly chasing the centre of a spinning sprite.
@@ -1631,8 +1678,10 @@ function plane(type,id,x,y,angle){
           const escort=state.mode==='campaign'&&state.campaignEncounter?.objective==='escort';
           const protectedAlly=escort?state.fliers.find(p=>p.escortProtected):null;
           if(!user.alive||(escort&&!protectedAlly?.alive))endRound(1);
-          else if(state.campaignEncounter?.objective==='intel-hunt'){
-            if(state.time<=0)endRound(1);
+          else if(window.WingmanMissionDoctrine?.priorityObjective(state.campaignEncounter?.objective)){
+            const result=window.WingmanMissionDoctrine.priorityDecision(
+              state.campaignEncounter,state.fliers,state.time);
+            if(result!==null&&result!==undefined)endRound(result);
           }
           else if(!state.fliers.some(q=>q.alive&&q.team===1)&&!campaignBackupPending()&&!bossWaiting())endRound(0);
           else if(state.time<=0)endRound(escort||state.campaignEncounter?.objective==='recon'?0:1);
@@ -2102,7 +2151,8 @@ function plane(type,id,x,y,angle){
       const friendly=state.fliers.filter(q=>q.id!==0&&q.team===0).slice(0,2);
       const contact=(q,index,right,offset)=>{
         const y=offset+index*16,edge=right?W-9:9;
-        const label=q.priorityCarrier?'★ INTEL':q.escortProtected?'★ BOMBER':
+        const label=q.priorityLeader?'★ SQUADRON LEADER':q.priorityEscapeAce?'★ FLEEING ACE':
+          q.priorityCarrier?'★ INTEL':q.escortProtected?'★ BOMBER':
           (right?'ENEMY '+(index+1):'ALLY '+(index+1))+' · '+short(q);
         const total=Math.max(1,q.d.hull+q.d.armour);
         const remaining=clamp((Math.max(0,q.health)+Math.max(0,q.armour))/total,0,1);
