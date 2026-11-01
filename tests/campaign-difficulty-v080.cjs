@@ -11,6 +11,7 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const rosterRoot={};
 new Function('window',read('src/data/pilot-roster.js'))(rosterRoot);
 const balance=require('../src/campaign/combat-balance.js');
+require('../src/environment/flight-atmosphere.js');
 const C=require('../src/campaign/king-of-skies.js');
 const B=require('../src/campaign/boss-rivalry.js');
 const {runAI}=require('./ai-behaviour.cjs');
@@ -54,7 +55,8 @@ const engineSources={
  pilotAI:read('src/data/pilot-ai.js'),
  missionDoctrine:read('src/ai/mission-doctrine.js'),
  bossRivalry:read('src/campaign/boss-rivalry.js'),
- combatBalance:read('src/campaign/combat-balance.js')
+ combatBalance:read('src/campaign/combat-balance.js'),
+ environment:read('src/environment/flight-atmosphere.js')
 };
 const result=runAI(engineSources,{reps:1,seconds:1,scenarios:['duel'],difficulty:'standard',
  campaignCheck:true,campaignScenarios:scenarios});
