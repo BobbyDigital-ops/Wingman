@@ -28,6 +28,7 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
   newRound();state.wind={active:false,base:0,current:0,elapsed:0};
   state.qa=true;state.qaScenario=enc.testPilotPattern||'duel';state.qaWinner=null;
   state.qaMaxBossStage=state.bossPhase||0;state.qaCommanderEntered=false;
+  state.qaCampaignTelemetry={engagementSeconds:0,evasionSeconds:0,threatSeconds:0,tailSeconds:0};
   state.qaDamage=Array(130).fill(0);state.qaHits=Array(130).fill(0);
  },
  projectileStep(){projectiles(STEP);},
@@ -36,8 +37,22 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
    update(STEP);
    state.qaMaxBossStage=Math.max(state.qaMaxBossStage||0,state.bossPhase||0);
    if(state.campaignEncounter?.finalBoss&&state.fliers[3]?.alive)state.qaCommanderEntered=true;
+   const hero=state.fliers[0],m=state.qaCampaignTelemetry;
+   for(const foe of state.fliers){
+    if(!hero?.alive||!foe.alive||foe.team!==1)continue;
+    const dx=wrappedDelta(foe.x,hero.x),dy=hero.y-foe.y;
+    const dist=Math.hypot(dx,dy),heading=Math.atan2(dy,dx);
+    if(dist<170&&(foe.aiMode==='attack'||foe.aiMode==='intercept'))m.engagementSeconds+=STEP;
+    if(foe.aiMode==='evade')m.evasionSeconds+=STEP;
+    if(dist<135&&Math.abs(angleDiff(heading,foe.angle))<.27)m.threatSeconds+=STEP;
+    if(dist<105&&Math.abs(angleDiff(foe.angle,hero.angle))<.65&&
+       Math.cos(hero.angle)*dx+Math.sin(hero.angle)*dy>18)m.tailSeconds+=STEP;
+   }
   }
   return {phase:state.phase,winner:state.qaWinner,maxBossStage:state.qaMaxBossStage||0,
+   telemetry:{...state.qaCampaignTelemetry,shots:state.campaignMetrics?.shots||0,
+    hits:state.campaignMetrics?.hits||0,damageTaken:state.campaignMetrics?.damageTaken||0,
+    damageDealt:state.campaignMetrics?.damageDealt||0},
    commanderEntered:!!state.qaCommanderEntered,
    flights:state.fliers.map(p=>({id:p.id,team:p.team,escort:!!p.escortProtected,alive:p.alive}))};
  },
@@ -174,6 +189,13 @@ function runAI(sources,{reps=1,seconds=60,scenarios=['duel','escape','pursuer'],
     const hero=window.aiQA.state.fliers[0];
     samples.push({win:result.winner===0,loss:result.winner===1,
      maxBossStage:result.maxBossStage||0,commanderEntered:!!result.commanderEntered,
+       engagementSeconds:+(result.telemetry?.engagementSeconds||0).toFixed(2),
+       enemyEvasionSeconds:+(result.telemetry?.evasionSeconds||0).toFixed(2),
+       gunThreatSeconds:+(result.telemetry?.threatSeconds||0).toFixed(2),
+       enemyTailSeconds:+(result.telemetry?.tailSeconds||0).toFixed(2),
+       shots:result.telemetry?.shots||0,hits:result.telemetry?.hits||0,
+       damageTaken:Math.round(result.telemetry?.damageTaken||0),
+       damageDealt:Math.round(result.telemetry?.damageDealt||0),
       seconds:Math.max(0,Math.round((enc.timeLimit||120)-window.aiQA.state.time)),
       integrity:+((Math.max(0,hero.health)+Math.max(0,hero.armour))/Math.max(1,startingCondition)).toFixed(2),
       killed:window.aiQA.state.fliers.filter(p=>p.team===1&&!p.alive&&!p.queued).length,
