@@ -1,0 +1,18 @@
+/* Phase 11A — brief atmospheric conditions before a sortie, no extra step. */
+.wm-v110-environment{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;
+ align-items:center;margin:8px 0 11px;padding:10px 13px;
+ background:linear-gradient(110deg,rgba(21,38,47,.9),rgba(35,55,61,.74));
+ border:1px solid rgba(196,174,125,.45);border-left:3px solid #c9aa74;
+ color:#eddfc3;font-family:inherit}
+.wm-v110-environment strong{font-size:10px;letter-spacing:.09em;
+ text-transform:uppercase;color:#d5bc8c}
+.wm-v110-environment span{font-size:12px;font-weight:800;
+ text-align:right;color:#fff0cd;letter-spacing:.035em}
+.wm-v110-environment small{grid-column:1/-1;max-width:100%;
+ font-size:11px;line-height:1.4;color:#d2d0c7}
+@media(max-width:690px),(max-height:410px){
+ .wm-v110-environment{margin:5px 0 7px;padding:7px 9px;gap:3px 7px}
+ .wm-v110-environment strong{font-size:9px}
+ .wm-v110-environment span{font-size:10px}
+ .wm-v110-environment small{font-size:10px}
+}
