@@ -14,7 +14,8 @@ test('campaign weather follows declared deterministic rank and lane',()=>{
  assert.equal(sample(9,1).weather,'glare');
  assert.equal(sample(7,2).weather,'storm');
  assert.equal(sample(10,2).hazard,'flak');
- assert.equal(sample(11,1).hazard,'searchlight');
+ assert.equal(sample(11,1).hazard,null);
+ assert.equal(sample(11,1).weather,'fog');
  assert.equal(sample(12,2).hazard,null,'final boss has no random damage hazard');
  assert.equal(sample(12,0).weather,'storm');
  assert.deepEqual(sample(11,1),sample(11,1),'repeatable briefing and mission rules');
@@ -27,20 +28,19 @@ test('arcade four theatres have atmospheric personality without added hazards',(
 });
 
 test('all visual conditions and neutral hazards are selectable in Skirmish',()=>{
- assert.deepEqual(A.PRESETS,['auto','clear','clouds','fog','rain','storm','glare','flak','searchlight']);
+ assert.deepEqual(A.PRESETS,['auto','clear','clouds','fog','rain','storm','glare','flak']);
  assert.equal(A.forPreset('auto',3).weather,'storm');
  assert.equal(A.forPreset('clear',3).weather,'clear');
  assert.equal(A.forPreset('rain',0).weather,'rain');
  assert.equal(A.forPreset('flak',0).hazard,'flak');
- assert.equal(A.forPreset('searchlight',0).hazard,'searchlight');
- assert.equal(A.forPreset('searchlight',0).weather,'fog');
+ assert.equal(A.forPreset('searchlight',0).hazard,null,'retired preset is no longer accessible');
  assert.equal(A.forPreset('wrong',0).hazard,null);
 });
 test('storm weather uses stronger shared wind gusts and preserves old wind physics',()=>{
  const game=read('game.js');
  assert.match(game,/const storm=state\.environment\?\.weather==='storm'/);
- assert.match(game,/state\.environment\?\.weather==='storm'&&!state\.wind\.active/);
- assert.match(game,/state\.wind=\{active:true,base:strength,current:strength,elapsed:0\}/);
+ assert.match(game,/if\(state\.environment\?\.weather==='storm'\)/);
+ assert.match(game,/state\.wind=\{active:true,base:strength,current:strength,vertical:0,elapsed:0\}/);
  assert.match(game,/environmentOverride=weather==='auto'/);
  assert.match(read('wingman-ui/ui.js'),/data-setting="weather"/);
 });
@@ -72,11 +72,12 @@ test('heavy craft and bombers bank more gradually than light fighters',()=>{
 
 test('visual banking matrix is bounded and preserves both horizontal facing directions',()=>{
  const right=A.bankMatrix({visualBank:.85}),left=A.bankMatrix({visualBank:-.85});
- assert.ok(right.height>=.62&&right.height<1);
+ assert.ok(right.height>=.45&&right.height<.6);
+ assert.ok(right.shearX>.35,'turn clearly changes the aircraft silhouette');
  assert.equal(right.height,left.height);
  assert.equal(right.shearX,-left.shearX);
  assert.equal(right.shearY,-left.shearY);
- assert.ok(A.bankMatrix({visualBank:3}).height>=.62);
+ assert.ok(A.bankMatrix({visualBank:3}).height>=.45);
  assert.equal(A.bankMatrix({visualBank:0}).height,1);
 });
 
@@ -92,7 +93,7 @@ test('flak has a visible warning before any explosion or damage',()=>{
  assert.equal(env.flakBursts.length,0);
  A.advance(env,1.9,520,400,[craft],()=>hits++);
  assert.equal(env.flakMarker,null);
- assert.equal(env.flakBursts.length,1);
+ assert.equal(env.flakBursts.length,4,'AA salvo includes three staggered smoke/flash puffs');
  assert.equal(hits,1);
  assert.equal(env.damageEvents,1);
 });
@@ -111,33 +112,50 @@ test('neutral flak can strike either faction but cannot strike off-target or pro
  assert.equal(damaged.length,2,'no damage repeated in the same burst');
 });
 
-test('searchlights require sustained exposure and have a cooldown',()=>{
- const env=A.create({weather:'fog',hazard:'searchlight'}),W=520,H=400;
- const craft={id:1,team:1,alive:true,spawnSafe:0,x:260,y:310,d:{radius:6}};
- let hits=0;
- for(let i=0;i<16;i++){
-  craft.x=A.searchlightX(env.time+.12,W);
-  A.advance(env,.12,W,H,[craft],()=>hits++);
- }
- assert.equal(hits,1,'1.8s exposure is meaningful and capped');
- for(let i=0;i<30;i++){
-  craft.x=A.searchlightX(env.time+.12,W);
-  A.advance(env,.12,W,H,[craft],()=>hits++);
- }
- assert.equal(hits,1,'no automatic repeated hits during the cooldown');
+test('flak visual barrage never adds extra damage from decorative smoke puffs',()=>{
+ const env=A.create({weather:'clouds',hazard:'flak'}),W=520,H=400;
+ const target=A.flakPoint(0,W,H),craft={id:0,team:0,alive:true,spawnSafe:0,
+  x:target.x,y:target.y,d:{radius:8}};
+ const hits=[];
+ A.advance(env,9.25,W,H,[craft],(p,damage)=>hits.push(damage));
+ assert.equal(env.flakBursts.length,4);
+ assert.equal(env.flakBursts.filter(b=>b.primary).length,1);
+ assert.equal(hits.length,1);
+ assert.equal(hits[0],7,'smoke/flashes are visual only');
+ A.advance(env,.3,W,H,[craft],()=>hits.push(7));
+ assert.equal(hits.length,1);
 });
-
-test('searchlights cannot harm high flyers outside the beam',()=>{
- const env=A.create({weather:'fog',hazard:'searchlight'}),W=520,H=400;
- const craft={id:0,team:0,alive:true,spawnSafe:0,x:260,y:100,d:{radius:7}};
+test('retired searchlight presets and saved missions safely become fog',()=>{
+ const old=A.create({weather:'fog',hazard:'searchlight',
+   label:'SEARCHLIGHT SWEEP',detail:'Sweeping beams'});
+ assert.equal(old.hazard,null);
+ assert.equal(old.weather,'fog');
+ assert.equal(old.label,'LOW VISIBILITY');
+ const target={id:0,team:0,alive:true,spawnSafe:0,x:260,y:330,d:{radius:6}};
  let hits=0;
- for(let i=0;i<100;i++){
-  craft.x=A.searchlightX(env.time+.1,W);
-  A.advance(env,.1,W,H,[craft],()=>hits++);
- }
+ for(let i=0;i<150;i++)A.advance(old,.1,520,400,[target],()=>hits++);
  assert.equal(hits,0);
+ assert.equal(old.flakBursts.length,0);
 });
-
+test('windsock reflects real wind direction, magnitude and calm',()=>{
+ const labels=[];
+ const g={save(){},restore(){},translate(){},scale(){},fillRect(){},strokeRect(){},
+  beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},stroke(){},
+  fillText(t){labels.push(t)}};
+ A.drawWindsock(g,{active:true,current:29},220,43,2);
+ A.drawWindsock(g,{active:true,current:-24},220,43,2);
+ A.drawWindsock(g,{active:false,current:0},220,43,2);
+ assert.deepEqual(labels,['→ 29 WIND','← 24 WIND','CALM']);
+});
+test('wind is real shared plane displacement, not merely a moving HUD icon',()=>{
+ const game=read('game.js');
+ assert.match(game,/const strength=\(state\.mode==='campaign'\?25:29\)/);
+ assert.match(game,/w\.vertical=storm/);
+ assert.match(game,/p\.x\+=\(p\.vx\+state\.wind\.current\)\*dt/);
+ assert.match(game,/p\.y\+=\(p\.vy\+\(state\.wind\.vertical\|\|0\)\)\*dt/);
+ assert.match(game,/WingmanFlightAtmosphere\?\.drawWindsock\?/);
+ assert.match(game,/sound\('flak'\)/);
+});
 test('campaign encounter carries readable weather and safety information',()=>{
  const prev=globalThis.WingmanFlightAtmosphere;
  globalThis.WingmanFlightAtmosphere=A;
@@ -149,7 +167,8 @@ test('campaign encounter carries readable weather and safety information',()=>{
   };
   assert.match(sample(10,2).environment.label,/FLAK/);
   assert.match(sample(10,2).environment.detail,/warn/i);
-  assert.match(sample(11,1).environment.label,/SEARCHLIGHT/);
+  assert.doesNotMatch(sample(11,1).environment.label,/SEARCHLIGHT/);
+  assert.equal(sample(11,1).environment.hazard,null);
   assert.equal(sample(12,1).environment.hazard,null);
   assert.equal(sample(8,1).environment.weather,'rain');
  }finally{globalThis.WingmanFlightAtmosphere=prev;}
