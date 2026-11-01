@@ -45,7 +45,7 @@ for(const faction of ['Allies','Axis']){
   });
  }
 }
-const result=runAI({
+const engineSources={
  game:read('game.js'),
  physics:read('src/physics/swoop-flight.js'),
  aircraft:read('src/art/aircraft.js'),
@@ -55,8 +55,28 @@ const result=runAI({
  missionDoctrine:read('src/ai/mission-doctrine.js'),
  bossRivalry:read('src/campaign/boss-rivalry.js'),
  combatBalance:read('src/campaign/combat-balance.js')
-},{reps:1,seconds:1,scenarios:['duel'],difficulty:'standard',
+};
+const result=runAI(engineSources,{reps:1,seconds:1,scenarios:['duel'],difficulty:'standard',
  campaignCheck:true,campaignScenarios:scenarios});
+// Late-game players normally arrive with aircraft specialisation, repairs,
+// reward choices and several run upgrades. Audit that actual game code as
+// well as the deliberately harsh no-upgrades baseline, rather than assuming
+// a naked scripted bot represents a human who has completed eleven stages.
+const equipped= scenarios.filter(enc=>[4,8,12].includes(enc.rank)).map(enc=>{
+ const effects=enc.rank===4?['gunsmith']:
+  enc.rank===8?['gunsmith','reinforced-spars','supercharger','armour-plates']:
+  ['gunsmith','reinforced-spars','supercharger','armour-plates','ace-weapon-sights','control-rigging'];
+ const run={rank:enc.rank,condition:enc.rank===12?86:enc.rank===8?92:95,
+  supplies:1,effects,operations:{}};
+ return {...enc,
+  playerAptitude:C.sortieBonuses(run,enc.playerType,true),
+  fieldOrders:enc.rank===12?{ambush:1,radio:0,favour:0}:enc.fieldOrders
+ };
+});
+const equippedResult=runAI(engineSources,{
+ reps:1,seconds:1,scenarios:['duel'],difficulty:'standard',campaignCheck:false,
+ campaignScenarios:equipped
+});
 const rows=result.campaignBenchmark;
 const round=n=>Math.round(n*100)/100;
 const summary=entries=>({
@@ -73,6 +93,7 @@ const byRegion=Object.fromEntries(C.REGIONS.map(k=>[k,summary(rows.filter(x=>C.r
 const byRank=Object.fromEntries(Array.from({length:12},(_,i)=>[i+1,summary(rows.filter(x=>x.rank===i+1))]));
 const byAircraft=Object.fromEntries(['fighter','heavy','bomber','bf109','bf110','he111']
  .map(k=>[k,summary(rows.filter(x=>x.playerType===k))]));
+const equippedByRank=Object.fromEntries([4,8,12].map(rank=>[rank,summary(equippedResult.campaignBenchmark.filter(x=>x.rank===rank))]));
 const milestones=[4,8,12].map(rank=>({
  rank,byLane:Object.fromEntries([0,1,2].map(lane=>[lane,summary(rows.filter(x=>x.rank===rank&&x.lane===lane))])),
  phaseVisits:Object.fromEntries([1,2,3].map(stage=>[stage,rows.filter(x=>x.rank===rank)
@@ -83,11 +104,14 @@ const audit={
  phase:'10E',totalRungs:12,combatRoutes:rows.length,nonCombatRoutesPerFaction:10,
  trials:rows.reduce((n,x)=>n+x.samples.length,0),
  byRisk,byRegion,byRank,byAircraft,milestones,
+ equippedMilestones:equippedByRank,
+ equippedTrials:equippedResult.campaignBenchmark.reduce((n,x)=>n+x.samples.length,0),
  objectiveChecks:result.campaignChecks,
  missions:rows
 };
 console.log(JSON.stringify(audit,null,2));
-if(rows.length!==156||audit.trials!==312||rows.some(x=>x.crashes>0)||
+if(rows.length!==156||audit.trials!==312||audit.equippedTrials!==108||
+ equippedResult.campaignBenchmark.some(x=>x.crashes>0)||rows.some(x=>x.crashes>0)||
  Object.values(result.campaignChecks).some(x=>!x)||
  rows.some(x=>x.samples.length!==2)||
  scenarios.some(x=>(x.eliteEncounter||x.finalBoss)&&!x.bossPlan))process.exitCode=1;
