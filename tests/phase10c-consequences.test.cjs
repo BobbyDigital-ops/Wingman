@@ -74,6 +74,53 @@ test('field order roles and gameplay effects are verified in the real combat eng
  assert.ok(Object.values(report.campaignChecks).every(Boolean));
  assert.equal(report.groundCrashes,0);
 });
+test('real career flow carries earned operations across events, sortie, debrief and reward',()=>{
+ const rootWin={WingmanCampaign:C,WingmanGame:{startCampaignFight(enc){this.last=enc},showMenu(){}},
+  addEventListener(){}};
+ new Function('window',read('src/data/pilot-roster.js'))(rootWin);
+ new Function('window',read('src/data/pilot-ai.js'))(rootWin);
+ const pilot=rootWin.WingmanRoster.find(p=>p.faction==='Allies'&&p.plane==='fighter');
+ const saved={profile:{rosterId:pilot.id,name:pilot.name,plane:'fighter',
+  faction:'Allies',characterConfirmed:true},wins:1,losses:0,kills:2,
+  completed:0,best:2,medals:[],records:{},service:[],
+  run:{rank:2,lastLane:2,lives:3,visits:1,seed:2901,campaignSchema:12,
+   condition:92,supplies:4,effects:[],faction:'Allies',aircraft:'fighter',
+   choices:[],pathHistory:[{rank:1,lane:2}]}};
+ const db={'wingman-road-to-ace-v1':JSON.stringify(saved)};
+ const storage={getItem:key=>db[key]??null,setItem:(key,value)=>db[key]=value};
+ const eventHandlers={},mk=id=>({id,hidden:false,innerHTML:'',
+  querySelector(){return null},querySelectorAll(){return[]},
+  classList:{add(){},remove(){}},addEventListener:(name,cb)=>eventHandlers[id+'.'+name]=cb,
+  getAttribute(){return null}});
+ const document={getElementById(id){this.nodes??={};return this.nodes[id]??=mk(id)}};
+ new Function('window','document','localStorage','sessionStorage',read('career.js'))(
+  rootWin,document,storage,{getItem(){return null}});
+ const load=()=>JSON.parse(db['wingman-road-to-ace-v1']);
+ assert.equal(load().run.campaignSchema,13);
+ const event=rootWin.WingmanCareer.resolveCampaignEvent(2,'scout');
+ assert.equal(event.newOrders.radio,1);
+ assert.equal(load().run.rank,3);
+ assert.equal(rootWin.WingmanCareer.buyCampaignOrder('favour'),true);
+ assert.equal(load().run.operations.favour,1);
+ const click=dataset=>eventHandlers['career-screen.click'](
+  {target:{closest:()=>({dataset})}});
+ click({choice:'2'});click({sortiePlane:'fighter'});click({action:'confirm-sortie-aircraft'});
+ const flight=rootWin.WingmanGame.last;
+ assert.equal(flight.fieldOrders.favour,1);
+ assert.equal(flight.fieldOrders.radio,0);
+ assert.equal(load().run.operations.radio,1);
+ assert.equal(load().run.operations.favour,0);
+ rootWin.WingmanCareer.finishEncounter(true,flight,
+  {kills:2,integrity:.84,shots:150,hits:35,damageDealt:230,damageTaken:45,elapsedSeconds:97});
+ const reward=load().run.pendingReward;
+ assert.ok(reward);
+ assert.equal(load().lastOutcome.fieldOrders.favour,1);
+ assert.equal(rootWin.WingmanCareer.claimReward(reward.offers[0]),true);
+ assert.equal(load().run.rank,4);
+ assert.equal(load().run.operations.radio,1);
+ assert.equal(load().run.lives,3);
+});
+
 test('menu reports the actual event reward, held tactical orders and consumed sortie orders',()=>{
  const ui=read('wingman-ui/ui.js'),bridge=read('src/ui/wingman-bridge.js'),career=read('career.js');
  assert.match(ui,/wm-v101-field-orders/);
