@@ -61,11 +61,11 @@ if(data?.run&&campaign){
  }
  // Migrate current v0.7 missions once without resetting rank, lives,
  // earned effects, service history or a pending post-sortie reward.
- if(!data.run.pendingReward&&(data.run.campaignSchema!==13||
+ if(!data.run.pendingReward&&(data.run.campaignSchema!==14||
    !Array.isArray(data.run.choices)||data.run.choices.length!==3||
    data.run.choices.some(c=>!c?.objective))){
    data.run.choices=makeChoices(data.run);
-   data.run.campaignSchema=13;
+   data.run.campaignSchema=14;
  }
  if(data.run.pendingReward)view='outcome';
  save();
@@ -289,11 +289,12 @@ function makeChoices(run){
  const seed=(run.seed+run.rank*37+run.visits*19)>>>0;
  const shuffled=pool.map((p,i)=>({p,sort:((i*53+seed*17+i*i*11)%113)}))
   .sort((a,b)=>a.sort-b.sort).map(o=>o.p);
- const nemesis=pool.map(p=>({p,r:data?.records?.[p.id]}))
-  .filter(x=>x.r&&(x.r.losses||x.r.wins))
-  .sort((a,b)=>((b.r.losses||0)*3+(b.r.wins||0))-((a.r.losses||0)*3+(a.r.wins||0)))[0]?.p;
+ const elitePool=run.rank===4||run.rank===8?
+  pool.filter(p=>p.plane===(run.faction==='Allies'?'bf109':'fighter')):pool;
+ const nemesis=window.WingmanBossRivalry?.selectReturningRival(
+  elitePool,data?.records||{},run.rank,seed)||null;
  const picked=[];
- if(nemesis&&run.rank>=5)picked.push(nemesis);
+ if(nemesis&&run.rank>=4)picked.push(nemesis);
  for(const p of shuffled)if(picked.length<3&&!picked.some(q=>q.id===p.id))picked.push(p);
  const fixed=window.WingmanPilotAI;
  const profile=p=>{
@@ -328,7 +329,8 @@ function makeChoices(run){
    wingman:w,wingmen:escorts,
    opponents,finalBoss:final,bossId:final?p.id:null,mission,
    label:p.name};
-  return campaign?.decorateEncounter(encounter,run,i,{pool:shuffled,profile})||encounter;
+  const decorated=campaign?.decorateEncounter(encounter,run,i,{pool:shuffled,profile})||encounter;
+  return window.WingmanBossRivalry?.decorateEncounter(decorated,data?.records||{})||decorated;
  });
 }
 function show(which='ladder'){
@@ -402,7 +404,7 @@ function startRun(aircraftId){
  const allowed=data.profile.faction==='Allies'?ALLIES:AXIS;
  if(!allowed.includes(aircraftId))return;
  data.run={faction:data.profile.faction,aircraft:aircraftId,airframe:null,rank:1,
-  lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null,campaignSchema:13,lastLane:null,allowedLanes:[0,1,2],pathHistory:[],operations:{radio:0,ambush:0,favour:0}};
+  lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null,campaignSchema:14,lastLane:null,allowedLanes:[0,1,2],pathHistory:[],operations:{radio:0,ambush:0,favour:0}};
  campaign?.normalizeRun(data.run);
  data.run.choices=makeChoices(data.run);save();view='ladder';render();
 }
@@ -436,7 +438,7 @@ function resolveCampaignEvent(index,optionId){
   label:enc.label,kills:0,grade:'—',description:result.description};
  if(run.rank>MAX_RANK)return null; // Final rung is a mandatory combat boss.
  run.choices=makeChoices(run);
- run.campaignSchema=13;
+ run.campaignSchema=14;
  save();
  if(showing){view='ladder';render();}
  return result;
@@ -495,6 +497,7 @@ function finishEncounter(won,encounter,summary={}){
   run.lives--; // Defeat costs a life; never advances or rewinds the route.
   if(run.lives<=0)data.run=null;
  }
+ const rivalryUpdate=window.WingmanBossRivalry?.recordResult(record,won,atRank)||null;
  if(data.run)campaign?.settle(run,rival,won,Number(summary.integrity??1));
  data.lastOutcome={won,rank:atRank,risk:rival.risk||'LOW',objective:rival.objective||'duel',
    mission:rival.mission||'DOGFIGHT',label:rival.label,
@@ -510,7 +513,9 @@ function finishEncounter(won,encounter,summary={}){
    alliesLost:Math.max(0,Math.floor(Number(summary.alliesLost)||0)),
    enemiesExpected:rival.totalEnemyThreat||rival.types?.length||1,
    suppliesEarned:won?rival.suppliesAward||1:0,
-   fieldOrders:{...rival.fieldOrders}};
+   fieldOrders:{...rival.fieldOrders},
+   bossStage:Math.max(0,Math.min(3,Math.floor(Number(summary.bossStage)||0))),
+   returningRival:!!rival.returningRival,rivalry:rivalryUpdate};
  archiveService({won,rank:atRank,lane:rival.lane,rival:rival.label,
   mission:rival.mission||'DOGFIGHT',enemies:rival.types.length,
   kills,grade,threat:rival.threat??null,risk:rival.risk||'LOW',
@@ -519,8 +524,9 @@ function finishEncounter(won,encounter,summary={}){
   hits:Math.max(0,Math.floor(Number(summary.hits)||0)),
   damageDealt:Math.max(0,Math.round(Number(summary.damageDealt)||0)),
   damageTaken:Math.max(0,Math.round(Number(summary.damageTaken)||0)),
-  fieldOrders:{...rival.fieldOrders},result:won?'VICTORY':'SHOT DOWN'});
- if(data.run){run.visits++;if(won){run.choices=makeChoices(run);run.campaignSchema=13;}}
+  fieldOrders:{...rival.fieldOrders},bossStage:data.lastOutcome.bossStage,
+  returningRival:!!rival.returningRival,result:won?'VICTORY':'SHOT DOWN'});
+ if(data.run){run.visits++;if(won){run.choices=makeChoices(run);run.campaignSchema=14;}}
  save();active=null;
  view='outcome';showing=true;screen.hidden=false;result.classList.add('hidden');
  const promotion=won&&rankTitle(Math.min(MAX_RANK,atRank+1))!==previousTitle?
@@ -542,8 +548,11 @@ function renderOutcome(won,encounter,earned=[],promotion=null){
   '<span>'+data.kills+' CONFIRMED KILLS</span><span>'+data.bestStreak+' BEST STREAK</span></div></section>':'';
  const promotionMarkup=promotion?'<div class="career-promotion"><span>NEW PROMOTION</span><strong>'+escape(promotion)+'</strong></div>':'';
  const lossNotice=!won&&data?.run?'<p class="career-muted">One life lost. Your career continues from rank '+data.run.rank+'.</p>':'';
+ const rivalryNotice=data.lastOutcome?.rivalry?
+   '<p class="career-muted">RIVALRY RECORD · '+data.lastOutcome.rivalry.wins+
+   ' victories / '+data.lastOutcome.rivalry.losses+' defeats against '+escape(encounter?.label||'this rival')+'.</p>':'';
  panel(resultTitle,'<p class="career-outcome-opponent">'+escape(encounter?.label||'Rival')+' · '+
-  escape((encounter?.types||[]).map(t=>aircraft[t]||t).join(' + '))+'</p>'+tribute+lossNotice+
+  escape((encounter?.types||[]).map(t=>aircraft[t]||t).join(' + '))+'</p>'+tribute+lossNotice+rivalryNotice+
   '<div class="career-stats"><span>'+(data?.run?'RANK '+data.run.rank:'RUN FINISHED')+'</span>'+
   '<span>'+(data?.run?'♥ '+data.run.lives+' LIVES':'SERVICE RECORDED')+'</span>'+
   '<span>PERFORMANCE '+escape(data.lastOutcome?.grade||'—')+'</span></div>'+
@@ -740,9 +749,9 @@ nav.addEventListener('click',()=>show(data?'ladder':'select'));licenceBtn.addEve
 document.getElementById('career-open-mobile')?.addEventListener('click',()=>show(data?'ladder':'select'));
 function claimReward(id){
  if(!data?.run||!campaign?.claim(data.run,id))return false;
- if(data.run.campaignSchema!==13){
+ if(data.run.campaignSchema!==14){
    data.run.choices=makeChoices(data.run);
-   data.run.campaignSchema=13;
+   data.run.campaignSchema=14;
  }
  save();
  if(showing){view='ladder';render();}
