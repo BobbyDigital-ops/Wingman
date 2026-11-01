@@ -103,7 +103,12 @@
  }
  function create(spec){
   const src=spec||forEncounter(null,0);
-  return {...src,time:0,flakCount:0,flakMarker:null,flakBursts:[],damageEvents:0};
+  // A saved run from the older preview may still carry searchlight data.
+  // Retire it safely without touching the campaign save schema.
+  const safe=src.hazard==='searchlight'?{...src,
+   hazard:null,weather:'fog',label:labels.fog,
+   detail:'Fog and low visibility. Searchlights have been retired.'}:src;
+  return {...safe,time:0,flakCount:0,flakMarker:null,flakBursts:[],damageEvents:0};
  }
  const flakPoint=(index,W,H)=>({
   x:W*(.24+((index*7+3)%10)*.052),
