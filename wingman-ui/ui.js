@@ -548,12 +548,15 @@ function outcome(){
    ['BACKUP FIGHTERS ARRIVED',number(report.reinforcements)],['ALLIED AIRCRAFT LOST',number(report.alliesLost)],
    ['SORTIE DURATION',number(report.secondsElapsed,'s')],['AIRFRAME INTEGRITY',report.integrity==null?'—':Math.round(report.integrity*100)+'%']
  ];
+ const fieldOrdersUsed=Object.entries(report.fieldOrders||{}).filter(([,value])=>value>0);
+ const fieldOrderNames={radio:'RADIO INTERFERENCE · BACKUP DELAYED',ambush:'AMBUSH TACTICS · ENEMY SKILL REDUCED',favour:'GROUND CREW · EARLY SUPPORT CHARGE'};
+ const fieldOrdersReport=fieldOrdersUsed.length?'<div class="wm-v101-debrief-orders"><small>FIELD PREPARATIONS USED ON THIS SORTIE</small>'+fieldOrdersUsed.map(([key])=>'<strong>✓ '+esc(fieldOrderNames[key]||key)+'</strong>').join('')+'</div>':'';
  const debriefPanel='<span class="wg-v7-overline">FORM 09 · AFTER ACTION REPORT</span>'+
    '<h3>'+(report.won?'MISSION SUCCESSFUL':'MISSION FAILED')+'</h3>'+
    '<p>'+esc(report.mission||'COMBAT SORTIE')+' · '+esc(report.label||'ENEMY SQUADRON')+
    ' · RANK '+esc(report.rank||'—')+' · '+esc(report.grade||'—')+' GRADE</p>'+
    '<div class="wm-v9f-sortie-stats">'+debriefItems.map(([label,value])=>
-     '<div><small>'+esc(label)+'</small><strong>'+esc(value)+'</strong></div>').join('')+'</div>'+
+     '<div><small>'+esc(label)+'</small><strong>'+esc(value)+'</strong></div>').join('')+'</div>'+fieldOrdersReport+
    '<p class="wm-v9f-sortie-note">'+(report.won?
       'Sortie complete. Review your performance before claiming the reward you earned.':
       run?'One life lost. Your rung is unchanged; retry a connected mission.':
