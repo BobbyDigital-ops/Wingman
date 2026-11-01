@@ -22,7 +22,7 @@ try{const settings=P.WingmanUIBridge?.getAudioSettings?.();if(settings){S.sound=
 try{const savedOptions=JSON.parse(localStorage.getItem('wingman-ui-flight-presets-v1')||'null');
  if(savedOptions&&['rookie','standard','ace'].includes(savedOptions.difficulty))S.difficulty=savedOptions.difficulty;
  if(savedOptions&&['0','1','2','3'].includes(savedOptions.theatre))S.theatre=savedOptions.theatre;
- if(savedOptions&&['auto','clear','clouds','fog','rain','storm','glare','flak','searchlight'].includes(savedOptions.weather))S.weather=savedOptions.weather;
+ if(savedOptions&&['auto','clear','clouds','fog','rain','storm','glare','flak'].includes(savedOptions.weather))S.weather=savedOptions.weather;
 }catch{}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const aircraftPreviews={};
@@ -101,7 +101,7 @@ function operations(){
    '<option value="clear">CLEAR SKIES</option><option value="clouds">MOVING CLOUD BANKS</option>'+ 
    '<option value="fog">FOG &amp; LOW VISIBILITY</option><option value="rain">DRIVING RAIN</option>'+ 
    '<option value="storm">STORM &amp; STRONG GUSTS</option><option value="glare">SUN GLARE</option>'+ 
-   '<option value="flak">FLAK BATTERY · LIVE FIRE</option><option value="searchlight">SEARCHLIGHTS · LIVE FIRE</option>';
+   '<option value="flak">FLAK BATTERY · LIVE FIRE</option>';
  const opponent='<option value="random">RANDOM OPPONENT</option>'+
    TYPES.map((t,i)=>'<option value="'+t+'">'+esc(PLANES[i][0])+'</option>').join('');
  return '<section class="frame wm-v12-ops wm-v13-ops"><div class="wm-v13-ops-content">'+
@@ -297,7 +297,7 @@ function career(){
  const encounterInfo=selected&&!selected.isNonCombat?
   (selected.tacticalMission?'<div class="wm-v100-special-objective"><strong>TACTICAL MISSION</strong><span>'+esc(selected.tacticalMission)+'</span><small>Follow the primary objective shown below. Escort aircraft may be optional targets.</small></div>':'')+
   '<div class="wm-v9f-mission-goal"><strong>PRIMARY OBJECTIVE</strong><span>'+esc(selected.missionGoal||'Defeat hostile aircraft')+'</span></div>'+
-  (selected.environment?'<div class="wm-v110-environment"><strong>FLIGHT CONDITIONS</strong><span>'+esc(selected.environment.label)+'</span><small>'+esc(selected.environment.detail)+'</small></div>':'')+
+  (selected.environment?'<div class="wm-v110-environment"><strong>FLIGHT CONDITIONS</strong><span>'+esc(selected.environment.hazard==='searchlight'?'LOW VISIBILITY':selected.environment.label)+'</span><small>'+esc(selected.environment.hazard==='searchlight'?'Fog with reduced visibility.':selected.environment.detail)+'</small></div>':'')+
   '<div class="wm-v9f-mission-forces"><div><small>ENEMIES AT SCRAMBLE</small><strong>'+esc(selected.initialEnemies??selected.types?.length??1)+'</strong></div>'+
   '<div><small>ENEMY REINFORCEMENTS</small><strong>'+esc((selected.reinforcements||[]).reduce((n,w)=>n+w.count,0))+'</strong></div>'+
   '<div><small>YOUR ALLIES</small><strong>'+(selected.objective==='escort'?'1 PROTECTED BOMBER':'UP TO 2 CALLED IN')+'</strong></div></div>'+
