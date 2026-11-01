@@ -27,3 +27,17 @@
  .wm-v100-special-objective strong,.wm-v100-special-objective small{font-size:9px}
  .wm-v100-target-line{padding:2px 5px!important;font-size:10px!important}
 }
+
+.wm-v100-force-roster{
+ display:flex;flex-wrap:wrap;gap:4px 6px;margin:2px 0;
+}
+.wm-v100-force-roster span{
+ display:inline-block;padding:3px 6px;background:#203b43;color:#edd9ad;
+ border:1px solid #9f8353;
+ font:900 clamp(9px,.95vw,12px) 'Barlow Condensed',Impact,sans-serif;
+ letter-spacing:.045em;
+}
+@media(max-height:520px) and (orientation:landscape){
+ .wm-v100-force-roster{gap:2px}
+ .wm-v100-force-roster span{font-size:9px;padding:2px 4px}
+}
