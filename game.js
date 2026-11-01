@@ -398,9 +398,10 @@ function plane(type,id,x,y,angle){
        !Object.prototype.hasOwnProperty.call(PLANES,opponent))return false;
     const theatre=Number(arena);
     if(!Number.isInteger(theatre)||theatre<0||theatre>3)return false;
-    if(!window.WingmanFlightAtmosphere?.PRESETS?.includes(weather))return false;
+    if(window.WingmanFlightAtmosphere&&
+       !window.WingmanFlightAtmosphere.PRESETS.includes(weather))return false;
     state.environmentOverride=weather==='auto'?null:
-      window.WingmanFlightAtmosphere.forPreset(weather,theatre);
+      window.WingmanFlightAtmosphere?.forPreset?.(weather,theatre)||null;
     const set=(id,value)=>{
       const field=document.getElementById(id);
       if(field){field.value=String(value);field.dispatchEvent(new Event('change',{bubbles:true}));}
