@@ -61,11 +61,11 @@ if(data?.run&&campaign){
  }
  // Migrate current v0.7 missions once without resetting rank, lives,
  // earned effects, service history or a pending post-sortie reward.
- if(!data.run.pendingReward&&(data.run.campaignSchema!==12||
+ if(!data.run.pendingReward&&(data.run.campaignSchema!==13||
    !Array.isArray(data.run.choices)||data.run.choices.length!==3||
    data.run.choices.some(c=>!c?.objective))){
    data.run.choices=makeChoices(data.run);
-   data.run.campaignSchema=12;
+   data.run.campaignSchema=13;
  }
  if(data.run.pendingReward)view='outcome';
  save();
@@ -402,7 +402,7 @@ function startRun(aircraftId){
  const allowed=data.profile.faction==='Allies'?ALLIES:AXIS;
  if(!allowed.includes(aircraftId))return;
  data.run={faction:data.profile.faction,aircraft:aircraftId,airframe:null,rank:1,
-  lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null,campaignSchema:12,lastLane:null,allowedLanes:[0,1,2],pathHistory:[]};
+  lives:3,visits:0,seed:Math.floor(Math.random()*10000),choices:null,campaignSchema:13,lastLane:null,allowedLanes:[0,1,2],pathHistory:[],operations:{radio:0,ambush:0,favour:0}};
  campaign?.normalizeRun(data.run);
  data.run.choices=makeChoices(data.run);save();view='ladder';render();
 }
@@ -436,7 +436,7 @@ function resolveCampaignEvent(index,optionId){
   label:enc.label,kills:0,grade:'—',description:result.description};
  if(run.rank>MAX_RANK)return null; // Final rung is a mandatory combat boss.
  run.choices=makeChoices(run);
- run.campaignSchema=12;
+ run.campaignSchema=13;
  save();
  if(showing){view='ladder';render();}
  return result;
@@ -450,6 +450,7 @@ function launchSortie(type){
  if(scaled){choice.attributes=scaled.attributes;choice.signature=scaled.signature;choice.archetype=scaled.archetype;choice.personality=scaled.tactic;}
  choice.playerAptitude=campaign?.sortieBonuses(run,type,type===data.profile.plane)||
    (type===data.profile.plane?{hull:1.1,armour:1.1,damage:1.1}:null);
+ choice.fieldOrders=campaign?.deployFieldOrders?.(run,choice)||{radio:0,ambush:0,favour:0};
  choice.playerAircraft=type;run.aircraft=type;run.airframe=null;
  pendingChoice=null;pendingAircraft=null;save();active=choice;showing=false;screen.hidden=true;
  window.WingmanGame.startCampaignFight(choice,type,null);
@@ -508,7 +509,8 @@ function finishEncounter(won,encounter,summary={}){
    reinforcements:Math.max(0,Math.floor(Number(summary.reinforcements)||0)),
    alliesLost:Math.max(0,Math.floor(Number(summary.alliesLost)||0)),
    enemiesExpected:rival.totalEnemyThreat||rival.types?.length||1,
-   suppliesEarned:won?rival.suppliesAward||1:0};
+   suppliesEarned:won?rival.suppliesAward||1:0,
+   fieldOrders:{...rival.fieldOrders}};
  archiveService({won,rank:atRank,lane:rival.lane,rival:rival.label,
   mission:rival.mission||'DOGFIGHT',enemies:rival.types.length,
   kills,grade,threat:rival.threat??null,risk:rival.risk||'LOW',
@@ -517,8 +519,8 @@ function finishEncounter(won,encounter,summary={}){
   hits:Math.max(0,Math.floor(Number(summary.hits)||0)),
   damageDealt:Math.max(0,Math.round(Number(summary.damageDealt)||0)),
   damageTaken:Math.max(0,Math.round(Number(summary.damageTaken)||0)),
-  result:won?'VICTORY':'SHOT DOWN'});
- if(data.run){run.visits++;if(won){run.choices=makeChoices(run);run.campaignSchema=12;}}
+  fieldOrders:{...rival.fieldOrders},result:won?'VICTORY':'SHOT DOWN'});
+ if(data.run){run.visits++;if(won){run.choices=makeChoices(run);run.campaignSchema=13;}}
  save();active=null;
  view='outcome';showing=true;screen.hidden=false;result.classList.add('hidden');
  const promotion=won&&rankTitle(Math.min(MAX_RANK,atRank+1))!==previousTitle?
@@ -738,13 +740,18 @@ nav.addEventListener('click',()=>show(data?'ladder':'select'));licenceBtn.addEve
 document.getElementById('career-open-mobile')?.addEventListener('click',()=>show(data?'ladder':'select'));
 function claimReward(id){
  if(!data?.run||!campaign?.claim(data.run,id))return false;
- if(data.run.campaignSchema!==12){
+ if(data.run.campaignSchema!==13){
    data.run.choices=makeChoices(data.run);
-   data.run.campaignSchema=12;
+   data.run.campaignSchema=13;
  }
  save();
  if(showing){view='ladder';render();}
  return true;
+}
+function buyCampaignOrder(key){
+ const run=data?.run;
+ if(!run||active||run.pendingReward||!campaign?.buyFieldOrder?.(run,key))return false;
+ save();if(showing)render();return true;
 }
 function repairAirframe(){
  if(!data?.run||!campaign?.repair(data.run))return false;
@@ -757,5 +764,5 @@ function restartCampaign(){
   selectFaction=data.profile?.faction||'Allies';candidates=generateCandidates();
   save();view='select';render();return true;
  }
- window.WingmanCareer={claimReward,repairAirframe,resolveCampaignEvent,suspendLegacyScreen:()=>{pendingChoice=null;pendingAircraft=null;showing=false;screen.hidden=true;},restartCampaign,restartRun:()=>{active=null;pendingChoice=null;pendingAircraft=null;startRun(data?.profile?.plane);},finishEncounter,open:show,cancelEncounter:()=>{active=null;}};
+ window.WingmanCareer={claimReward,repairAirframe,buyCampaignOrder,resolveCampaignEvent,suspendLegacyScreen:()=>{pendingChoice=null;pendingAircraft=null;showing=false;screen.hidden=true;},restartCampaign,restartRun:()=>{active=null;pendingChoice=null;pendingAircraft=null;startRun(data?.profile?.plane);},finishEncounter,open:show,cancelEncounter:()=>{active=null;}};
 })();
