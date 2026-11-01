@@ -228,6 +228,7 @@ function plane(type,id,x,y,angle){
         state.fliers.push(foe);
       });
       state.fliers[0].team=0;
+      state.bossPhase=encounter.bossPlan?1:0;
       state.bossCountdown=encounter.finalBoss?20:0;
       state.bossReinforcementLaunched=!encounter.finalBoss;
       if(encounter.finalBoss&&state.fliers[3]){
@@ -318,7 +319,10 @@ function plane(type,id,x,y,angle){
     }
     if(state.mode==='campaign'&&state.campaignEncounter?.hazard)
       state.banner+=' · '+(state.campaignEncounter.hazard==='crosswind'?'CROSSWIND':'COASTAL HAZE');
-    state.bannerTime=state.campaignEncounter?.finalBoss?4:1.5;
+    if(state.mode==='campaign'&&state.campaignEncounter?.eliteEncounter&&state.campaignEncounter?.bossPlan){
+      state.banner='REGIONAL ACE · '+state.campaignEncounter.bossPlan.stages[0].name;
+    }
+    state.bannerTime=state.campaignEncounter?.bossPlan?4:1.5;
     controls.left=false;controls.right=false;controls.boost=false;
   }
   function startMatch(){
@@ -458,6 +462,7 @@ function plane(type,id,x,y,angle){
         damageDealt:Math.round(metrics.damageDealt||0),
         damageTaken:Math.round(metrics.damageTaken||0),
         reinforcements:metrics.backupArrivals||0,
+        bossStage:state.bossPhase||0,
         alliesLost:state.fliers.filter(p=>p.team===0&&p.id!==0&&!p.alive&&!p.departed).length
       });
       return;
@@ -597,6 +602,21 @@ function plane(type,id,x,y,angle){
     state.bossReinforcementLaunched=true;
     state.banner='THE LEGEND ARRIVES — '+(boss.aiName?.match(/"([^"]+)"/)?.[1]||'FINAL ACE').toUpperCase();
     state.bannerTime=4;sound('boss');
+  }
+  function advanceCampaignBossPhase(){
+    const enc=state.campaignEncounter;
+    if(state.mode!=='campaign'||!enc?.bossPlan)return;
+    const phase=window.WingmanBossRivalry?.phaseFor(enc,state.fliers);
+    if(!phase)return;
+    const ace=state.fliers[phase.pilotIndex+1];
+    if(ace?.alive&&!ace.queued)ace.bossStage=phase.stage;
+    if(phase.stage<=(state.bossPhase||1))return;
+    state.bossPhase=phase.stage;
+    // State change is communicated before the new tactics become the focus.
+    // Nothing restores enemy health or modifies aircraft/weapon parameters.
+    state.banner=(enc.finalBoss?'FINAL ACE · ':'REGIONAL ACE · ')+phase.label;
+    state.bannerTime=3.8;
+    sound('boss');
   }
   function campaignBackupPending(){
     return state.mode==='campaign'&&Array.isArray(state.campaignWaves)&&state.campaignWaves.length>0;
@@ -1177,7 +1197,9 @@ function plane(type,id,x,y,angle){
       state.recordMode==='survival'?
         clamp((state.difficulty==='ace'?.57:state.difficulty==='rookie'?.12:.34)+(state.round-1)*.065,0,1):
         state.difficulty==='ace'?1:state.difficulty==='rookie'?0:.76;
-    const style=rankAI?p.aiStyle:'hunter';
+    const bossStyle=rankAI&&p.bossStage>=2?
+      window.WingmanBossRivalry?.tacticFor(state.campaignEncounter,p.bossStage):null;
+    const style=bossStyle||(rankAI?p.aiStyle:'hunter');
     const dx=wrappedDelta(p.x,target.x),dy=target.y-p.y;
     const range=Math.hypot(dx,dy);
     const directAngle=Math.atan2(dy,dx);
@@ -1668,6 +1690,7 @@ function plane(type,id,x,y,angle){
       state.time-=dt;
       if(state.session)state.session.seconds+=dt;
       summonFinalAce(dt);
+      advanceCampaignBossPhase();
       summonCampaignBackup(dt);
       if((state.mode==='survival'||state.mode==='challenge')&&state.time<=0){endRound(1);return;}
       const user=state.fliers[0];
@@ -2223,9 +2246,12 @@ function plane(type,id,x,y,angle){
       const remain=Math.ceil(state.bossCountdown||0);
       g.fillStyle='#f4c793';g.font='bold 6.6px monospace';
       g.fillText('FINAL ACE INBOUND • '+remain+'s',cx,36);
-    }else if(state.mode==='campaign'&&state.campaignEncounter?.finalBoss){
+    }else if(state.mode==='campaign'&&state.campaignEncounter?.bossPlan){
       g.fillStyle='#f3c49b';g.font='bold 6.6px monospace';
-      g.fillText('FINAL ACE ENGAGED',cx,36);
+      const plan=state.campaignEncounter.bossPlan;
+      const stage=Math.max(1,state.bossPhase||1);
+      g.fillText('PHASE '+stage+'/'+plan.stages.length+' · '+
+        (plan.stages[stage-1]?.name||'ACE ENGAGED'),cx,36,Math.min(210,W*.55));
     }
     // A narrow, unboxed airspeed scale sits centrally near the ground.
     // It stays clear of the thumb controls at either side.
