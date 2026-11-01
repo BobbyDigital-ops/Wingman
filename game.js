@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, SKY_EXTRA=150, WORLD_H=H+SKY_EXTRA, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v1.0.3',GAME_PHASE='BOSS RIVALS / REGRESSION QA'; // stable release identifier
+  const GAME_VERSION='v1.0.4',GAME_PHASE='CAMPAIGN COMBAT BALANCE'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -216,7 +216,8 @@ function plane(type,id,x,y,angle){
     if(state.mode==='campaign'&&state.campaignEncounter){
       const encounter=state.campaignEncounter;
       state.fliers=[plane(state.selected,0,W*.22,H*.45,-.14)];
-      const starts=[[.78,.52,Math.PI+.15],[.68,.36,Math.PI+.28],[.86,.42,Math.PI+.08]];
+      const starts=[0,1,2].map(i=>window.WingmanCombatBalance?.startingPosition(i)||
+        [[.78,.52,Math.PI+.15],[.91,.28,Math.PI+.28],[.91,.64,Math.PI+.08]][i]);
       encounter.types.slice(0,3).forEach((type,index)=>{
         const [x,y,angle]=starts[index],foe=plane(type,index+1,W*x,H*y,angle);
         foe.team=1;
@@ -1067,9 +1068,11 @@ function plane(type,id,x,y,angle){
     p.aiArchetype=personality?.archetype||raw.archetype||'Balanced';
     p.aiRank=rank;p.aiStyle=personality?.style||raw.personality||AI_STYLES[hash%AI_STYLES.length];
     p.aiPersonality=personality||null;
-    p.aiSkillLevel=clamp((rank-1)/11+
-      (encounter.lane===2?.44:encounter.lane===1?.22:0)+
-      (encounter.eliteEncounter?.16:0)-(encounter.fieldOrders?.ambush?.13:0),0,1);
+    // Deterministic and intentionally gradual through the 12-rung ladder;
+    // high-risk routes must no longer saturate to perfect AI at rank six.
+    p.aiSkillLevel=window.WingmanCombatBalance?.skillFor(encounter)??
+      clamp((rank-1)/11+(encounter.lane===2?.44:encounter.lane===1?.22:0)+
+        (encounter.eliteEncounter?.16:0)-(encounter.fieldOrders?.ambush?.13:0),0,1);
     p.aiManeuver='PATROL';p.aiManeuverTimer=0;p.aiManeuverCooldown=3;
     p.aiMistake=0;
     p.attributes=pilotAttributes(personality?.attributes||raw.attributes||encounter.attributes);
@@ -1305,7 +1308,9 @@ function plane(type,id,x,y,angle){
     if(rankAI&&p.aiRole==='flanker'&&range>76){
       // Offset the intercept from the other pursuer instead of stacking
       // both aircraft in one perfect tail-chase. Closes back in when near.
-      const offset=clamp((range-76)/180,0,1)*27*(p.id%2===0?1:-1);
+      // Wingmen choose a separate physical intercept line; they do not
+      // pile into the leader's gun corridor or receive invisible aim buffs.
+      const offset=clamp((range-76)/180,0,1)*(29+talent*9)*(p.id%2===0?1:-1);
       tx-=targetNoseY*offset;ty+=targetNoseX*offset;
       p.aiManeuver='CROSSING INTERCEPT';
     }
