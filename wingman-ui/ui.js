@@ -16,12 +16,13 @@ const PLANES=[
 const liveSpecs=P.WingmanGame?.aircraftSpecs?.();
 if(liveSpecs)for(let i=0;i<TYPES.length;i++){const p=liveSpecs[TYPES[i]];if(!p)continue;PLANES[i][4]=p.speed;PLANES[i][5]=p.turn;PLANES[i][6]=p.armour;PLANES[i][7]=p.damage;}
 const OPS=[['1 VS 1','Classic dogfight','Head-to-head fighter combat.','duel'],['SURVIVAL','How long can you last?','Increasing waves of enemies.','survival'],['FREE FOR ALL','Every pilot for themselves','Multiple aircraft. One winner.','triple'],['2 VS 2','Team up','Fight with an AI wingman.','teams'],['CHALLENGES','Special operations','Time-limited combat objectives.','challenge']];
-const S={screen:'title',back:[],op:0,plane:0,opponent:'random',faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:null,campaignPanel:'ladder',difficulty:'standard',theatre:'0',sound:true,audioVolume:100,optionTab:'GAMEPLAY',lastResult:null,outcomeStep:'debrief'};
+const S={screen:'title',back:[],op:0,plane:0,opponent:'random',faction:'Allies',pilotIndex:0,page:0,pilotFilter:'Allies',career:false,choice:null,campaignPanel:'ladder',difficulty:'standard',theatre:'0',weather:'auto',sound:true,audioVolume:100,optionTab:'GAMEPLAY',lastResult:null,outcomeStep:'debrief'};
 const stage=document.querySelector('#stage'),nav=document.querySelector('.nav');
 try{const settings=P.WingmanUIBridge?.getAudioSettings?.();if(settings){S.sound=!settings.muted;S.audioVolume=Math.round(settings.volume*100);}}catch{}
 try{const savedOptions=JSON.parse(localStorage.getItem('wingman-ui-flight-presets-v1')||'null');
  if(savedOptions&&['rookie','standard','ace'].includes(savedOptions.difficulty))S.difficulty=savedOptions.difficulty;
  if(savedOptions&&['0','1','2','3'].includes(savedOptions.theatre))S.theatre=savedOptions.theatre;
+ if(savedOptions&&['auto','clear','clouds','fog','rain','storm','glare','flak','searchlight'].includes(savedOptions.weather))S.weather=savedOptions.weather;
 }catch{}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const aircraftPreviews={};
@@ -96,6 +97,11 @@ function operations(){
  const types=OPS.map((o,i)=>'<option value="'+i+'">'+esc(o[0])+' · '+esc(o[1]).toUpperCase()+'</option>').join('');
  const theatre='<option value="0">ALPINE FRONT</option><option value="1">ENGLISH CHANNEL</option>'+
    '<option value="2">NORTH AFRICA</option><option value="3">STORM FRONT</option>';
+ const weather='<option value="auto">AUTO · MATCH THEATRE</option>'+ 
+   '<option value="clear">CLEAR SKIES</option><option value="clouds">MOVING CLOUD BANKS</option>'+ 
+   '<option value="fog">FOG &amp; LOW VISIBILITY</option><option value="rain">DRIVING RAIN</option>'+ 
+   '<option value="storm">STORM &amp; STRONG GUSTS</option><option value="glare">SUN GLARE</option>'+ 
+   '<option value="flak">FLAK BATTERY · LIVE FIRE</option><option value="searchlight">SEARCHLIGHTS · LIVE FIRE</option>';
  const opponent='<option value="random">RANDOM OPPONENT</option>'+
    TYPES.map((t,i)=>'<option value="'+t+'">'+esc(PLANES[i][0])+'</option>').join('');
  return '<section class="frame wm-v12-ops wm-v13-ops"><div class="wm-v13-ops-content">'+
@@ -111,7 +117,8 @@ function operations(){
   '<div class="wm-v12-ops-field"><label>DIFFICULTY<select data-setting="difficulty"><option value="rookie">ROOKIE</option>'+
   '<option value="standard">REGULAR</option><option value="ace">ACE</option></select></label>'+
   '<label>THEATRE<select data-setting="theatre">'+theatre+'</select></label>'+
-  (op[3]==='duel'?'<label class="wm-v12-span-all">ENEMY AIRCRAFT<select data-setting="opponent">'+opponent+'</select></label>':'')+
+  '<label>WEATHER<select data-setting="weather">'+weather+'</select></label>'+
+  (op[3]==='duel'?'<label>ENEMY AIRCRAFT<select data-setting="opponent">'+opponent+'</select></label>':'')+
   '</div><div class="wm-v13-ops-note"><span class="wm-v12-kicker">OPERATIONAL NOTES</span>'+
   '<p>Briefing and aircraft confirmation follow. Your chosen settings are retained.</p></div>'+
   '</div></div></div>'+
@@ -665,7 +672,7 @@ function go(screen){if(S.screen!==screen){S.back.push(S.screen);S.screen=screen;
 function back(){S.screen=S.back.pop()||'home';if(S.screen!=='aircraft')S.career=false;show()}
 function beginCareer(){const a=api();if(!a?.beginCareer?.())return;S.choice=null;S.career=false;S.screen='career';show()}
 function action(v){
- if(v==='options-reset'){S.difficulty='standard';S.theatre='0';try{localStorage.setItem('wingman-ui-flight-presets-v1',JSON.stringify({difficulty:S.difficulty,theatre:S.theatre}))}catch{}return show();}
+ if(v==='options-reset'){S.difficulty='standard';S.theatre='0';S.weather='auto';try{localStorage.setItem('wingman-ui-flight-presets-v1',JSON.stringify({difficulty:S.difficulty,theatre:S.theatre,weather:S.weather}))}catch{}return show();}
  if(v==='opening-start'){S.screen='profiles';S.back=[];return show();}
  if(v==='profile-back'){S.screen='title';S.back=[];return show();}
  if(v==='switch-profile'){S.screen='profiles';S.back=['home'];return show();}
@@ -689,7 +696,7 @@ function action(v){
  if(v==='confirm-pilot'){const p=roster[S.pilotIndex];if(!p)return;const status=api()?.choosePilot?.(p.id);if(status===false)return;S.faction=p.faction;S.plane=Math.max(0,TYPES.indexOf(p.plane));S.career=false;S.screen='home';S.back=[];return show()}
  if(v==='begin-career')return beginCareer();
  if(v==='career-aircraft'){if(S.choice===null||!playerSave()?.run||playerSave().run.choices?.[S.choice]?.isNonCombat)return;S.career=true;S.launchError='';S.faction=playerSave().profile.faction;S.plane=TYPES.indexOf(playerSave().profile.plane);return go('aircraft')}
- if(v==='launch-arcade'){const ok=api()?.startArcade?.({mode:OPS[S.op][3],aircraft:TYPES[S.plane],opponent:S.opponent,difficulty:S.difficulty,arena:S.theatre});if(ok){S.launchError='';api()?.hide?.()}else{S.launchError='UNABLE TO LAUNCH · TRY AGAIN';show()}return}
+ if(v==='launch-arcade'){const ok=api()?.startArcade?.({mode:OPS[S.op][3],aircraft:TYPES[S.plane],opponent:S.opponent,difficulty:S.difficulty,arena:S.theatre,weather:S.weather});if(ok){S.launchError='';api()?.hide?.()}else{S.launchError='UNABLE TO LAUNCH · TRY AGAIN';show()}return}
  if(v==='launch-career'){const ok=api()?.startCareer?.(S.choice,TYPES[S.plane]);if(ok){S.launchError='';S.career=false;api()?.hide?.()}else{S.launchError='UNABLE TO START SORTIE · TRY AGAIN';show()}return}
  if(v==='career-continue'){if(playerSave()?.run?.pendingReward)return show();api()?.continueCareer?.();S.lastResult=null;S.choice=null;S.campaignPanel='ladder';S.screen='career';S.back=[];return show()}
  if(v==='repair-airframe'){if(api()?.repairCampaignAircraft?.())show();return;}
@@ -735,8 +742,8 @@ document.addEventListener('change',e=>{
  const key=e.target.dataset.setting;
  if(key==='op'){S.op=Number(e.target.value);show();return;}
  S[key]=e.target.value;
- if(key==='difficulty'||key==='theatre')try{localStorage.setItem('wingman-ui-flight-presets-v1',
-  JSON.stringify({difficulty:S.difficulty,theatre:S.theatre}))}catch{}
+ if(key==='difficulty'||key==='theatre'||key==='weather')try{localStorage.setItem('wingman-ui-flight-presets-v1',
+  JSON.stringify({difficulty:S.difficulty,theatre:S.theatre,weather:S.weather}))}catch{}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.screen!=='title')back();else if((e.key==='Enter'||e.key===' ')&&S.screen==='title'){e.preventDefault();action('opening-start')}});
 window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.data?.wmUI==='career'){S.career=false;S.screen='career';S.back=[];S.lastResult=null;show()}if(e.data?.wmUI==='home'){S.career=false;S.screen='home';S.back=[];show()}if(e.data?.wmUI==='result'){S.lastResult=e.data.result;S.lastCareer=!!e.data.career;S.outcomeStep='debrief';S.screen='outcome';S.back=[];show()}});
