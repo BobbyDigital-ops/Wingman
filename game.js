@@ -198,7 +198,10 @@ function plane(type,id,x,y,angle){
   }
   function newRound(){
     syncAbilityButton();
-    if(state.mode==='campaign'){state.supportCharge=0;state.supportTime=0;state.supportUses=0;}
+    if(state.mode==='campaign'){
+      state.supportCharge=state.campaignEncounter?.fieldOrders?.favour?25:0;
+      state.supportTime=0;state.supportUses=0;
+    }
     const help=document.getElementById('call-support');
     if(help)help.hidden=state.mode!=='campaign';
     state.fliers=[
@@ -307,6 +310,12 @@ function plane(type,id,x,y,angle){
       state.campaignEncounter?.finalBoss?'FINAL SCRAMBLE — TWO ESCORTS':
       state.mode==='campaign'?(state.campaignEncounter?.mission||'RIVAL INTERCEPT')+' • '+callsign:
       state.wind.active?(state.wind.base>0?'CROSSWIND →':'← CROSSWIND'):'ROUND '+state.round;
+    if(state.mode==='campaign'&&state.campaignEncounter?.fieldOrders){
+      const orders=state.campaignEncounter.fieldOrders;
+      if(orders.ambush)state.banner+=' · AMBUSH ACTIVE';
+      if(orders.radio)state.banner+=' · RADIO DECEPTION';
+      if(orders.favour)state.banner+=' · CREW READY';
+    }
     if(state.mode==='campaign'&&state.campaignEncounter?.hazard)
       state.banner+=' · '+(state.campaignEncounter.hazard==='crosswind'?'CROSSWIND':'COASTAL HAZE');
     state.bannerTime=state.campaignEncounter?.finalBoss?4:1.5;
@@ -1040,7 +1049,7 @@ function plane(type,id,x,y,angle){
     p.aiPersonality=personality||null;
     p.aiSkillLevel=clamp((rank-1)/11+
       (encounter.lane===2?.44:encounter.lane===1?.22:0)+
-      (encounter.eliteEncounter?.16:0),0,1);
+      (encounter.eliteEncounter?.16:0)-(encounter.fieldOrders?.ambush?.13:0),0,1);
     p.aiManeuver='PATROL';p.aiManeuverTimer=0;p.aiManeuverCooldown=3;
     p.aiMistake=0;
     p.attributes=pilotAttributes(personality?.attributes||raw.attributes||encounter.attributes);
