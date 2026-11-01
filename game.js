@@ -1376,6 +1376,33 @@ function plane(type,id,x,y,angle){
       ty=p.y>WORLD_H*.56?p.y-35:p.y+20;
     }
     if(p.energy<28&&p.aiMode==='intercept')ty=Math.max(86,ty);
+    // Boss phases use committed, ordinary aircraft turns rather than extra
+    // health, weapon damage, or instantaneous position changes.
+    const staged=state.campaignEncounter?.bossPlan;
+    const stageAce=rankAI&&p.bossStage>=2&&staged&&
+      p.id===(state.campaignEncounter.finalBoss?3:1);
+    if(stageAce&&p.aiMode!=='evade'){
+      const final=!!state.campaignEncounter.finalBoss;
+      const manoeuvre=final?'LAST STAND ATTACK':
+        state.campaignEncounter.rank<=4?'SCISSOR COUNTER':'CROSSING ATTACK';
+      if(p.aiManeuverTimer<=0&&p.aiManeuverCooldown<=0&&range<138&&range>38){
+        p.aiManeuver=manoeuvre;
+        p.aiManeuverTimer=final?.85:1.05;
+        p.aiManeuverCooldown=final?3.8:5.2;
+      }
+      if(p.aiManeuverTimer>0&&p.aiManeuver===manoeuvre){
+        if(manoeuvre==='SCISSOR COUNTER'){
+          tx=p.x+(Math.cos(p.angle)>=0?1:-1)*62;
+          ty=p.y+(p.y>WORLD_H*.52?-29:29);
+        }else if(manoeuvre==='CROSSING ATTACK'){
+          tx=target.x+target.vx*predict*1.25-targetNoseY*25;
+          ty=target.y+target.vy*predict*1.25+targetNoseX*25;
+        }else{
+          tx=target.x-targetNoseX*18+target.vx*predict;
+          ty=target.y-targetNoseY*18+target.vy*predict;
+        }
+      }
+    }
     if(rankAI&&state.campaignEncounter?.finalBoss&&p.id<=2&&
        (p.aiMode==='intercept'||p.aiMode==='attack')){
       const wing=state.fliers.find(q=>q.id>0&&q.id!==p.id&&q.id<=2&&q.alive);
@@ -1389,7 +1416,11 @@ function plane(type,id,x,y,angle){
     const turn=p.aiMode==='break'?p.aiBreakSign:
       Math.abs(error)<.045?0:
         clamp(error*(2.0+talent*1.4),-1,1);
-    p.aiBoost=false;
+    // Final-stage commander makes occasional committed boost pursuits with
+    // the same airspeed and energy physics available to any fighter.
+    p.aiBoost=!!(stageAce&&state.campaignEncounter.finalBoss&&
+      p.bossStage>=3&&p.aiMode==='intercept'&&range>95&&
+      facing<.72&&p.energy>38);
 
     // Actual guns use their own firing axis, not the tail-position waypoint.
     const solution=firingSolution;
