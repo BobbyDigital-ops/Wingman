@@ -1780,7 +1780,7 @@ function plane(type,id,x,y,angle){
         const oldBursts=state.environment?.flakBursts?.length||0;
         window.WingmanFlightAtmosphere?.advance(state.environment,dt,W,WORLD_H,
           state.fliers,(p,damage,x,y,cause)=>hit(p,damage,x,y,undefined,cause,null));
-        if((state.environment?.flakBursts?.length||0)>oldBursts)sound('bombImpact');
+        if((state.environment?.flakBursts?.length||0)>oldBursts)sound('flak');
       }else{
         window.WingmanFlightAtmosphere?.advance(state.environment,dt,W,WORLD_H,[]);
       }
