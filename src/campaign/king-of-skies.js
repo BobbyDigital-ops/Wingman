@@ -321,7 +321,11 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
    objective==='intel-hunt'?Math.max(70,101-rank*2):
    objective==='ace-hunt'?Math.max(66,100-rank*2):
    objective==='outnumbered'?Math.max(97,126-rank*3):115;
-enc.escortType=objective==='escort'?(run.faction==='Allies'?'bomber':'he111'):null;
+// The second regional ace uses a prolonged, two-stage pursuit. The old
+ // 84-second timer frequently produced a timeout with both pilots still
+ // healthy instead of a meaningful victory/defeat: allow room for a rematch.
+ if(kind==='elite'&&rank===8)enc.timeLimit=Math.max(enc.timeLimit,112);
+ enc.escortType=objective==='escort'?(run.faction==='Allies'?'bomber':'he111'):null;
  enc.priorityTargetIndex=['intel-hunt','formation-break','escape-artist'].includes(objective)?0:null;
  enc.tacticalMission=objective==='formation-break'?'LEADER TAKEDOWN':objective==='escape-artist'?'FLEEING ACE':
   objective==='intel-hunt'?'INTELLIGENCE STRIKE':objective==='escort'?'PROTECT FRIENDLY BOMBER':null;
