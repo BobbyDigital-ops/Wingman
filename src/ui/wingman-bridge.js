@@ -127,6 +127,7 @@ window.WingmanUIBridge={show,hide,choosePilot,beginCareer,startCareer,startArcad
  repairCampaignAircraft(){
   return !!window.WingmanCareer?.repairAirframe?.();
  },
+ buyCampaignOrder(key){return !!window.WingmanCareer?.buyCampaignOrder?.(key);},
   restartCampaign(){const ok=window.WingmanCareer?.restartCampaign?.();if(ok)show();return !!ok;},
  openLicence(){openCareer('licence');broadcast({wmUI:'career'})},
  toggleSound(){const current=window.WingmanAudio?.muted;window.WingmanAudio?.setMuted?.(!current);return !window.WingmanAudio?.muted;},
