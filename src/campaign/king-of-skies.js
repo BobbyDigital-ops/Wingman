@@ -355,6 +355,9 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
  enc.threat=threatRating(enc);
  // Hazards are declared in mission data; never randomly bias one player.
  enc.hazard=rank>=9&&lane===2?'crosswind':rank>=5&&lane===0?'haze':rank===8?'crosswind':null;
+ // Only declared, deterministic weather and hazard types appear in the
+ // sortie dossier. Existing symmetric crosswind remains authoritative.
+ enc.environment=root.WingmanFlightAtmosphere?.forEncounter?.(enc,enc.arena)||null;
  return enc;
 }
 function threatRating(enc){
