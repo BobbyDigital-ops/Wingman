@@ -418,7 +418,9 @@ test('G3A.2 near-ceiling fighter keeps chasing instead of bobbing in ground-reco
 test('Ground-threat prediction still overrides AI pursuit without universal boost',()=>{
  const game=launch();game.listeners.get('start:click')();
  const enemy=game.internals.state.fliers[1];
- enemy.y=165;enemy.vy=78;enemy.angle=.8;enemy.aiThink=20;
+ // Random matchmaking may spawn any class; pin the fighter being tested.
+ enemy.type='bf109';enemy.role='fighter';enemy.d=game.internals.PLANES.bf109;
+ enemy.y=195;enemy.vy=78;enemy.angle=.8;enemy.aiThink=20;
  const target=game.internals.state.fliers[0];target.y=220;
  game.internals.aiInput(enemy,target);
  assert.equal(enemy.aiMode,'recover');
