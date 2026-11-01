@@ -79,6 +79,20 @@ test('campaign combat and browser load calibration before the existing flight en
  assert.match(page,/boss-rivalry\.js/);
  assert.match(read('src/campaign/king-of-skies.js'),/WingmanCombatBalance\?\.calibratedThreat/);
 });
+test('escort doctrine splits enemies between the bomber and its defender',()=>{
+ const D=require('../src/ai/mission-doctrine.js');
+ const hero={id:0,team:0,alive:true};
+ const bomber={id:90,team:0,escortProtected:true,alive:true};
+ const targets=[hero,bomber];
+ const primary={id:1,team:1,aiRole:'interceptor'};
+ const screen={id:2,team:1,aiRole:'hunter'};
+ const backup={id:200,team:1,aiRole:'hunter'};
+ assert.equal(D.pickTarget(primary,targets,{objective:'escort',player:hero}),bomber);
+ assert.equal(D.pickTarget(screen,targets,{objective:'escort',player:hero}),hero);
+ assert.equal(D.pickTarget(backup,targets,{objective:'escort',player:hero}),hero);
+ bomber.alive=false;
+ assert.equal(D.pickTarget(primary,targets.filter(p=>p.alive),{objective:'escort',player:hero}),hero);
+});
 test('benchmark exercises every combat mission, six aircraft and both sides',()=>{
  const source=read('tests/campaign-difficulty-v080.cjs');
  assert.match(source,/for\(const faction of \['Allies','Axis'\]\)/);
