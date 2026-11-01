@@ -24,8 +24,15 @@ function pickTarget(actor,targets,{objective,dist,player,fliers}={}){
  const distance=typeof dist==='function'?dist:(a,b)=>Math.hypot((a.x||0)-(b.x||0),(a.y||0)-(b.y||0));
  const role=actor.aiRole;
  if(objective==='escort'&&actor.team===1){
-  const bomber=targets.find(p=>p.escortProtected&&p.alive);
-  if(bomber)return bomber;
+  // Only the designated interceptor commits to the protected bomber.
+  // Escort hunters and later reinforcement pilots challenge its defender;
+  // otherwise every hostile piles onto the objective and the player cannot
+  // influence a bomber destroyed in the first 20 seconds.
+  if(actor.aiRole==='interceptor'){
+   const bomber=targets.find(p=>p.escortProtected&&p.alive);
+   if(bomber)return bomber;
+  }
+  if(player?.alive&&targets.includes(player))return player;
  }
  if((role==='screen'||role==='guard')&&player&&targets.includes(player)){
   // Screens are useful only if they actively threaten the intercepting pilot.
