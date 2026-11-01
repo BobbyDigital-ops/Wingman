@@ -1,0 +1,70 @@
+/* v1.0.1 — Wingman campaign operations desk, retained RAF parchment art */
+.wm-v101-field-orders{
+ display:flex;flex-direction:column;gap:5px;margin:6px 0;
+ padding:clamp(6px,1vw,12px);background:#f1ddb5;
+ border:1px solid #ae8c5f;border-left:5px solid #244354;
+ color:#263947;box-shadow:inset 0 0 18px #96744417;
+}
+.wm-v101-order-heading{
+ display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;
+ gap:4px 8px;padding-bottom:5px;border-bottom:1px solid #ac9069;
+}
+.wm-v101-order-heading strong{font:900 clamp(13px,1.3vw,19px) 'Barlow Condensed',Impact,sans-serif;letter-spacing:.06em}
+.wm-v101-order-heading small{font:800 clamp(10px,.85vw,12px) 'Barlow Condensed',Impact,sans-serif;color:#7c5939}
+.wm-v101-order-list{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;
+}
+.wm-v101-order-entry{
+ display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;
+ gap:2px 5px;padding:5px 7px;border:1px solid #9f865f;background:#e4cfa9;
+}
+.wm-v101-order-entry span{color:#2b414a;font:900 clamp(10px,.95vw,13px) 'Barlow Condensed',Impact,sans-serif;letter-spacing:.04em}
+.wm-v101-order-entry strong{font:900 16px 'Barlow Condensed',Impact,sans-serif;color:#864a2d}
+.wm-v101-order-entry small{
+ grid-column:1/-1;font:600 clamp(10px,.9vw,12px)/1.2 Barlow,Arial,sans-serif;
+ color:#624b32;
+}
+.wm-v101-order-actions{display:flex;flex-wrap:wrap;gap:6px}
+.wm-v101-order-actions button{
+ flex:1;min-width:130px;padding:7px 9px;cursor:pointer;
+ background:linear-gradient(#365969,#1a3643);color:#f7e6c2!important;
+ border:2px solid #a98a5a;font:900 clamp(11px,1.1vw,15px) 'Barlow Condensed',Impact,sans-serif;
+ letter-spacing:.04em;
+}
+.wm-v101-order-actions button:disabled{opacity:.4!important;cursor:default}
+.wm-v101-order-actions button:not(:disabled):hover{filter:brightness(1.18)}
+.wm-v101-order-notice{font:800 12px 'Barlow Condensed',Impact,sans-serif;color:#7d4b31}
+.wm-v101-event-order{
+ background:#203d47;color:#f9e4b9;border-left:5px solid #b39458;
+ padding:7px 10px;margin-bottom:7px;display:flex;flex-direction:column;gap:3px;
+}
+.wm-v101-event-order strong{font:900 clamp(13px,1.4vw,18px) 'Barlow Condensed',Impact,sans-serif}
+.wm-v101-event-order small{font:600 clamp(10px,1vw,12px) Barlow,Arial,sans-serif;color:#e2d4af}
+.wm-v101-debrief-orders{
+ display:flex;flex-wrap:wrap;gap:5px;border:1px solid #b29261;
+ background:#e4cfa0;padding:7px 9px;margin:5px 0;
+}
+.wm-v101-debrief-orders small{flex-basis:100%;font:900 11px 'Barlow Condensed',Impact,sans-serif;color:#705032;letter-spacing:.1em}
+.wm-v101-debrief-orders strong{
+ color:#315344;padding:4px 5px;border:1px solid #8fa078;
+ font:900 clamp(11px,1vw,14px) 'Barlow Condensed',Impact,sans-serif;
+}
+@media(max-height:550px) and (orientation:landscape){
+ .wm-v101-field-orders{gap:3px;padding:4px 6px;margin:2px 0}
+ .wm-v101-order-heading{padding-bottom:2px}
+ .wm-v101-order-heading strong{font-size:12px}
+ .wm-v101-order-heading small{font-size:9px}
+ .wm-v101-order-entry{padding:3px 4px;gap:1px}
+ .wm-v101-order-entry span,.wm-v101-order-entry strong{font-size:11px}
+ .wm-v101-order-entry small{font-size:9px}
+ .wm-v101-order-actions button{padding:4px 5px;font-size:10px;min-width:100px}
+ .wm-v101-event-order{padding:4px 6px;gap:1px}
+ .wm-v101-event-order strong{font-size:12px}
+ .wm-v101-event-order small{font-size:9px}
+ .wm-v101-debrief-orders{padding:4px 5px;margin:3px 0}
+ .wm-v101-debrief-orders strong{font-size:10px}
+}
+@media(max-width:660px) and (orientation:portrait){
+ .wm-v101-order-list{grid-template-columns:1fr}
+ .wm-v101-order-actions{flex-direction:column}
+}
