@@ -90,6 +90,6 @@ test('new mission code loads before gameplay and leaves art/menus intact',()=>{
  assert.match(ui,/wm-v100-special-objective/);
  assert.match(ui,/FORMATION LEADER/);
  assert.match(ui,/ESCAPING ACE/);
- assert.match(career,/campaignSchema=12/);
+ assert.match(career,/campaignSchema=13/);
  assert.match(ui,/S\.choice=null/);
 });
