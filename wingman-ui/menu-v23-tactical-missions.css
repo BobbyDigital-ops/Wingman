@@ -1,0 +1,29 @@
+/* v1.0 Phase 10 — tactical objective highlighting; preserves original RAF panel art. */
+.wm-v100-special-objective{
+ display:flex;align-items:baseline;flex-wrap:wrap;gap:5px 10px;
+ padding:6px 10px;margin:3px 0;background:linear-gradient(100deg,#354b49,#263c46);
+ border-left:5px solid #c9aa6f;color:#f5e6c6;
+}
+.wm-v100-special-objective strong{
+ font:900 clamp(10px,.95vw,13px) 'Barlow Condensed',Impact,sans-serif;
+ color:#e2c187;letter-spacing:.11em;
+}
+.wm-v100-special-objective span{
+ font:900 clamp(14px,1.4vw,21px) 'Barlow Condensed',Impact,sans-serif;
+ color:#fff1ce;
+}
+.wm-v100-special-objective small{
+ flex-basis:100%;font:600 clamp(10px,1vw,13px)/1.2 Barlow,sans-serif;color:#eadbc0;
+}
+.wm-v100-target-line{
+ padding:4px 8px!important;margin:2px 0!important;color:#773d2b!important;
+ border-left:4px solid #b95433;background:#f6e4c494;
+ font:900 clamp(10px,1.15vw,15px) 'Barlow Condensed',Impact,sans-serif;
+ letter-spacing:.045em;
+}
+@media(max-height:520px) and (orientation:landscape){
+ .wm-v100-special-objective{padding:3px 6px;gap:3px 7px;margin:1px 0}
+ .wm-v100-special-objective span{font-size:12px}
+ .wm-v100-special-objective strong,.wm-v100-special-objective small{font-size:9px}
+ .wm-v100-target-line{padding:2px 5px!important;font-size:10px!important}
+}
