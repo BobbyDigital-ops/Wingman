@@ -79,15 +79,26 @@ const equippedResult=runAI(engineSources,{
 });
 const rows=result.campaignBenchmark;
 const round=n=>Math.round(n*100)/100;
-const summary=entries=>({
+const summary=entries=>{
+ const samples=entries.flatMap(x=>x.samples||[]);
+ const avg=key=>samples.length?round(samples.reduce((n,x)=>n+(x[key]||0),0)/samples.length):null;
+ const shots=samples.reduce((n,x)=>n+(x.shots||0),0),hits=samples.reduce((n,x)=>n+(x.hits||0),0);
+ return {
  missions:entries.length,
+ averageFightSeconds:avg('seconds'),
+ enemyEngagementSeconds:avg('engagementSeconds'),
+ enemyEvasionSeconds:avg('enemyEvasionSeconds'),
+ gunThreatSeconds:avg('gunThreatSeconds'),
+ enemyTailSeconds:avg('enemyTailSeconds'),
+ averageDamageTaken:avg('damageTaken'),
+ scriptedPilotShotAccuracyPct:shots?Math.round(hits/shots*100):null,
  scriptedPilotWinPct:entries.length?Math.round(entries.reduce((n,x)=>n+x.winRate,0)/entries.length):null,
  averageRemainingIntegrity:entries.length?round(entries.reduce((n,x)=>n+x.avgIntegrity,0)/entries.length):null,
  groundCrashes:entries.reduce((n,x)=>n+x.crashes,0),
  commanderArrivalPct:entries.some(x=>x.bossStages===3)?
-  Math.round(entries.flatMap(x=>x.samples).filter(s=>s.commanderEntered).length/
-   entries.flatMap(x=>x.samples).length*100):null
-});
+  Math.round(samples.filter(s=>s.commanderEntered).length/samples.length*100):null
+ };
+};
 const byRisk=Object.fromEntries(['LOW','MEDIUM','HIGH'].map(k=>[k,summary(rows.filter(x=>x.risk===k))]));
 const byRegion=Object.fromEntries(C.REGIONS.map(k=>[k,summary(rows.filter(x=>C.regionForRank(x.rank)===k))]));
 const byRank=Object.fromEntries(Array.from({length:12},(_,i)=>[i+1,summary(rows.filter(x=>x.rank===i+1))]));
@@ -100,7 +111,7 @@ const milestones=[4,8,12].map(rank=>({
   .flatMap(x=>x.samples).filter(s=>s.maxBossStage>=stage).length]))
 }));
 const audit={
- description:'Identical scripted AI pilot (no campaign upgrades) across both factions and all six aircraft. Two deterministic trials per COMBAT mission. NOT a human win-rate estimate.',
+ description:'Real-engine scripted AI pilot: pursuit, evasions, gun threat, attack accuracy, survivability and boss entry. 312 stock attempts plus 108 plausible upgraded late-game attempts across six aircraft and both factions. NOT a human win-rate estimate.',
  phase:'10E',totalRungs:12,combatRoutes:rows.length,nonCombatRoutesPerFaction:10,
  trials:rows.reduce((n,x)=>n+x.samples.length,0),
  byRisk,byRegion,byRank,byAircraft,milestones,
