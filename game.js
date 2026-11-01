@@ -281,7 +281,7 @@ function plane(type,id,x,y,angle){
       const enc=state.campaignEncounter;
       for(const [i,foe] of state.fliers.slice(1).entries())assignCampaignAI(foe,enc,i);
       if(enc.objective==='escort'){
-        const ally=plane(enc.escortType||'bomber',90,W*.35,H*.35,-.07);
+        const ally=plane(enc.escortType||'bomber',90,W*.16,H*.30,-.07);
         ally.team=0;ally.escortProtected=true;
         ally.aiName='PROTECTED BOMBER';ally.aiSkillLevel=.28;ally.spawnSafe=1.7;
         state.fliers.push(ally);
