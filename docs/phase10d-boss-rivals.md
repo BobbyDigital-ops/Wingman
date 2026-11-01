@@ -14,7 +14,7 @@ Give regional elite missions and the final showdown distinct, clearly announced 
 - **Rank 4, Channel regional ace**: starts with the normal dogfight. Below **55% actual hull**, changes to a tight duellist/scissor-counter plan.
 - **Rank 8, Continental regional ace**: starts with high-altitude pursuit. Below **55% actual hull**, switches to interception/crossing-attack style.
 - **Rank 12, final squadron**: preserves the previous two-escort launch and the ace's timed/escort-loss entry. Stage 1: escort screen. Stage 2: commander engages. Stage 3: below **45% of the commander's actual hull**, tactical style switches to aggressive brawler.
-- Stage transitions are visible by banner and HUD, and stage details appear in the mission dossier.
+- Stage transitions are visible by banner and HUD, and stage details appear in the mission dossier. Injured Channel aces commit to scissor-counter manoeuvres, Continental aces attempt crossing attacks, and last-stand commanders use close-in attacks and occasional energy-limited boost pursuit.
 - No boss healing, scripted teleporting, damage multipliers, weapon cheats, changes to collision/flight physics, or new aircraft art.
 - The existing final win condition remains: defeat both escorts and their commander before the deadline.
 
@@ -23,14 +23,14 @@ Give regional elite missions and the final showdown distinct, clearly announced 
 - At the rank 4 and 8 ace-hunt nodes, a returning fighter's **same pilot ID** is preserved through campaign mission decoration; the mission does not silently substitute a generic fighter.
 - On the final rung, a previous recurring opponent can become the named commander.
 - First-time runs without a previous opponent use the existing deterministic pilot selection.
-- Records persist with wins, losses, last result, last rank and streak; details surface in the briefing and debrief.
+- Records persist with wins, losses, last result, last rank and streak; details surface in the briefing and debrief. A defeated boss is recognised in the very next retry, without duplicated briefing text.
 - Existing approved pilot portraits and aircraft visuals are reused. There is no cartoon replacement.
 
 ## QA
 - Dedicated new `tests/phase10d-boss-rivalry.test.cjs` covers deterministic recurring-rival selection, three encounter designs, actual-health transition thresholds, no free repairs, save migration from schema 13, pilot identity and UI wiring.
-- Latest run on Phase 10D: **176 tests, 162 passed, 14 failed**. The same **14 tests** failed on the untouched Phase 10C checkpoint (**169 tests, 155 passed, 14 failed**). All **7 new Phase 10D tests passed**. These failures are legacy expectations, including outdated aircraft physics, aircraft stat and UI assumptions. They must be investigated separately, not "fixed" by rolling back good combat mechanics.
+- Latest run on Phase 10D: **177 tests, 163 passed, 14 failed**. The same **14 tests** failed on the untouched Phase 10C checkpoint (**169 tests, 155 passed, 14 failed**). All **8 new Phase 10D tests passed**. These failures are legacy expectations, including outdated aircraft physics, aircraft stat and UI assumptions. They must be investigated separately, not "fixed" by rolling back good combat mechanics.
 - GitHub CI syntax check passes. The full legacy suite is **not green**, and this phase has not been certified through manual real-device gameplay.
-- A branch-specific Vercel preview requires explicit deployment; previous project's Vercel Git integration did not automatically create a preview for this new branch.
+- A dedicated non-production Vercel preview was created explicitly for the Phase 10D branch. It was not generated automatically by this project's Git integration.
 
 ## Recommended acceptance tests
 1. On rank 4, visit an elite ace. Verify the two-stage briefing, then reduce the lead below 55% hull: expect a named stage announcement and changed fighter manoeuvres, not a sudden HP refill.
