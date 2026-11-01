@@ -200,6 +200,14 @@
   noise(.45,.063,.065,{filter:'bandpass',frequency:240,toFrequency:135,q:.5});
   tone(66,39,.43,.075,'sine');
  }
+ function flakBurst(){
+  // Distinct heavy anti-aircraft crack with smoke-rumble after the report.
+  // All procedural, short, not the comedic or synthy bomb-fall whistle.
+  noise(.24,.12,0,{filter:'highpass',frequency:680,q:.48});
+  noise(.60,.28,.025,{filter:'lowpass',frequency:380,toFrequency:85,q:.42});
+  noise(.20,.15,.075,{filter:'bandpass',frequency:255,toFrequency:145,q:.5});
+  tone(81,42,.34,.082,'sine');
+ }
  function metalHit(){
   // A short sheet-metal snap, followed by a soft shrapnel rattle.
   // Deliberately NON-TONAL so gun strikes don't sound like UI bleeps.
@@ -232,6 +240,8 @@
     bombWhistle();
   }else if(type==='bombImpact'){
     bombImpact();
+  }else if(type==='flak'){
+    flakBurst();
   }else if(type==='hit'){
     if(now-lastHit<.065)return;lastHit=now;metalHit();
   }else if(type==='crash'){
