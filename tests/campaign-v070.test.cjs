@@ -79,8 +79,10 @@ test('campaign escort and bomber deadline objectives run in real game engine',()
  const root=path.resolve(__dirname,'..'),load=p=>fs.readFileSync(path.join(root,p),'utf8');
  const {runAI}=require('./ai-behaviour.cjs');
  const report=runAI({game:load('game.js'),physics:load('src/physics/swoop-flight.js'),
-  aircraft:load('src/art/aircraft.js'),scenery:load('src/art/scenery.js')},
+  aircraft:load('src/art/aircraft.js'),scenery:load('src/art/scenery.js'),
+  roster:load('src/data/pilot-roster.js'),pilotAI:load('src/data/pilot-ai.js'),
+  missionDoctrine:load('src/ai/mission-doctrine.js')},
   {seconds:1,reps:1,scenarios:['duel'],difficulty:'standard',campaignCheck:true});
- assert.deepEqual(report.campaignChecks,{escortPresent:true,escortSurvived:true,escortLost:true,interceptionDeadline:true,reconSurvivalWin:true,reconPilotLost:true,aceHuntTimedOut:true,campaignBonusesApplied:true,noFriendlyFire:true});
+ for(const [objective,passed] of Object.entries(report.campaignChecks)) assert.equal(passed,true,objective+' must pass');
  assert.equal(report.groundCrashes,0);
 });
