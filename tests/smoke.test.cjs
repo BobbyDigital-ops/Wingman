@@ -389,9 +389,9 @@ test('G3A.3 fighter commits to a real reversal before resuming close pursuit',()
  const game=launch();game.listeners.get('start:click')();
  const [player,fighter]=game.internals.state.fliers;
  fighter.type='bf109';fighter.role='fighter';fighter.d=game.internals.PLANES.bf109;
- fighter.x=145;fighter.y=100;fighter.angle=2.35;
- fighter.vx=-58;fighter.vy=-10;fighter.aiRecoveryTime=0;
- player.x=198;player.y=100;player.vx=0;player.vy=0;player.spawnSafe=0;
+ fighter.x=145;fighter.y=160;fighter.angle=2.35;
+ fighter.vx=-58;fighter.vy=0;fighter.aiRecoveryTime=0;
+ player.x=198;player.y=160;player.vx=0;player.vy=0;player.spawnSafe=0;
  const first=game.internals.aiInput(fighter,player);
  assert.ok(fighter.aiBreakTime>0,'nearby target behind the nose triggers a committed reversal');
  assert.equal(first,fighter.aiBreakSign,'reversal holds a consistent bank');
