@@ -79,6 +79,19 @@ test('campaign combat and browser load calibration before the existing flight en
  assert.match(page,/boss-rivalry\.js/);
  assert.match(read('src/campaign/king-of-skies.js'),/WingmanCombatBalance\?\.calibratedThreat/);
 });
+test('continental elite retains a viable pursuit window for both boss stages',()=>{
+ const w={};new Function('window',read('src/data/pilot-roster.js'))(w);
+ const pool=w.WingmanRoster.filter(p=>p.faction==='Axis');
+ const leader=pool.find(p=>p.plane==='bf109');
+ for(const lane of [0,1,2]){
+  const run={rank:8,faction:'Allies',seed:10,visits:0};
+  const enc=C.decorateEncounter({id:leader.id,label:leader.name,
+   types:[leader.plane],opponents:[leader]},run,lane,{pool,profile:p=>({...p})});
+  assert.ok(enc.eliteEncounter);
+  assert.ok(enc.timeLimit>=112,'boss must not expire before phase two can be contested');
+  assert.equal(B.bossPlanFor(enc).stages.length,2);
+ }
+});
 test('escort doctrine splits enemies between the bomber and its defender',()=>{
  const D=require('../src/ai/mission-doctrine.js');
  const hero={id:0,team:0,alive:true};
