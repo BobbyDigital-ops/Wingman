@@ -94,7 +94,9 @@ test('weather modifiers are symmetric and announced, not arbitrary hidden stat b
  const mission=(rank,lane)=>C.decorateEncounter(
   {id:lead.id,label:lead.name,rank,types:[lead.plane],opponents:[lead]},
   {rank,seed:2026,faction:'Allies',visits:0},lane,{pool,profile:p=>p});
- assert.equal(mission(9,2).hazard,'crosswind');
+ // Rung nine high lane is now an intelligence event, not a flight.
+ assert.equal(mission(9,2).isNonCombat,true);
+ assert.equal(mission(10,2).hazard,'crosswind');
  assert.equal(mission(6,0).hazard,'haze');
  const game=read('game.js');
  assert.match(game,/state\.campaignEncounter\?\.hazard==='crosswind'/);
