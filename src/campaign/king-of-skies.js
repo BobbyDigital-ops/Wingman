@@ -213,7 +213,9 @@ function decorateEncounter(enc,run,lane,{pool=[],profile}={}){
    }
  }
  if(objective==='ace-hunt'){
-   const fighter=pool.find(p=>p.plane===(run.faction==='Allies'?'bf109':'fighter'));
+   const fighterType=run.faction==='Allies'?'bf109':'fighter';
+   const fighter=pool.find(p=>p.id===enc.id&&p.plane===fighterType)||
+    pool.find(p=>p.plane===fighterType);
    if(fighter&&profile){
      const rival=profile(fighter);
      Object.assign(enc,{id:rival.id,label:rival.name,types:[rival.plane],
