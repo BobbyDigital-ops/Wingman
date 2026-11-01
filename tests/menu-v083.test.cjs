@@ -54,7 +54,7 @@ test('options cockpit, functional tabs and persistent difficulty/theatre',()=>{
  assert.match(t.stage.innerHTML,/FLIGHT CONFIGURATION/);
  assert.match(t.stage.innerHTML,/data-setting="difficulty"/);
  t.change('difficulty','ace');t.change('theatre','2');
- assert.deepEqual(JSON.parse(t.storage['wingman-ui-flight-presets-v1']),{difficulty:'ace',theatre:'2'});
+ assert.deepEqual(JSON.parse(t.storage['wingman-ui-flight-presets-v1']),{difficulty:'ace',theatre:'2',weather:'auto'});
  t.click({optionTab:'AUDIO'});assert.match(t.stage.innerHTML,/WIRELESS \/ SOUND/);
  assert.match(t.stage.innerHTML,/data-action="sound"/);
  t.click({optionTab:'GRAPHICS'});assert.match(t.stage.innerHTML,/data-action="fullscreen"/);
