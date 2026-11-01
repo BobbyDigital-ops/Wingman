@@ -22,7 +22,7 @@ async function campaignToHangar(page){
  await ui(page).locator('[data-choice="1"]').click();
  await expect(ui(page).locator('.wm-v085-sortie-brief')).toBeVisible();
  await expect(ui(page).locator('.wm-v085-sortie-metrics')).toContainText('THREAT RATING');
- await ui(page).locator('[data-action="career-aircraft"]').first().click();
+ await ui(page).locator('[data-action="career-aircraft"]:visible').click();
  await expect(ui(page).locator('[data-action="launch-career"]')).toBeVisible();
  await expect(ui(page).locator('.wm-v12-aircraft-tile')).toHaveCount(3);
 }
