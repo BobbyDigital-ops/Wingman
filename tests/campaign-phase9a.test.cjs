@@ -57,7 +57,9 @@ test('older pilots and source art remain compatible; the selected event is never
  assert.match(career,/resolveCampaignEvent/);
  assert.match(bridge,/resolveCampaignEvent/);
  assert.match(ui,/data-event-option/);
- assert.match(ui,/if\(v==='career-aircraft'\)\{if\(!playerSave\(\)\?\.run\|\|playerSave\(\)\.run\.choices\?\.\[S\.choice\]\?\.isNonCombat\)return/);
+ assert.match(ui,/if\(v==='career-aircraft'\)/);
+ assert.match(ui,/S\.choice===null/);
+ assert.match(ui,/choices\?\.\[S\.choice\]\?\.isNonCombat\)return/);
  assert.match(ui,/function atlas\(p\)/);
  assert.match(ui,/const TYPES=\['fighter','heavy','bomber','bf109','bf110','he111'\]/);
 });
