@@ -71,6 +71,36 @@
   const bank=clamp(Number(p?.visualBank)||0,-1,1),strength=Math.abs(bank);
   return {bank,shearX:bank*.49,shearY:bank*.19,height:1-strength*.55,depth:strength*.80};
  }
+ // Always-visible cockpit windsock: cloth droop in calm conditions,
+ // stretched striped fabric when a real shared wind field is active.
+ function drawWindsock(g,wind,x,y,t=0){
+  const strength=clamp(Math.abs(Number(wind?.current)||0)/37,0,1);
+  const dir=(Number(wind?.current)||0)<0?-1:1;
+  const active=!!wind?.active&&strength>.025;
+  const reach=active?7+20*strength:6;
+  const tipY=active?-1.5-Math.sin(t*4.4)*1.05*strength:8;
+  g.save();g.translate(x,y);
+  g.fillStyle='#0c2330cc';g.fillRect(-10,-12,99,23);
+  g.strokeStyle='#b7a88688';g.lineWidth=.65;g.strokeRect(-10,-12,99,23);
+  // A compact mast and two tapered cloth segments, rendered from the
+  // very wind values moving the planes rather than a cosmetic random flag.
+  g.strokeStyle='#c7cec9';g.lineWidth=1.1;g.beginPath();g.moveTo(0,-5);
+  g.lineTo(0,7);g.stroke();
+  g.fillStyle='#afc1bd';g.fillRect(-2,6,4,1.6);
+  g.save();g.translate(0,-4);if(dir<0)g.scale(-1,1);
+  const midY=tipY*.50;
+  g.fillStyle='#be6546';g.beginPath();g.moveTo(0,-3.1);
+  g.lineTo(reach*.47,midY-2.35);g.lineTo(reach*.47,midY+2.35);
+  g.lineTo(0,3.1);g.closePath();g.fill();
+  g.fillStyle='#eee5cf';g.beginPath();g.moveTo(reach*.47,midY-2.35);
+  g.lineTo(reach,tipY-1.1);g.lineTo(reach,tipY+1.1);
+  g.lineTo(reach*.47,midY+2.35);g.closePath();g.fill();
+  g.restore();
+  g.font='bold 7px monospace';g.textAlign='left';g.textBaseline='middle';
+  g.fillStyle=active?'#f5d6a0':'#c1c9c2';
+  g.fillText(active?((dir>0?'→':'←')+' '+Math.round(Math.abs(wind.current))+' WIND'):'CALM',30,0,56);
+  g.restore();
+ }
  function create(spec){
   const src=spec||forEncounter(null,0);
   return {...src,time:0,flakCount:0,flakMarker:null,flakBursts:[],damageEvents:0};
@@ -242,7 +272,7 @@
   }
   g.restore();
  }
- const api={forEncounter,forPreset,PRESETS,advanceBank,bankTarget,bankMatrix,drawBankWing,
+ const api={forEncounter,forPreset,PRESETS,advanceBank,bankTarget,bankMatrix,drawBankWing,drawWindsock,
   create,advance,drawBack,drawFront,flakPoint,labels};
  if(typeof module!=='undefined'&&module.exports)module.exports=api;
  root.WingmanFlightAtmosphere=api;
