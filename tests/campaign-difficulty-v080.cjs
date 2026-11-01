@@ -82,7 +82,12 @@ const round=n=>Math.round(n*100)/100;
 const summary=entries=>{
  const samples=entries.flatMap(x=>x.samples||[]);
  const avg=key=>samples.length?round(samples.reduce((n,x)=>n+(x[key]||0),0)/samples.length):null;
- const shots=samples.reduce((n,x)=>n+(x.shots||0),0),hits=samples.reduce((n,x)=>n+(x.hits||0),0);
+ // Bomber bombs and defensive turrets produce hit events that are not
+ // counted as forward-gun shots. Only compare like-for-like tracked guns.
+ const gunSamples=entries.filter(x=>!['bomber','he111'].includes(x.playerType))
+  .flatMap(x=>x.samples||[]);
+ const shots=gunSamples.reduce((n,x)=>n+(x.shots||0),0);
+ const hits=gunSamples.reduce((n,x)=>n+(x.hits||0),0);
  return {
  missions:entries.length,
  averageFightSeconds:avg('seconds'),
@@ -91,7 +96,7 @@ const summary=entries=>{
  gunThreatSeconds:avg('gunThreatSeconds'),
  enemyTailSeconds:avg('enemyTailSeconds'),
  averageDamageTaken:avg('damageTaken'),
- scriptedPilotShotAccuracyPct:shots?Math.round(hits/shots*100):null,
+ scriptedPilotShotAccuracyPct:shots&&hits<=shots?Math.round(hits/shots*100):null,
  scriptedPilotWinPct:entries.length?Math.round(entries.reduce((n,x)=>n+x.winRate,0)/entries.length):null,
  averageRemainingIntegrity:entries.length?round(entries.reduce((n,x)=>n+x.avgIntegrity,0)/entries.length):null,
  groundCrashes:entries.reduce((n,x)=>n+x.crashes,0),
@@ -112,7 +117,8 @@ const milestones=[4,8,12].map(rank=>({
 }));
 const audit={
  description:'Real-engine scripted AI pilot: pursuit, evasions, gun threat, attack accuracy, survivability and boss entry. 312 stock attempts plus 108 plausible upgraded late-game attempts across six aircraft and both factions. NOT a human win-rate estimate.',
- phase:'10E',totalRungs:12,combatRoutes:rows.length,nonCombatRoutesPerFaction:10,
+ phase:'10E',gunAccuracyNote:'Forward gun hit ratio only. Bombers use untracked defensive turret and bomb events, so no false bomber accuracy percentages.',
+ totalRungs:12,combatRoutes:rows.length,nonCombatRoutesPerFaction:10,
  trials:rows.reduce((n,x)=>n+x.samples.length,0),
  byRisk,byRegion,byRank,byAircraft,milestones,
  equippedMilestones:equippedByRank,
