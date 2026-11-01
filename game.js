@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   let W=520; const H=250, SKY_EXTRA=150, WORLD_H=H+SKY_EXTRA, STEP=1/60, TAU=Math.PI*2;
-  const GAME_VERSION='v1.1.0',GAME_PHASE='FLIGHT BANKING / ENVIRONMENT'; // stable release identifier
+  const GAME_VERSION='v1.1.1',GAME_PHASE='VISIBLE BANKING / WIND / FLAK'; // stable release identifier
   const renderScale=window.matchMedia?.('(pointer: coarse)')?.matches ? Math.min(3,Math.max(2.5,window.devicePixelRatio||2)) : 1;
   const canvas=document.getElementById('game');
   const aircraftArt=window.WingmanSprites;
@@ -128,9 +128,9 @@ function plane(type,id,x,y,angle){
 
   // Wind is an infrequent, symmetric difficulty modifier, not the baseline physics.
   function rollWind(mode,rank=1){
-    const chance=mode==='campaign'?Math.min(.38,.18+Math.max(1,rank)*.025):.28;
+    const chance=mode==='campaign'?Math.min(.55,.29+Math.max(1,rank)*.025):.48;
     if(Math.random()>=chance)return {active:false,base:0,current:0,elapsed:0};
-    const base=(Math.random()<.5?-1:1)*(8+Math.random()*9);
+    const base=(Math.random()<.5?-1:1)*(15+Math.random()*9);
     return {active:true,base,current:base,elapsed:0};
   }
   function updateWind(dt){
@@ -139,8 +139,11 @@ function plane(type,id,x,y,angle){
     const storm=state.environment?.weather==='storm';
     // A single shared gust field affects all pilots and bullets via the
     // existing wind physics; storm fronts add stronger but bounded variance.
-    w.current=w.base*(1+(storm?.27:.16)*Math.sin(w.elapsed*1.1)+
-      (storm?.11:.07)*Math.sin(w.elapsed*2.7));
+    w.current=w.base*(1+(storm?.29:.20)*Math.sin(w.elapsed*1.1)+
+      (storm?.13:.08)*Math.sin(w.elapsed*2.7));
+    // Vertical storm gusts are world-space air movement, not a steering
+    // override. Aircraft on both sides experience the same turbulence.
+    w.vertical=storm?(5.6*Math.sin(w.elapsed*.76)+2.1*Math.sin(w.elapsed*2.1)):0;
   }
   function drawWind(){
     const w=state.wind;if(!w?.active)return;
@@ -304,16 +307,25 @@ function plane(type,id,x,y,angle){
     state.wind=rollWind(state.mode,state.campaignEncounter?.rank||1);
     // Phase 9C: declared weather is symmetric: both teams fly through the same air.
     if(state.mode==='campaign'&&state.campaignEncounter?.hazard==='crosswind'){
-      const gust=state.campaignEncounter.lane===2?-15:15;
+      const gust=state.campaignEncounter.lane===2?-25:25;
       state.wind={active:true,base:gust,current:gust,elapsed:0};
     }
-    if(state.mode==='challenge'&&state.challenge==='crosswind')
-      state.wind={active:true,base:state.round%2===0?-16:16,current:state.round%2===0?-16:16,elapsed:0};
+    if(state.mode==='challenge'&&state.challenge==='crosswind'){
+      const gust=state.round%2===0?-26:26;
+      state.wind={active:true,base:gust,current:gust,elapsed:0};
+    }
     // Storms genuinely change the flight conditions using the same global
     // wind field as crosswinds, never a player-only steering penalty.
-    if(state.environment?.weather==='storm'&&!state.wind.active){
-      const strength=(state.mode==='campaign'?7:9)*(state.arena%2===0?-1:1);
-      state.wind={active:true,base:strength,current:strength,elapsed:0};
+    if(state.environment?.weather==='storm'){
+      // Even when the randomly rolled wind happened to be active, storms
+      // must remain physically noticeable instead of inheriting a light breeze.
+      const direction=state.wind.active?Math.sign(state.wind.current):
+        state.arena%2===0?-1:1;
+      const strength=(state.mode==='campaign'?25:29)*direction;
+      state.wind={active:true,base:strength,current:strength,vertical:0,elapsed:0};
+    }else if(state.environment?.weather==='rain'&&!state.wind.active){
+      const strength=19*(state.arena%2===0?-1:1);
+      state.wind={active:true,base:strength,current:strength,vertical:0,elapsed:0};
     }
     state.time=state.mode==='survival'?70:state.mode==='challenge'?CHALLENGES[state.challenge].time:
       state.mode==='campaign'?(state.campaignEncounter?.timeLimit||(state.campaignEncounter?.finalBoss?165:120)):90;
@@ -421,6 +433,8 @@ function plane(type,id,x,y,angle){
     isPlaying:()=>state.phase==='playing',
     flightVisuals:()=>({weather:state.environment?.weather||'clear',
       hazard:state.environment?.hazard||null,
+      wind:{active:!!state.wind.active,current:state.wind.current||0,
+        vertical:state.wind.vertical||0},
       banking:state.fliers.map(p=>({id:p.id,bank:p.visualBank||0}))}),
     aircraftSpecs:()=>Object.fromEntries(Object.entries(PLANES).map(([id,p])=>
       [id,{speed:p.speed,turn:p.turn,armour:p.armour,hull:p.hull,damage:(id==='bomber'||id==='he111')?2.9:p.damage,radius:p.radius}]))
@@ -929,7 +943,7 @@ function plane(type,id,x,y,angle){
         p.vy+=(Math.sin(p.angle)*p.speed-p.vy)*follow;
       }
       const oldY=p.y;
-      p.x+=(p.vx+state.wind.current)*dt;p.y+=p.vy*dt;
+      p.x+=(p.vx+state.wind.current)*dt;p.y+=(p.vy+(state.wind.vertical||0))*dt;
       if(p.x<-p.d.radius)p.x+=W+2*p.d.radius;
       if(p.x>W+p.d.radius)p.x-=W+2*p.d.radius;
       crossTopEdge(p);
@@ -961,7 +975,7 @@ function plane(type,id,x,y,angle){
     if(p.topRecovery>0){
       p.topRecovery=Math.max(0,p.topRecovery-dt);
       p.vy=Math.max(p.vy,p.d.speed*.42);
-      p.y+=p.vy*dt;p.x+=(p.vx+state.wind.current)*dt;
+      p.x+=(p.vx+state.wind.current)*dt;p.y+=(p.vy+(state.wind.vertical||0))*dt;
       if(p.x<0)p.x+=W;else if(p.x>W)p.x-=W;
       return;
     }
@@ -1028,7 +1042,7 @@ function plane(type,id,x,y,angle){
     if(p.flightRisk>0)p.vy+=dt*(5+15*p.flightRisk);
     if(swoopPhysics&&p.invertedNow)p.vy+=dt*9;
     const oldY=p.y;
-    p.x+=(p.vx+state.wind.current)*dt;p.y+=p.vy*dt;
+    p.x+=(p.vx+state.wind.current)*dt;p.y+=(p.vy+(state.wind.vertical||0))*dt;
     // Fast, sustained ascents increase load. A dive drains it quickly.
     // This is a rolling-memory proxy and independent of absolute altitude.
     const altitudeGain=Math.max(0,oldY-p.y);
@@ -2063,6 +2077,8 @@ function plane(type,id,x,y,angle){
         aircraftArt?.draw(c,p.type,artState);
       }
     };
+    if(p.corkscrewTime<=0&&p.rollTime<=0)
+      window.WingmanFlightAtmosphere?.drawBankWing?.(c,p);
     paintPlane();
     // Pilot Harden and the heavy-fighter armour special both flash the aircraft
     // itself, like a power-up, rather than drawing a blue protection ring.
@@ -2339,10 +2355,9 @@ function plane(type,id,x,y,angle){
       g.fillStyle='#a5b6b45c';g.fillRect(sx,sy,62,1.8);
       g.fillStyle=progress>.75?'#f1bc83':'#b2d0bd';g.fillRect(sx,sy,62*progress,1.8);
     }
-    if(state.wind?.active){
-      g.textAlign='center';g.font='bold 6px monospace';g.fillStyle='#ffe0ae';
-      g.fillText((state.wind.current>0?'CROSSWIND → ':'← CROSSWIND ')+Math.round(Math.abs(state.wind.current)),cx,42);
-    }
+    // Clear, fixed cockpit wind readout — striped cloth points downwind
+    // and its magnitude is the very same number moving the aeroplanes.
+    window.WingmanFlightAtmosphere?.drawWindsock?.(g,state.wind,cx-48,46,state.visualClock);
     if(p&&e?.role==='bomber'&&e.alive){
       const dx=wrappedDelta(e.x,p.x),dy=p.y-e.y;
       const along=dx*Math.cos(e.angle)+dy*Math.sin(e.angle);
